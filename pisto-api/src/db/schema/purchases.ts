@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, boolean, timestamp, date, serial, integer, decimal, uniqueIndex, index } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, boolean, timestamp, date, integer, decimal, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { business, appUser, paymentMethod, tax } from './core'
 import { product, warehouse } from './inventory'
 
@@ -18,7 +18,7 @@ export const supplier = pgTable('supplier', {
 })
 
 export const supplierProduct = pgTable('supplier_product', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   supplierId: uuid('supplier_id').notNull().references(() => supplier.id),
   productId: uuid('product_id').notNull().references(() => product.id),
   supplierSku: varchar('supplier_sku', { length: 50 }),
@@ -32,7 +32,7 @@ export const purchaseOrder = pgTable('purchase_order', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   supplierId: uuid('supplier_id').notNull().references(() => supplier.id),
-  warehouseId: integer('warehouse_id').notNull().references(() => warehouse.id),
+  warehouseId: uuid('warehouse_id').notNull().references(() => warehouse.id),
   orderNumber: varchar('order_number', { length: 30 }).notNull(),
   orderDate: date('order_date').defaultNow().notNull(),
   expectedDate: date('expected_date'),
@@ -49,13 +49,13 @@ export const purchaseOrder = pgTable('purchase_order', {
 ])
 
 export const purchaseOrderLine = pgTable('purchase_order_line', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   purchaseOrderId: uuid('purchase_order_id').notNull().references(() => purchaseOrder.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull().references(() => product.id),
   quantityOrdered: decimal('quantity_ordered', { precision: 12, scale: 2 }).notNull(),
   quantityReceived: decimal('quantity_received', { precision: 12, scale: 2 }).default('0').notNull(),
   unitCost: decimal('unit_cost', { precision: 12, scale: 2 }).notNull(),
-  taxId: integer('tax_id').references(() => tax.id),
+  taxId: uuid('tax_id').references(() => tax.id),
   taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }).default('0').notNull(),
   lineTotal: decimal('line_total', { precision: 12, scale: 2 }).notNull(),
 })
@@ -71,9 +71,9 @@ export const goodsReceipt = pgTable('goods_receipt', {
 })
 
 export const goodsReceiptLine = pgTable('goods_receipt_line', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   goodsReceiptId: uuid('goods_receipt_id').notNull().references(() => goodsReceipt.id, { onDelete: 'cascade' }),
-  purchaseOrderLineId: integer('purchase_order_line_id').notNull().references(() => purchaseOrderLine.id),
+  purchaseOrderLineId: uuid('purchase_order_line_id').notNull().references(() => purchaseOrderLine.id),
   productId: uuid('product_id').notNull().references(() => product.id),
   quantityReceived: decimal('quantity_received', { precision: 12, scale: 2 }).notNull(),
 })
@@ -97,7 +97,7 @@ export const supplierPayment = pgTable('supplier_payment', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   accountPayableId: uuid('account_payable_id').notNull().references(() => accountPayable.id),
-  paymentMethodId: integer('payment_method_id').notNull().references(() => paymentMethod.id),
+  paymentMethodId: uuid('payment_method_id').notNull().references(() => paymentMethod.id),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
   paymentDate: date('payment_date').defaultNow().notNull(),
   reference: varchar('reference', { length: 100 }),

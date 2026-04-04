@@ -1,10 +1,10 @@
-import { pgTable, pgEnum, uuid, varchar, text, boolean, timestamp, serial, integer, decimal, bigserial, uniqueIndex, index } from 'drizzle-orm/pg-core'
+import { pgTable, pgEnum, uuid, varchar, text, boolean, timestamp, integer, decimal, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { business, appUser } from './core'
 
 export const productCategory = pgTable('product_category', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
-  parentId: integer('parent_id'),
+  parentId: uuid('parent_id'),
   name: varchar('name', { length: 100 }).notNull(),
   description: text('description'),
   isActive: boolean('is_active').default(true).notNull(),
@@ -13,13 +13,13 @@ export const productCategory = pgTable('product_category', {
 ])
 
 export const unitOfMeasure = pgTable('unit_of_measure', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   code: varchar('code', { length: 10 }).notNull().unique(),
   name: varchar('name', { length: 50 }).notNull(),
 })
 
 export const warehouse = pgTable('warehouse', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   name: varchar('name', { length: 100 }).notNull(),
   address: text('address'),
@@ -31,8 +31,8 @@ export const warehouse = pgTable('warehouse', {
 export const product = pgTable('product', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
-  categoryId: integer('category_id').references(() => productCategory.id),
-  unitId: integer('unit_id').notNull().references(() => unitOfMeasure.id),
+  categoryId: uuid('category_id').references(() => productCategory.id),
+  unitId: uuid('unit_id').notNull().references(() => unitOfMeasure.id),
   sku: varchar('sku', { length: 50 }),
   barcode: varchar('barcode', { length: 50 }),
   name: varchar('name', { length: 200 }).notNull(),
@@ -54,9 +54,9 @@ export const product = pgTable('product', {
 ])
 
 export const productStock = pgTable('product_stock', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   productId: uuid('product_id').notNull().references(() => product.id),
-  warehouseId: integer('warehouse_id').notNull().references(() => warehouse.id),
+  warehouseId: uuid('warehouse_id').notNull().references(() => warehouse.id),
   quantity: decimal('quantity', { precision: 12, scale: 2 }).default('0').notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
@@ -70,9 +70,9 @@ export const inventoryMovementTypeEnum = pgEnum('inventory_movement_type', [
 ])
 
 export const inventoryMovement = pgTable('inventory_movement', {
-  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   productId: uuid('product_id').notNull().references(() => product.id),
-  warehouseId: integer('warehouse_id').notNull().references(() => warehouse.id),
+  warehouseId: uuid('warehouse_id').notNull().references(() => warehouse.id),
   movementType: inventoryMovementTypeEnum('movement_type').notNull(),
   quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
   unitCost: decimal('unit_cost', { precision: 12, scale: 2 }),
@@ -88,8 +88,8 @@ export const inventoryMovement = pgTable('inventory_movement', {
 export const inventoryTransfer = pgTable('inventory_transfer', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
-  fromWarehouseId: integer('from_warehouse_id').notNull().references(() => warehouse.id),
-  toWarehouseId: integer('to_warehouse_id').notNull().references(() => warehouse.id),
+  fromWarehouseId: uuid('from_warehouse_id').notNull().references(() => warehouse.id),
+  toWarehouseId: uuid('to_warehouse_id').notNull().references(() => warehouse.id),
   status: varchar('status', { length: 20 }).default('pending').notNull(),
   notes: text('notes'),
   createdBy: uuid('created_by').references(() => appUser.id),
@@ -98,7 +98,7 @@ export const inventoryTransfer = pgTable('inventory_transfer', {
 })
 
 export const inventoryTransferLine = pgTable('inventory_transfer_line', {
-  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   transferId: uuid('transfer_id').notNull().references(() => inventoryTransfer.id, { onDelete: 'cascade' }),
   productId: uuid('product_id').notNull().references(() => product.id),
   quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),

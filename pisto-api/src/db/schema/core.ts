@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, char, boolean, timestamp, serial, integer, decimal, uniqueIndex } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, char, boolean, timestamp, integer, decimal, uniqueIndex } from 'drizzle-orm/pg-core'
 
 export const business = pgTable('business', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -28,7 +28,7 @@ export const appUser = pgTable('app_user', {
 })
 
 export const role = pgTable('role', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   name: varchar('name', { length: 50 }).notNull(),
   description: varchar('description', { length: 200 }),
@@ -37,45 +37,52 @@ export const role = pgTable('role', {
 ])
 
 export const permission = pgTable('permission', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   code: varchar('code', { length: 80 }).notNull().unique(),
   description: varchar('description', { length: 200 }),
 })
 
 export const rolePermission = pgTable('role_permission', {
-  roleId: integer('role_id').notNull().references(() => role.id, { onDelete: 'cascade' }),
-  permissionId: integer('permission_id').notNull().references(() => permission.id, { onDelete: 'cascade' }),
+  id: uuid('id').primaryKey().defaultRandom(),
+  roleId: uuid('role_id').notNull().references(() => role.id, { onDelete: 'cascade' }),
+  permissionId: uuid('permission_id').notNull().references(() => permission.id, { onDelete: 'cascade' }),
 }, (t) => [
   uniqueIndex('role_permission_pk').on(t.roleId, t.permissionId),
 ])
 
 export const userRole = pgTable('user_role', {
+  id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => appUser.id, { onDelete: 'cascade' }),
-  roleId: integer('role_id').notNull().references(() => role.id, { onDelete: 'cascade' }),
+  roleId: uuid('role_id').notNull().references(() => role.id, { onDelete: 'cascade' }),
   assignedAt: timestamp('assigned_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
   uniqueIndex('user_role_pk').on(t.userId, t.roleId),
 ])
 
 export const documentType = pgTable('document_type', {
-  id: serial('id').primaryKey(),
-  code: varchar('code', { length: 20 }).notNull().unique(),
-  name: varchar('name', { length: 80 }).notNull(),
-  isFiscal: boolean('is_fiscal').default(false).notNull(),
-  affectsTax: boolean('affects_tax').default(false).notNull(),
-})
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessId: uuid('business_id').notNull().references(() => business.id),
+  name: varchar('name', { length: 50 }).notNull(),
+  code: varchar('code', { length: 20 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex('doc_type_business_code_idx').on(t.businessId, t.code),
+])
 
 export const paymentMethod = pgTable('payment_method', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
+  businessId: uuid('business_id').notNull().references(() => business.id),
   name: varchar('name', { length: 50 }).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })
 
 export const tax = pgTable('tax', {
-  id: serial('id').primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   name: varchar('name', { length: 50 }).notNull(),
-  rate: decimal('rate', { precision: 5, scale: 4 }).notNull(),
-  isDefault: boolean('is_default').default(false).notNull(),
+  rate: decimal('rate', { precision: 5, scale: 2 }).notNull(),
   isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 })

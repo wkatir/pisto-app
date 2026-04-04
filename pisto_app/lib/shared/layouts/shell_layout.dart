@@ -15,9 +15,8 @@ class ShellLayout extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.t;
-    final width = MediaQuery.of(context).size.width;
-    final useMobile = width <= 800;
-    final isExtended = width > 1200;
+    final size = MediaQuery.sizeOf(context);
+    final useMobileNav = size.width < 600;
 
     final destinations = [
       _NavDest(LucideIcons.layoutDashboard, t.dashboard, '/dashboard'),
@@ -34,7 +33,7 @@ class ShellLayout extends ConsumerWidget {
       context.go(destinations[index].path);
     }
 
-    if (useMobile) {
+    if (useMobileNav) {
       return Scaffold(
         body: child,
         bottomNavigationBar: NavigationBar(
@@ -52,29 +51,33 @@ class ShellLayout extends ConsumerWidget {
       );
     }
 
+    final isExtended = size.width >= 1200;
+
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: selected,
-            onDestinationSelected: (i) => onDestination(context, i),
-            extended: isExtended,
-            minWidth: 72,
-            minExtendedWidth: 220,
-            leading: _RailHeader(isExtended: isExtended),
-            trailing: Expanded(
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: _RailFooter(isExtended: isExtended),
+          SizedBox(
+            width: isExtended ? 220 : 72,
+            child: NavigationRail(
+              selectedIndex: selected,
+              onDestinationSelected: (i) => onDestination(context, i),
+              extended: isExtended,
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              leading: _RailHeader(isExtended: isExtended),
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _RailFooter(isExtended: isExtended),
+                ),
               ),
+              destinations: destinations
+                  .map((d) => NavigationRailDestination(
+                        icon: Icon(d.icon),
+                        selectedIcon: Icon(d.icon),
+                        label: Text(d.label),
+                      ))
+                  .toList(),
             ),
-            destinations: destinations
-                .map((d) => NavigationRailDestination(
-                      icon: Icon(d.icon),
-                      selectedIcon: Icon(d.icon),
-                      label: Text(d.label),
-                    ))
-                .toList(),
           ),
           VerticalDivider(
             width: 1,

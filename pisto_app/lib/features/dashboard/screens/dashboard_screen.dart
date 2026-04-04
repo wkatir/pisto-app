@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -173,7 +174,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             crossAxisCount: crossCount,
             mainAxisSpacing: 16,
             crossAxisSpacing: 16,
-            mainAxisExtent: 110,
+            childAspectRatio: 1.5,
           ),
           itemCount: kpis.length,
           itemBuilder: (context, i) => _KpiCard(data: kpis[i]),
@@ -553,14 +554,12 @@ class _KpiCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 8),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.centerLeft,
-              child: Text(
-                data.value,
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-                maxLines: 1,
-              ),
+            AutoSizeText(
+              data.value,
+              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 1,
+              minFontSize: 14,
+              overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 2),
             Text(

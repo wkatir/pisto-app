@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   cupertino_icons: ^1.0.8
   flutter_riverpod: ^3.3.1
@@ -26,6 +28,7 @@ dependencies:
   lucide_icons_flutter: ^3.1.11
   slang: ^4.14.0
   slang_flutter: ^4.14.0
+  auto_size_text: ^3.0.0
 
 dev_dependencies:
   flutter_test:

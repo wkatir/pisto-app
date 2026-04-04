@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'config/app_router.dart';
 import 'config/app_theme.dart';
 import 'config/constants.dart';
 import 'core/providers/core_providers.dart';
 import 'core/providers/theme_provider.dart';
-import 'core/providers/locale_provider.dart';
 import 'core/services/auth_service.dart';
 import 'i18n/translations.g.dart';
 
@@ -38,7 +38,6 @@ class PistoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeModeProvider);
-    final locale = ref.watch(localeProvider);
 
     return TranslationProvider(
       child: MaterialApp.router(
@@ -47,8 +46,13 @@ class PistoApp extends ConsumerWidget {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: themeMode,
-        locale: locale,
+        locale: LocaleSettings.currentLocale.flutterLocale,
         supportedLocales: AppLocaleUtils.supportedLocales,
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         routerConfig: appRouter,
       ),
     );

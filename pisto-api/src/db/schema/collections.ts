@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, decimal, timestamp, date, integer, bigserial, uniqueIndex, index } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, decimal, timestamp, date, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { business, appUser, paymentMethod } from './core'
 import { customer, sale } from './sales'
 
@@ -22,7 +22,7 @@ export const collectionPayment = pgTable('collection_payment', {
   id: uuid('id').primaryKey().defaultRandom(),
   businessId: uuid('business_id').notNull().references(() => business.id),
   accountReceivableId: uuid('account_receivable_id').notNull().references(() => accountReceivable.id),
-  paymentMethodId: integer('payment_method_id').notNull().references(() => paymentMethod.id),
+  paymentMethodId: uuid('payment_method_id').notNull().references(() => paymentMethod.id),
   receiptNumber: varchar('receipt_number', { length: 30 }),
   amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
   paymentDate: date('payment_date').defaultNow().notNull(),
@@ -35,7 +35,7 @@ export const collectionPayment = pgTable('collection_payment', {
 ])
 
 export const statementHistory = pgTable('statement_history', {
-  id: bigserial('id', { mode: 'number' }).primaryKey(),
+  id: uuid('id').primaryKey().defaultRandom(),
   customerId: uuid('customer_id').notNull().references(() => customer.id),
   sentDate: timestamp('sent_date', { withTimezone: true }).defaultNow().notNull(),
   sentVia: varchar('sent_via', { length: 20 }),

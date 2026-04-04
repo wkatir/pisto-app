@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 
@@ -151,7 +152,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 crossAxisCount: crossCount,
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
-                mainAxisExtent: 90,
+                childAspectRatio: 2.0,
               ),
               itemCount: items.length,
               itemBuilder: (context, i) {
@@ -176,10 +177,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        FittedBox(
-                          fit: BoxFit.scaleDown,
-                          alignment: Alignment.centerLeft,
-                          child: Text(item.value, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700), maxLines: 1),
+                        AutoSizeText(
+                          item.value,
+                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          minFontSize: 12,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
