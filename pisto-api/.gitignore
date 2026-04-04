@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+*.tgz
+
+# Code coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+
+# Diagnostic dumps
+tsc_errors*.txt
+*_errors*.txt
+*_utf8.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Caches
+.eslintcache
+.cache/
+*.tsbuildinfo
+
+# Drizzle
+drizzle/meta/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.swp

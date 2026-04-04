@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: pisto-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pisto
+      POSTGRES_PASSWORD: pisto_dev_2026
+      POSTGRES_DB: pisto_app
+    ports:
+      - "5433:5432"
+    volumes:
+      - pisto_pgdata:/var/lib/postgresql/data
+
+volumes:
+  pisto_pgdata:
