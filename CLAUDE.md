@@ -11,8 +11,8 @@ pisto-api/    → Hono + Bun API (backend)
 
 - **Runtime:** Bun
 - **Framework:** Hono (con AppEnv type en src/types/app-env.ts)
-- **DB:** PostgreSQL 16 (Docker, puerto 5433)
-- **ORM:** Drizzle ORM + postgres.js driver
+- **DB:** SQL Server 2022 (Docker, puerto 1433)
+- **ORM:** Drizzle ORM + mssql driver (branch experimental mssql)
 - **Validacion:** Valibot + @hono/valibot-validator
 - **Auth:** JWT (hono/jwt) con access token (15min) + refresh token (7d)
 - **Exports:** pdf-lib (PDF), excel-builder-vanilla (Excel), fast-csv (CSV)
@@ -36,32 +36,35 @@ pisto-api/    → Hono + Bun API (backend)
 ```bash
 cd pisto-api
 bun run dev          # Servidor con hot reload
-bun run db:push      # Aplicar schema a la DB
-bun run db:generate  # Generar migraciones
-bun run db:migrate   # Correr migraciones
 bun run db:seed      # Seed datos demo
+bun run db:studio    # Drizzle Studio
 ```
 
 ### Variables de entorno (.env)
 
 ```
-DATABASE_URL=postgresql://pisto:pisto_dev_2026@localhost:5433/pisto_app
+DB_SERVER=localhost
+DB_PORT=1433
+DB_NAME=pisto_app
+DB_USER=sa
+DB_PASSWORD=YourPassword123!
+DB_ENCRYPT=false
+DB_TRUST_SERVER_CERTIFICATE=true
 JWT_ACCESS_SECRET=...
 JWT_REFRESH_SECRET=...
 CORS_ORIGIN=*
 PORT=3000
+RATE_LIMIT_ENABLED=false
 ```
 
-### Docker (PostgreSQL)
+### Docker (SQL Server)
 
 ```bash
-docker compose up -d   # o:
-docker run -d --name pisto-db \
-  -e POSTGRES_USER=pisto \
-  -e POSTGRES_PASSWORD=pisto_dev_2026 \
-  -e POSTGRES_DB=pisto_app \
-  -p 5433:5432 \
-  postgres:16-alpine
+docker run -d --name pisto-mssql \
+  -e ACCEPT_EULA=Y \
+  -e MSSQL_SA_PASSWORD=YourPassword123! \
+  -p 1433:1433 \
+  mcr.microsoft.com/mssql/server:2022-latest
 ```
 
 ## Frontend: pisto_app
