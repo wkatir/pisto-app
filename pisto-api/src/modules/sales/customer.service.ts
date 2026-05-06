@@ -2,6 +2,10 @@ import { eq, and, or, like, count } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { customer } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
+
+type CustomerInsert = Omit<typeof customer.$inferInsert, 'id' | 'businessId' | 'createdAt' | 'updatedAt'>
+type CustomerUpdate = Partial<CustomerInsert>
 
 export async function listCustomers(businessId: string, query: { page: number; limit: number; search?: string }) {
   const { page, limit, search } = query
@@ -22,14 +26,11 @@ export async function listCustomers(businessId: string, query: { page: number; l
   const where = and(...conditions)
 
   const [items, [total]] = await Promise.all([
-    db.select().from(customer).where(where).limit(limit).offset(offset),
+    db.select().from(customer).where(where).orderBy(customer.createdAt).offset(offset).fetch(limit),
     db.select({ count: count() }).from(customer).where(where),
   ])
 
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function getCustomer(businessId: string, id: string) {
@@ -39,16 +40,18 @@ export async function getCustomer(businessId: string, id: string) {
   return c
 }
 
-export async function createCustomer(businessId: string, data: Record<string, unknown>) {
-  const [c] = await db.insert(customer).values({ businessId, ...data } as any).returning()
+export async function createCustomer(businessId: string, data: CustomerInsert) {
+  const [c] = await db.insert(customer)
+    .output()
+    .values({ businessId, ...data })
   return c
 }
 
-export async function updateCustomer(businessId: string, id: string, data: Record<string, unknown>) {
+export async function updateCustomer(businessId: string, id: string, data: CustomerUpdate) {
   const [updated] = await db.update(customer)
-    .set({ ...data, updatedAt: new Date() } as any)
+    .set({ ...data, updatedAt: new Date() })
     .where(and(eq(customer.id, id), eq(customer.businessId, businessId)))
-    .returning()
+    .output()
   if (!updated) throw new AppError(404, 'Cliente no encontrado')
   return updated
 }

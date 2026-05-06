@@ -2,18 +2,19 @@ import { eq, and, like, sql, count } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { product, productStock, productCategory, unitOfMeasure } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
 
 interface ProductQuery {
   page: number
   limit: number
   search?: string
-  categoryId?: number
+  categoryId?: string
   isActive?: boolean
-  warehouseId?: number
+  warehouseId?: string
 }
 
 export async function listProducts(businessId: string, query: ProductQuery) {
-  const { page, limit, search, categoryId, isActive } = query
+  const { page, limit, search, categoryId, isActive, warehouseId } = query
   const offset = (page - 1) * limit
 
   const conditions = [eq(product.businessId, businessId)]
@@ -22,6 +23,10 @@ export async function listProducts(businessId: string, query: ProductQuery) {
   if (search) conditions.push(like(product.name, `%${search}%`))
 
   const where = and(...conditions)
+
+  const stockConditions = warehouseId
+    ? eq(productStock.warehouseId, warehouseId)
+    : undefined
 
   const [items, [total]] = await Promise.all([
     db.select({
@@ -43,25 +48,27 @@ export async function listProducts(businessId: string, query: ProductQuery) {
       .from(product)
       .leftJoin(productCategory, eq(product.categoryId, productCategory.id))
       .leftJoin(unitOfMeasure, eq(product.unitId, unitOfMeasure.id))
-      .leftJoin(productStock, eq(product.id, productStock.productId))
+      .leftJoin(productStock, stockConditions ? and(eq(product.id, productStock.productId), stockConditions) : eq(product.id, productStock.productId))
       .where(where)
-      .groupBy(product.id, productCategory.name, unitOfMeasure.code)
-      .limit(limit)
-      .offset(offset),
+      .groupBy(
+        product.id, product.sku, product.barcode, product.name,
+        product.costPrice, product.salePrice, product.minStock,
+        product.isService, product.isTaxable, product.isActive, product.imageUrl,
+        product.createdAt, productCategory.name, unitOfMeasure.code,
+      )
+      .orderBy(product.createdAt)
+      .offset(offset)
+      .fetch(limit),
     db.select({ count: count() }).from(product).where(where),
   ])
 
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function getProduct(businessId: string, id: string) {
   const [p] = await db.select()
     .from(product)
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
-    .limit(1)
 
   if (!p) throw new AppError(404, 'Producto no encontrado')
 
@@ -71,12 +78,12 @@ export async function getProduct(businessId: string, id: string) {
 }
 
 export async function createProduct(businessId: string, data: {
-  categoryId?: number; unitId: number; sku?: string; barcode?: string
+  categoryId?: string; unitId: string; sku?: string; barcode?: string
   name: string; description?: string; costPrice?: string; salePrice: string
   minStock?: string; maxStock?: string; isService?: boolean; isTaxable?: boolean
   imageUrl?: string
 }) {
-  const [p] = await db.insert(product).values({ businessId, ...data }).returning()
+  const [p] = await db.insert(product).output().values({ businessId, ...data } as any)
   return p
 }
 
@@ -84,7 +91,7 @@ export async function updateProduct(businessId: string, id: string, data: Record
   const [updated] = await db.update(product)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
-    .returning()
+    .output()
   if (!updated) throw new AppError(404, 'Producto no encontrado')
   return updated
 }
@@ -93,7 +100,7 @@ export async function deleteProduct(businessId: string, id: string) {
   const [updated] = await db.update(product)
     .set({ isActive: false, updatedAt: new Date() })
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
-    .returning()
+    .output()
   if (!updated) throw new AppError(404, 'Producto no encontrado')
   return updated
 }
@@ -113,6 +120,6 @@ export async function getLowStockAlerts(businessId: string) {
       eq(product.isActive, true),
       eq(product.isService, false),
     ))
-    .groupBy(product.id)
+    .groupBy(product.id, product.name, product.sku, product.minStock)
     .having(sql`COALESCE(SUM(${productStock.quantity}), 0) <= ${product.minStock}`)
 }

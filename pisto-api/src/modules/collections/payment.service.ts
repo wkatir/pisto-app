@@ -23,10 +23,10 @@ export async function createCollectionPayment(
     throw new AppError(400, 'Monto excede el saldo pendiente')
   }
 
-  const receiptNumber = await generateCorrelative(businessId, 'REC', 'collection_payment', 'receipt_number')
+  const receiptNumber = await generateCorrelative(businessId, 'REC', 'collection_payment')
 
   return db.transaction(async (tx) => {
-    const [payment] = await tx.insert(collectionPayment).values({
+    const [payment] = await tx.insert(collectionPayment).output().values({
       businessId,
       accountReceivableId: receivableId,
       paymentMethodId: data.paymentMethodId,
@@ -35,14 +35,14 @@ export async function createCollectionPayment(
       reference: data.reference,
       notes: data.notes,
       collectedBy: userId,
-    }).returning()
+    } as any)
 
     const newBalance = currentBalance.minus(payAmount)
     await tx.update(accountReceivable).set({
-      balance: newBalance.toFixed(2),
+      balance: parseFloat(newBalance.toFixed(2)),
       status: newBalance.lte(0) ? 'paid' : 'pending',
       updatedAt: new Date(),
-    }).where(eq(accountReceivable.id, receivableId))
+    } as any).where(eq(accountReceivable.id, receivableId))
 
     return payment
   })

@@ -2,7 +2,7 @@ import * as v from 'valibot'
 
 export const createCategorySchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Nombre requerido')),
-  parentId: v.optional(v.pipe(v.number(), v.integer())),
+  parentId: v.optional(v.pipe(v.string(), v.uuid())),
   description: v.optional(v.string()),
 })
 
@@ -16,8 +16,8 @@ export const createWarehouseSchema = v.object({
 export const updateWarehouseSchema = v.partial(createWarehouseSchema)
 
 export const createProductSchema = v.object({
-  categoryId: v.optional(v.pipe(v.number(), v.integer())),
-  unitId: v.pipe(v.number(), v.integer()),
+  categoryId: v.optional(v.pipe(v.string(), v.uuid())),
+  unitId: v.pipe(v.string(), v.uuid()),
   sku: v.optional(v.string()),
   barcode: v.optional(v.string()),
   name: v.pipe(v.string(), v.minLength(1, 'Nombre requerido')),
@@ -37,14 +37,14 @@ export const productQuerySchema = v.object({
   page: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1)), '1'),
   limit: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(100)), '20'),
   search: v.optional(v.string()),
-  categoryId: v.optional(v.pipe(v.string(), v.transform(Number), v.integer())),
+  categoryId: v.optional(v.string()),
   isActive: v.optional(v.pipe(v.string(), v.transform((v) => v === 'true'))),
-  warehouseId: v.optional(v.pipe(v.string(), v.transform(Number), v.integer())),
+  warehouseId: v.optional(v.string()),
 })
 
 export const adjustmentSchema = v.object({
   productId: v.pipe(v.string(), v.uuid()),
-  warehouseId: v.pipe(v.number(), v.integer()),
+  warehouseId: v.pipe(v.string(), v.uuid()),
   type: v.picklist(['adjustment_in', 'adjustment_out']),
   quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
   unitCost: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/))),
@@ -52,8 +52,8 @@ export const adjustmentSchema = v.object({
 })
 
 export const createTransferSchema = v.object({
-  fromWarehouseId: v.pipe(v.number(), v.integer()),
-  toWarehouseId: v.pipe(v.number(), v.integer()),
+  fromWarehouseId: v.pipe(v.string(), v.uuid()),
+  toWarehouseId: v.pipe(v.string(), v.uuid()),
   notes: v.optional(v.string()),
   lines: v.pipe(
     v.array(v.object({

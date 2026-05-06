@@ -11,7 +11,7 @@ const exports_ = new Hono<AppEnv>()
 const reportConfigs: Record<string, {
   title: string
   columns: { header: string; key: string; width?: number }[]
-  getData: (businessId: string, from?: string, to?: string) => Promise<any>
+  getData: (businessId: string, from?: string, to?: string) => Promise<any[]>
 }> = {
   'top-products': {
     title: 'Productos Más Vendidos',
@@ -21,7 +21,7 @@ const reportConfigs: Record<string, {
       { header: 'Cantidad', key: 'total_quantity', width: 12 },
       { header: 'Ingresos', key: 'total_revenue', width: 15 },
     ],
-    getData: (bid, from, to) => reportService.getTopProducts(bid, 100, from, to),
+    getData: (bid, from, to) => reportService.getTopProducts(bid, 100, from, to) as unknown as Promise<any[]>,
   },
   'inventory-valuation': {
     title: 'Valuación de Inventario',
@@ -32,7 +32,7 @@ const reportConfigs: Record<string, {
       { header: 'Stock', key: 'total_stock', width: 12 },
       { header: 'Valuación', key: 'valuation', width: 15 },
     ],
-    getData: (bid) => reportService.getInventoryValuation(bid),
+    getData: (bid) => reportService.getInventoryValuation(bid) as unknown as Promise<any[]>,
   },
   'receivables-aging': {
     title: 'Antigüedad de Cuentas por Cobrar',
@@ -42,7 +42,7 @@ const reportConfigs: Record<string, {
       { header: 'Saldo Total', key: 'total_balance', width: 15 },
       { header: 'Vencimiento Más Antiguo', key: 'oldest_due', width: 20 },
     ],
-    getData: (bid) => reportService.getReceivablesAging(bid),
+    getData: (bid) => reportService.getReceivablesAging(bid) as unknown as Promise<any[]>,
   },
   'purchases-by-supplier': {
     title: 'Compras por Proveedor',
@@ -51,7 +51,7 @@ const reportConfigs: Record<string, {
       { header: 'Total Órdenes', key: 'total_orders', width: 15 },
       { header: 'Monto Total', key: 'total_amount', width: 15 },
     ],
-    getData: (bid, from, to) => reportService.getPurchasesBySupplier(bid, from, to),
+    getData: (bid, from, to) => reportService.getPurchasesBySupplier(bid, from, to) as unknown as Promise<any[]>,
   },
 }
 
@@ -69,7 +69,7 @@ exports_.get('/:report/excel', async (c) => {
 
   c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
   c.header('Content-Disposition', `attachment; filename="${report}.xlsx"`)
-  return c.body(buffer as any)
+  return c.body(new Uint8Array(buffer))
 })
 
 exports_.get('/:report/pdf', async (c) => {
@@ -86,7 +86,7 @@ exports_.get('/:report/pdf', async (c) => {
 
   c.header('Content-Type', 'application/pdf')
   c.header('Content-Disposition', `attachment; filename="${report}.pdf"`)
-  return c.body(buffer as any)
+  return c.body(buffer as unknown as ArrayBuffer)
 })
 
 exports_.get('/:report/csv', async (c) => {

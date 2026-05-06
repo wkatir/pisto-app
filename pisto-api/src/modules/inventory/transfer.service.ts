@@ -14,8 +14,8 @@ export async function createTransfer(
   businessId: string,
   userId: string,
   data: {
-    fromWarehouseId: number
-    toWarehouseId: number
+    fromWarehouseId: string
+    toWarehouseId: string
     notes?: string
     lines: { productId: string; quantity: string }[]
   }
@@ -25,7 +25,7 @@ export async function createTransfer(
   }
 
   return db.transaction(async (tx) => {
-    const [transfer] = await tx.insert(inventoryTransfer).values({
+    const [transfer] = await tx.insert(inventoryTransfer).output().values({
       businessId,
       fromWarehouseId: data.fromWarehouseId,
       toWarehouseId: data.toWarehouseId,
@@ -33,21 +33,18 @@ export async function createTransfer(
       createdBy: userId,
       status: 'completed',
       completedAt: new Date(),
-    }).returning()
+    } as any)
 
     for (const line of data.lines) {
       await tx.insert(inventoryTransferLine).values({
         transferId: transfer!.id,
         productId: line.productId,
         quantity: line.quantity,
-      })
+      } as any)
 
       const qty = parseFloat(line.quantity)
 
-      // Out from source
       await updateStock(tx, line.productId, data.fromWarehouseId, -qty, 'transfer_out', userId, undefined, 'transfer', transfer!.id)
-
-      // In to destination
       await updateStock(tx, line.productId, data.toWarehouseId, qty, 'transfer_in', userId, undefined, 'transfer', transfer!.id)
     }
 

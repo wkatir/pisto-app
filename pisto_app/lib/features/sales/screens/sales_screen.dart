@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 import 'create_sale_screen.dart';
 import 'customer_form_screen.dart';
 
@@ -241,11 +242,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _invoiceDetailRow(theme, 'Fecha', detail['saleDate'] ?? ''),
-                    _invoiceDetailRow(theme, 'Estado', status),
-                    _invoiceDetailRow(theme, 'Pago', detail['paymentStatus'] ?? ''),
-                    if (customerName.isNotEmpty) _invoiceDetailRow(theme, 'Cliente', customerName),
-                    _invoiceDetailRow(theme, 'Total', _fmt.format(total)),
+                    DetailRow(theme: theme, label: 'Fecha', value: detail['saleDate'] ?? '', labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Estado', value: status, labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Pago', value: detail['paymentStatus'] ?? '', labelWidth: 80),
+                    if (customerName.isNotEmpty) DetailRow(theme: theme, label: 'Cliente', value: customerName, labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Total', value: _fmt.format(total), labelWidth: 80),
                     if (lines.isNotEmpty) ...[
                       const Divider(height: 24),
                       Text('Lineas', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
@@ -292,18 +293,6 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
             ),
           ],
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-        ],
-      ),
-    );
-  }
-
-  Widget _invoiceDetailRow(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 80, child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
         ],
       ),
     );

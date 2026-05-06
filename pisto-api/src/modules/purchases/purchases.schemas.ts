@@ -32,7 +32,7 @@ export const receiveGoodsSchema = v.object({
   notes: v.optional(v.string()),
   lines: v.pipe(
     v.array(v.object({
-      purchaseOrderLineId: v.pipe(v.number(), v.integer()),
+      purchaseOrderLineId: v.pipe(v.string(), v.uuid()),
       productId: v.pipe(v.string(), v.uuid()),
       quantityReceived: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
     })),

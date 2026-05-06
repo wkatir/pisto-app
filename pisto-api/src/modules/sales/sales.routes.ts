@@ -31,7 +31,7 @@ sales.get('/customers/:id', async (c) => {
 sales.post('/customers', vValidator('json', createCustomerSchema), async (c) => {
   const businessId = c.get('businessId')
   const body = c.req.valid('json')
-  const customer = await customerService.createCustomer(businessId, body)
+  const customer = await customerService.createCustomer(businessId, body as any)
   return c.json(customer, 201)
 })
 
@@ -40,7 +40,7 @@ sales.put('/customers/:id', vValidator('json', updateCustomerSchema), async (c) 
   const id = c.req.param('id')
   const body = c.req.valid('json')
   try {
-    const customer = await customerService.updateCustomer(businessId, id, body)
+    const customer = await customerService.updateCustomer(businessId, id, body as any)
     return c.json(customer)
   } catch (e) {
     if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)

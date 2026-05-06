@@ -115,7 +115,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<int>(
-                        initialValue: _selectedWarehouse,
+                        value: _selectedWarehouse,
                         decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
                         items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
                         onChanged: (v) => setState(() => _selectedWarehouse = v),
@@ -124,7 +124,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<String?>(
-                        initialValue: _selectedCustomer,
+                        value: _selectedCustomer,
                         decoration: const InputDecoration(labelText: 'Cliente (opcional)', border: OutlineInputBorder()),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('Sin cliente')),
@@ -139,7 +139,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<String>(
-                        initialValue: _paymentStatus,
+                        value: _paymentStatus,
                         decoration: const InputDecoration(labelText: 'Tipo Pago', border: OutlineInputBorder()),
                         items: const [
                           DropdownMenuItem(value: 'paid', child: Text('Contado')),

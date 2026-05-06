@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class InventoryScreen extends ConsumerStatefulWidget {
   const InventoryScreen({super.key});
@@ -601,13 +602,13 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _detailRow(theme, 'SKU', product['sku'] ?? 'N/A'),
-                _detailRow(theme, 'Precio Venta', _fmt.format(salePrice)),
-                _detailRow(theme, 'Precio Costo', _fmt.format(costPrice)),
+                DetailRow(theme: theme, label: 'SKU', value: product['sku'] ?? 'N/A', labelWidth: 110),
+                DetailRow(theme: theme, label: 'Precio Venta', value: _fmt.format(salePrice), labelWidth: 110),
+                DetailRow(theme: theme, label: 'Precio Costo', value: _fmt.format(costPrice), labelWidth: 110),
                 if (product['categoryName'] != null)
-                  _detailRow(theme, 'Categoria', product['categoryName']),
+                  DetailRow(theme: theme, label: 'Categoria', value: product['categoryName'], labelWidth: 110),
                 if (product['stock'] != null)
-                  _detailRow(theme, 'Stock', product['stock'].toString()),
+                  DetailRow(theme: theme, label: 'Stock', value: product['stock'].toString(), labelWidth: 110),
                 const Divider(height: 24),
                 Row(
                   children: [
@@ -673,19 +674,6 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             label: const Text('Editar'),
           ),
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(width: 110, child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
         ],
       ),
     );
@@ -851,21 +839,21 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue: selectedProduct,
+                    value: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedProduct = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    initialValue: fromWarehouse,
+                    value: fromWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Origen', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => fromWarehouse = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    initialValue: toWarehouse,
+                    value: toWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Destino', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => toWarehouse = v),
@@ -929,21 +917,21 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue: selectedProduct,
+                    value: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedProduct = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    initialValue: selectedWarehouse,
+                    value: selectedWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => selectedWarehouse = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    initialValue: adjustmentType,
+                    value: adjustmentType,
                     decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: 'in', child: Text('Entrada')),

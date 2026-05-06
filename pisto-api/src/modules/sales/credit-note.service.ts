@@ -4,6 +4,7 @@ import { sale, creditNote, creditNoteLine, accountReceivable } from '../../db/sc
 import { updateStock } from '../inventory/movement.service'
 import { generateCorrelative } from '../../shared/utils/correlative'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
 import Decimal from 'decimal.js'
 
 interface CreditNoteLineInput {
@@ -22,7 +23,7 @@ export async function createCreditNote(
   if (s.status === 'cancelled') throw new AppError(400, 'Venta cancelada, no se puede crear nota de crédito')
   if (!s.customerId) throw new AppError(400, 'Venta sin cliente, no se puede crear nota de crédito')
 
-  const noteNumber = await generateCorrelative(businessId, 'NC', 'credit_note', 'note_number')
+  const noteNumber = await generateCorrelative(businessId, 'NC', 'credit_note')
 
   return db.transaction(async (tx) => {
     let total = new Decimal(0)
@@ -41,15 +42,17 @@ export async function createCreditNote(
       })
     }
 
-    const [note] = await tx.insert(creditNote).values({
-      businessId,
-      saleId,
-      customerId: s.customerId!,
-      noteNumber,
-      reason: data.reason,
-      total: total.toFixed(2),
-      createdBy: userId,
-    }).returning()
+    const [note] = await tx.insert(creditNote)
+      .output()
+      .values({
+        businessId,
+        saleId,
+        customerId: s.customerId!,
+        noteNumber,
+        reason: data.reason,
+        total: total.toFixed(2),
+        createdBy: userId,
+      } as any)
 
     for (const line of lineData) {
       await tx.insert(creditNoteLine).values({
@@ -58,20 +61,18 @@ export async function createCreditNote(
         quantity: line.quantity,
         unitPrice: line.unitPrice,
         lineTotal: line.lineTotal,
-      })
+      } as any)
 
-      // Return stock
       await updateStock(tx, line.productId, s.warehouseId, parseFloat(line.quantity), 'return_in', userId, line.unitPrice, 'credit_note', note!.id)
     }
 
-    // If sale was credit, reduce the receivable balance
     if (s.paymentStatus === 'credit') {
       const [ar] = await tx.select().from(accountReceivable)
         .where(eq(accountReceivable.saleId, saleId))
       if (ar) {
         const newBalance = new Decimal(ar.balance).minus(total)
         await tx.update(accountReceivable).set({
-          balance: newBalance.lte(0) ? '0' : newBalance.toFixed(2),
+          balance: newBalance.lte(0) ? 0 : parseFloat(newBalance.toFixed(2)),
           status: newBalance.lte(0) ? 'paid' : 'pending',
           updatedAt: new Date(),
         }).where(eq(accountReceivable.id, ar.id))
@@ -88,13 +89,10 @@ export async function listCreditNotes(businessId: string, page = 1, limit = 20) 
     db.select().from(creditNote)
       .where(eq(creditNote.businessId, businessId))
       .orderBy(desc(creditNote.createdAt))
-      .limit(limit).offset(offset),
+      .offset(offset).fetch(limit),
     db.select({ count: count() }).from(creditNote).where(eq(creditNote.businessId, businessId)),
   ])
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function getCreditNote(businessId: string, id: string) {

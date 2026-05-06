@@ -30,14 +30,21 @@ app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOStri
 
 app.route('/auth', auth)
 
-// Rate limiting disabled for development
-// app.use('/inventory/*', authGuard, rateLimitMiddleware)
-app.use('/inventory/*', authGuard)
-app.use('/sales/*', authGuard)
-app.use('/collections/*', authGuard)
-app.use('/purchases/*', authGuard)
-app.use('/reports/*', authGuard)
-app.use('/exports/*', authGuard)
+if (env.RATE_LIMIT_ENABLED) {
+  app.use('/inventory/*', authGuard, rateLimitMiddleware)
+  app.use('/sales/*', authGuard, rateLimitMiddleware)
+  app.use('/collections/*', authGuard, rateLimitMiddleware)
+  app.use('/purchases/*', authGuard, rateLimitMiddleware)
+  app.use('/reports/*', authGuard, rateLimitMiddleware)
+  app.use('/exports/*', authGuard, rateLimitMiddleware)
+} else {
+  app.use('/inventory/*', authGuard)
+  app.use('/sales/*', authGuard)
+  app.use('/collections/*', authGuard)
+  app.use('/purchases/*', authGuard)
+  app.use('/reports/*', authGuard)
+  app.use('/exports/*', authGuard)
+}
 
 app.route('/inventory', inventory)
 app.route('/sales', sales)

@@ -16,7 +16,6 @@ export async function generateCSV(
     stream.on('end', () => resolve(chunks.join('')))
     stream.on('error', reject)
 
-    // Write header mapping
     for (const row of rows) {
       const mapped: Record<string, unknown> = {}
       for (const col of columns) {

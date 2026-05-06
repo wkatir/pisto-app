@@ -19,11 +19,11 @@ void main() async {
 
   final authService = AuthService(apiClient);
   if (authService.hasValidSession()) {
-    authChangeNotifier.setAuthenticated(true);
+    authRouterDelegate.setAuthenticated(true);
   }
 
   apiClient.onSessionExpired = () {
-    authChangeNotifier.setAuthenticated(false);
+    authRouterDelegate.setAuthenticated(false);
   };
 
   runApp(UncontrolledProviderScope(

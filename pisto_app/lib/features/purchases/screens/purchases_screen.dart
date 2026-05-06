@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class PurchasesScreen extends ConsumerStatefulWidget {
   const PurchasesScreen({super.key});
@@ -225,10 +226,10 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _orderDetailRow(theme, 'Fecha', detail['orderDate'] ?? ''),
-                    _orderDetailRow(theme, 'Estado', status),
-                    _orderDetailRow(theme, 'Proveedor', detail['supplierName'] ?? ''),
-                    _orderDetailRow(theme, 'Total', _fmt.format(total)),
+                    DetailRow(theme: theme, label: 'Fecha', value: detail['orderDate'] ?? '', labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Estado', value: status, labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Proveedor', value: detail['supplierName'] ?? '', labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Total', value: _fmt.format(total), labelWidth: 80),
                     if (lines.isNotEmpty) ...[
                       const Divider(height: 24),
                       Text('Lineas', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
@@ -266,18 +267,6 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
               label: const Text('Recibir Mercaderia'),
             ),
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-        ],
-      ),
-    );
-  }
-
-  Widget _orderDetailRow(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 80, child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
         ],
       ),
     );
@@ -356,7 +345,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    initialValue: selectedSupplier,
+                    value: selectedSupplier,
                     decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
                     items: _suppliers.map((s) => DropdownMenuItem(value: s['id'] as String, child: Text(s['companyName'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedSupplier = v),

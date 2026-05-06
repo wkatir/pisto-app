@@ -2,6 +2,7 @@ import { eq, and, desc, count } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { accountPayable, supplierPayment, supplier } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
 import Decimal from 'decimal.js'
 
 export async function listPayables(businessId: string, page = 1, limit = 20) {
@@ -17,14 +18,11 @@ export async function listPayables(businessId: string, page = 1, limit = 20) {
       .leftJoin(supplier, eq(accountPayable.supplierId, supplier.id))
       .where(where)
       .orderBy(desc(accountPayable.createdAt))
-      .limit(limit).offset(offset),
+      .offset(offset).fetch(limit),
     db.select({ count: count() }).from(accountPayable).where(where),
   ])
 
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function createSupplierPayment(
@@ -46,7 +44,7 @@ export async function createSupplierPayment(
   }
 
   return db.transaction(async (tx) => {
-    const [payment] = await tx.insert(supplierPayment).values({
+    const [payment] = await tx.insert(supplierPayment).output().values({
       businessId,
       accountPayableId: payableId,
       paymentMethodId: data.paymentMethodId,
@@ -54,14 +52,14 @@ export async function createSupplierPayment(
       reference: data.reference,
       notes: data.notes,
       paidBy: userId,
-    }).returning()
+    } as any)
 
     const newBalance = currentBalance.minus(payAmount)
     await tx.update(accountPayable).set({
-      balance: newBalance.toFixed(2),
+      balance: parseFloat(newBalance.toFixed(2)),
       status: newBalance.lte(0) ? 'paid' : 'pending',
       updatedAt: new Date(),
-    }).where(eq(accountPayable.id, payableId))
+    } as any).where(eq(accountPayable.id, payableId))
 
     return payment
   })

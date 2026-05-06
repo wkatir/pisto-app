@@ -1,14 +1,18 @@
 import { eq, and, desc, sql } from 'drizzle-orm'
 import { db } from '../../config/database'
-import { inventoryMovement, product } from '../../db/schema'
+import { inventoryMovement, productStock, product } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
 
-export async function getProductMovements(productId: string, limit = 50) {
-  return db.select()
-    .from(inventoryMovement)
+export async function getProductMovements(productId: string, businessId: string, limit = 50) {
+  const [p] = await db.select({ id: product.id }).from(product)
+    .where(and(eq(product.id, productId), eq(product.businessId, businessId)))
+  if (!p) throw new AppError(404, 'Producto no encontrado')
+
+  return db.select().from(inventoryMovement)
     .where(eq(inventoryMovement.productId, productId))
     .orderBy(desc(inventoryMovement.createdAt))
-    .limit(limit)
+    .offset(0)
+    .fetch(limit)
 }
 
 export async function createAdjustment(
@@ -16,42 +20,34 @@ export async function createAdjustment(
   userId: string,
   data: {
     productId: string
-    warehouseId: number
+    warehouseId: string
     type: 'adjustment_in' | 'adjustment_out'
     quantity: string
     unitCost?: string
     notes?: string
   }
 ) {
-  // Verify product belongs to business
-  const [p] = await db.select({ id: product.id })
-    .from(product)
+  const [p] = await db.select({ id: product.id }).from(product)
     .where(and(eq(product.id, data.productId), eq(product.businessId, businessId)))
-
   if (!p) throw new AppError(404, 'Producto no encontrado')
 
   const qty = parseFloat(data.quantity)
   const delta = data.type === 'adjustment_in' ? qty : -qty
 
   return db.transaction(async (tx) => {
-    // Create movement
-    const [movement] = await tx.insert(inventoryMovement).values({
-      productId: data.productId,
-      warehouseId: data.warehouseId,
-      movementType: data.type,
-      quantity: data.quantity,
-      unitCost: data.unitCost,
-      notes: data.notes,
-      createdBy: userId,
-    }).returning()
+    const [movement] = await tx.insert(inventoryMovement)
+      .output()
+      .values({
+        productId: data.productId,
+        warehouseId: data.warehouseId,
+        movementType: data.type,
+        quantity: parseFloat(data.quantity),
+        unitCost: data.unitCost !== undefined ? parseFloat(data.unitCost) : undefined,
+        notes: data.notes,
+        createdBy: userId,
+      } as any)
 
-    // Upsert stock
-    await tx.execute(sql`
-      INSERT INTO product_stock (product_id, warehouse_id, quantity)
-      VALUES (${data.productId}, ${data.warehouseId}, ${delta})
-      ON CONFLICT (product_id, warehouse_id)
-      DO UPDATE SET quantity = product_stock.quantity + ${delta}, updated_at = NOW()
-    `)
+    await upsertStock(tx, data.productId, data.warehouseId, delta)
 
     return movement
   })
@@ -60,7 +56,7 @@ export async function createAdjustment(
 export async function updateStock(
   tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
   productId: string,
-  warehouseId: number,
+  warehouseId: string,
   delta: number,
   movementType: 'purchase_in' | 'sale_out' | 'return_in' | 'return_out' | 'transfer_in' | 'transfer_out',
   userId: string,
@@ -72,17 +68,44 @@ export async function updateStock(
     productId,
     warehouseId,
     movementType,
-    quantity: Math.abs(delta).toString(),
-    unitCost,
+    quantity: Math.abs(delta),
+    unitCost: unitCost !== undefined ? parseFloat(unitCost) : undefined,
     referenceType,
     referenceId,
     createdBy: userId,
-  })
+  } as any)
 
-  await tx.execute(sql`
-    INSERT INTO product_stock (product_id, warehouse_id, quantity)
-    VALUES (${productId}, ${warehouseId}, ${delta})
-    ON CONFLICT (product_id, warehouse_id)
-    DO UPDATE SET quantity = product_stock.quantity + ${delta}, updated_at = NOW()
-  `)
+  await upsertStock(tx, productId, warehouseId, delta)
+}
+
+async function upsertStock(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  productId: string,
+  warehouseId: string,
+  delta: number,
+) {
+  const [existing] = await tx.select({ qty: productStock.quantity })
+    .from(productStock)
+    .where(and(
+      eq(productStock.productId, productId),
+      eq(productStock.warehouseId, warehouseId),
+    ))
+
+  if (existing) {
+    await tx.update(productStock)
+      .set({
+        quantity: sql`${productStock.quantity} + ${delta}`,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(productStock.productId, productId),
+        eq(productStock.warehouseId, warehouseId),
+      ))
+  } else {
+    await tx.insert(productStock).values({
+      productId,
+      warehouseId,
+      quantity: delta,
+    } as any)
+  }
 }

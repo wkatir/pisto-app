@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class CollectionsScreen extends ConsumerStatefulWidget {
   const CollectionsScreen({super.key});
@@ -203,9 +204,9 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                _detailRow(theme, 'Monto Original', _fmt.format(original)),
-                _detailRow(theme, 'Saldo', _fmt.format(balance)),
-                _detailRow(theme, 'Vencimiento', ar['dueDate'] ?? ''),
+                DetailRow(theme: theme, label: 'Monto Original', value: _fmt.format(original), labelWidth: 120),
+                DetailRow(theme: theme, label: 'Saldo', value: _fmt.format(balance), labelWidth: 120),
+                DetailRow(theme: theme, label: 'Vencimiento', value: ar['dueDate'] ?? '', labelWidth: 120),
                 const Divider(height: 24),
                 Row(
                   children: [
@@ -276,18 +277,6 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
               label: const Text('Registrar Abono'),
             ),
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(ThemeData theme, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(width: 120, child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant))),
-          Expanded(child: Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500))),
         ],
       ),
     );

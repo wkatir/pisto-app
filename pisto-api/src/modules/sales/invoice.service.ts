@@ -1,37 +1,56 @@
-import { eq, and, desc, count } from 'drizzle-orm'
+import { eq, and, desc, count, inArray } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { sale, saleLine, saleLineTax, salePayment, accountReceivable, tax } from '../../db/schema'
 import { updateStock } from '../inventory/movement.service'
 import { generateCorrelative } from '../../shared/utils/correlative'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
+import { SaleStatus, PaymentStatus } from '../../shared/constants/status'
 import Decimal from 'decimal.js'
 
 interface SaleLineInput {
-  productId: string; quantity: string; unitPrice: string
-  discountPct?: string; taxId?: number
+  productId: string
+  quantity: string
+  unitPrice: string
+  discountPct?: string
+  taxId?: string
 }
 
 interface PaymentInput {
-  paymentMethodId: number; amount: string; reference?: string
+  paymentMethodId: string
+  amount: string
+  reference?: string
 }
 
 export async function createSale(
   businessId: string,
   userId: string,
   data: {
-    customerId?: string; documentTypeId: number; warehouseId: number
-    dueDate?: string; notes?: string; paymentStatus?: string
-    lines: SaleLineInput[]; payments?: PaymentInput[]
+    customerId?: string
+    documentTypeId: string
+    warehouseId: string
+    dueDate?: string
+    notes?: string
+    paymentStatus?: string
+    lines: SaleLineInput[]
+    payments?: PaymentInput[]
   }
 ) {
-  const saleNumber = await generateCorrelative(businessId, 'FAC', 'sale', 'sale_number')
+  const saleNumber = await generateCorrelative(businessId, 'FAC', 'sale')
 
   return db.transaction(async (tx) => {
     let subtotal = new Decimal(0)
     let totalTax = new Decimal(0)
     let totalDiscount = new Decimal(0)
 
-    // Calculate line totals
+    const taxIds = [...new Set(data.lines.filter(l => l.taxId).map(l => l.taxId!))]
+    const taxMap = new Map<string, number>()
+    if (taxIds.length > 0) {
+      const taxes = await tx.select({ id: tax.id, rate: tax.rate }).from(tax)
+        .where(inArray(tax.id, taxIds))
+      taxes.forEach(t => taxMap.set(t.id, t.rate))
+    }
+
     const lineData = []
     for (const line of data.lines) {
       const qty = new Decimal(line.quantity)
@@ -42,18 +61,13 @@ export async function createSale(
       const afterDiscount = lineSubtotal.minus(discAmount)
 
       let lineTaxAmount = new Decimal(0)
-      let taxRate = new Decimal(0)
 
-      if (line.taxId) {
-        const [t] = await tx.select().from(tax).where(eq(tax.id, line.taxId))
-        if (t) {
-          taxRate = new Decimal(t.rate)
-          lineTaxAmount = afterDiscount.mul(taxRate)
-        }
+      if (line.taxId && taxMap.has(line.taxId)) {
+        const taxRate = new Decimal(taxMap.get(line.taxId)!)
+        lineTaxAmount = afterDiscount.mul(taxRate).div(100)
       }
 
       const lineTotal = afterDiscount.plus(lineTaxAmount)
-
       lineData.push({
         productId: line.productId,
         quantity: line.quantity,
@@ -63,7 +77,6 @@ export async function createSale(
         taxId: line.taxId,
         taxAmount: lineTaxAmount.toFixed(2),
         lineTotal: lineTotal.toFixed(2),
-        taxRate,
         afterDiscount,
       })
 
@@ -73,75 +86,73 @@ export async function createSale(
     }
 
     const total = subtotal.minus(totalDiscount).plus(totalTax)
-    const paymentStatus = data.paymentStatus || 'paid'
+    const paymentStatus = data.paymentStatus || PaymentStatus.PAID
 
-    // Create sale
-    const [newSale] = await tx.insert(sale).values({
-      businessId,
-      customerId: data.customerId,
-      documentTypeId: data.documentTypeId,
-      warehouseId: data.warehouseId,
-      saleNumber,
-      dueDate: data.dueDate,
-      paymentStatus,
-      subtotal: subtotal.toFixed(2),
-      taxAmount: totalTax.toFixed(2),
-      discountAmount: totalDiscount.toFixed(2),
-      total: total.toFixed(2),
-      notes: data.notes,
-      createdBy: userId,
-    }).returning()
+    const [newSale] = await tx.insert(sale)
+      .output()
+      .values({
+        businessId,
+        customerId: data.customerId,
+        documentTypeId: data.documentTypeId,
+        warehouseId: data.warehouseId,
+        saleNumber,
+        dueDate: data.dueDate,
+        paymentStatus,
+        subtotal: subtotal.toFixed(2),
+        taxAmount: totalTax.toFixed(2),
+        discountAmount: totalDiscount.toFixed(2),
+        total: total.toFixed(2),
+        notes: data.notes,
+        createdBy: userId,
+      } as any)
 
-    // Insert lines + deduct stock
     for (const line of lineData) {
-      const [sl] = await tx.insert(saleLine).values({
-        saleId: newSale!.id,
-        productId: line.productId,
-        quantity: line.quantity,
-        unitPrice: line.unitPrice,
-        discountPct: line.discountPct,
-        discountAmount: line.discountAmount,
-        taxId: line.taxId,
-        taxAmount: line.taxAmount,
-        lineTotal: line.lineTotal,
-      }).returning()
+      const [sl] = await tx.insert(saleLine)
+        .output()
+        .values({
+          saleId: newSale!.id,
+          productId: line.productId,
+          quantity: line.quantity,
+          unitPrice: line.unitPrice,
+          discountPct: line.discountPct,
+          discountAmount: line.discountAmount,
+          taxId: line.taxId,
+          taxAmount: line.taxAmount,
+          lineTotal: line.lineTotal,
+        } as any)
 
-      // Tax detail
       if (line.taxId) {
         await tx.insert(saleLineTax).values({
           saleLineId: sl!.id,
           taxId: line.taxId,
           taxBase: line.afterDiscount.toFixed(2),
           taxAmount: line.taxAmount,
-        })
+        } as any)
       }
 
-      // Deduct stock
       await updateStock(tx, line.productId, data.warehouseId, -parseFloat(line.quantity), 'sale_out', userId, line.unitPrice, 'sale', newSale!.id)
     }
 
-    // Payments (if paid)
-    if (data.payments && paymentStatus === 'paid') {
+    if (data.payments && paymentStatus === PaymentStatus.PAID) {
       for (const pay of data.payments) {
         await tx.insert(salePayment).values({
           saleId: newSale!.id,
           paymentMethodId: pay.paymentMethodId,
           amount: pay.amount,
           reference: pay.reference,
-        })
+        } as any)
       }
     }
 
-    // CxC (if credit)
-    if (paymentStatus === 'credit' && data.customerId) {
+    if (paymentStatus === PaymentStatus.CREDIT && data.customerId) {
       await tx.insert(accountReceivable).values({
         businessId,
-        customerId: data.customerId!,
+        customerId: data.customerId,
         saleId: newSale!.id,
         originalAmount: total.toFixed(2),
         balance: total.toFixed(2),
         dueDate: data.dueDate || new Date().toISOString().split('T')[0],
-      } as typeof accountReceivable.$inferInsert)
+      } as any)
     }
 
     return newSale!
@@ -154,23 +165,18 @@ export async function listSales(businessId: string, page = 1, limit = 20) {
     db.select().from(sale)
       .where(eq(sale.businessId, businessId))
       .orderBy(desc(sale.createdAt))
-      .limit(limit).offset(offset),
+      .offset(offset).fetch(limit),
     db.select({ count: count() }).from(sale).where(eq(sale.businessId, businessId)),
   ])
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function getSale(businessId: string, id: string) {
   const [s] = await db.select().from(sale)
     .where(and(eq(sale.id, id), eq(sale.businessId, businessId)))
   if (!s) throw new AppError(404, 'Venta no encontrada')
-
   const lines = await db.select().from(saleLine).where(eq(saleLine.saleId, id))
   const payments = await db.select().from(salePayment).where(eq(salePayment.saleId, id))
-
   return { ...s, lines, payments }
 }
 
@@ -178,21 +184,19 @@ export async function cancelSale(businessId: string, saleId: string, userId: str
   const [s] = await db.select().from(sale)
     .where(and(eq(sale.id, saleId), eq(sale.businessId, businessId)))
   if (!s) throw new AppError(404, 'Venta no encontrada')
-  if (s.status === 'cancelled') throw new AppError(400, 'Venta ya cancelada')
+  if (s.status === SaleStatus.CANCELLED) throw new AppError(400, 'Venta ya cancelada')
 
   return db.transaction(async (tx) => {
     await tx.update(sale).set({
-      status: 'cancelled',
+      status: SaleStatus.CANCELLED,
       cancelledAt: new Date(),
       cancelledBy: userId,
     }).where(eq(sale.id, saleId))
 
-    // Return stock
     const lines = await tx.select().from(saleLine).where(eq(saleLine.saleId, saleId))
     for (const line of lines) {
-      await updateStock(tx, line.productId, s.warehouseId, parseFloat(line.quantity), 'return_in', userId, line.unitPrice, 'sale_cancel', saleId)
+      await updateStock(tx, line.productId, s.warehouseId, parseFloat(String(line.quantity)), 'return_in', userId, String(line.unitPrice), 'sale_cancel', saleId)
     }
-
     return { message: 'Venta cancelada' }
   })
 }

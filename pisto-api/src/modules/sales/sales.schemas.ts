@@ -24,8 +24,8 @@ export const customerQuerySchema = v.object({
 
 export const createSaleSchema = v.object({
   customerId: v.optional(v.pipe(v.string(), v.uuid())),
-  documentTypeId: v.pipe(v.number(), v.integer()),
-  warehouseId: v.pipe(v.number(), v.integer()),
+  documentTypeId: v.pipe(v.string(), v.uuid()),
+  warehouseId: v.pipe(v.string(), v.uuid()),
   dueDate: v.optional(v.string()),
   notes: v.optional(v.string()),
   paymentStatus: v.optional(v.picklist(['paid', 'credit']), 'paid'),
@@ -35,12 +35,12 @@ export const createSaleSchema = v.object({
       quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
       unitPrice: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
       discountPct: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)), '0'),
-      taxId: v.optional(v.pipe(v.number(), v.integer())),
+      taxId: v.optional(v.pipe(v.string(), v.uuid())),
     })),
     v.minLength(1, 'Al menos un producto'),
   ),
   payments: v.optional(v.array(v.object({
-    paymentMethodId: v.pipe(v.number(), v.integer()),
+    paymentMethodId: v.pipe(v.string(), v.uuid()),
     amount: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
     reference: v.optional(v.string()),
   }))),

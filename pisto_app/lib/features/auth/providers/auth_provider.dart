@@ -19,7 +19,7 @@ class Auth extends _$Auth {
       final authService = ref.read(authServiceProvider);
       final response = await authService.login(email, password);
       state = AsyncData(response.user);
-      authChangeNotifier.setAuthenticated(true);
+      authRouterDelegate.setAuthenticated(true);
     } catch (e) {
       state = AsyncError(ApiClient.parseError(e), StackTrace.current);
     }
@@ -45,7 +45,7 @@ class Auth extends _$Auth {
         phone: phone,
       );
       state = AsyncData(response.user);
-      authChangeNotifier.setAuthenticated(true);
+      authRouterDelegate.setAuthenticated(true);
     } catch (e) {
       state = AsyncError(ApiClient.parseError(e), StackTrace.current);
     }
@@ -55,6 +55,6 @@ class Auth extends _$Auth {
     final authService = ref.read(authServiceProvider);
     await authService.logout();
     state = const AsyncData(null);
-    authChangeNotifier.setAuthenticated(false);
+    authRouterDelegate.setAuthenticated(false);
   }
 }

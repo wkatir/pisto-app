@@ -7,7 +7,7 @@ import { AppError } from '../../shared/errors/app-error'
 import Decimal from 'decimal.js'
 
 interface ReceiptLineInput {
-  purchaseOrderLineId: number; productId: string; quantityReceived: string
+  purchaseOrderLineId: string; productId: string; quantityReceived: string
 }
 
 export async function receiveGoods(
@@ -21,15 +21,15 @@ export async function receiveGoods(
   if (!po) throw new AppError(404, 'Orden de compra no encontrada')
   if (po.status === 'cancelled') throw new AppError(400, 'Orden cancelada')
 
-  const receiptNumber = await generateCorrelative(businessId, 'REC-C', 'goods_receipt', 'receipt_number')
+  const receiptNumber = await generateCorrelative(businessId, 'REC-C', 'goods_receipt')
 
   return db.transaction(async (tx) => {
-    const [receipt] = await tx.insert(goodsReceipt).values({
+    const [receipt] = await tx.insert(goodsReceipt).output().values({
       purchaseOrderId,
       receiptNumber,
       notes: data.notes,
       receivedBy: userId,
-    }).returning()
+    } as any)
 
     let allReceived = true
 
@@ -39,38 +39,34 @@ export async function receiveGoods(
         purchaseOrderLineId: line.purchaseOrderLineId,
         productId: line.productId,
         quantityReceived: line.quantityReceived,
-      })
+      } as any)
 
-      // Update PO line received quantity
-      const [poLine] = await tx.select().from(purchaseOrderLine)
-        .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))
+      const [poLine] = await (tx.select().from(purchaseOrderLine)
+        .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))) as any[]
 
       if (poLine) {
         const newReceived = new Decimal(poLine.quantityReceived).plus(new Decimal(line.quantityReceived))
-        await tx.update(purchaseOrderLine)
-          .set({ quantityReceived: newReceived.toFixed(2) })
+        await (tx.update(purchaseOrderLine) as any)
+          .set({ quantityReceived: parseFloat(newReceived.toFixed(2)) })
           .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))
 
         if (newReceived.lt(new Decimal(poLine.quantityOrdered))) {
           allReceived = false
         }
 
-        // Add stock
         await updateStock(
           tx, line.productId, po.warehouseId,
           parseFloat(line.quantityReceived), 'purchase_in',
-          userId, poLine.unitCost, 'purchase_order', purchaseOrderId
+          userId, String(poLine.unitCost), 'purchase_order', purchaseOrderId
         )
       }
     }
 
-    // Update PO status
     const newStatus = allReceived ? 'received' : 'partial'
     await tx.update(purchaseOrder)
       .set({ status: newStatus })
       .where(eq(purchaseOrder.id, purchaseOrderId))
 
-    // If fully received, create account payable
     if (allReceived) {
       const dueDate = new Date()
       dueDate.setDate(dueDate.getDate() + 30) // Default 30 days
@@ -82,7 +78,7 @@ export async function receiveGoods(
         originalAmount: po.total!,
         balance: po.total!,
         dueDate: dueDate.toISOString().split('T')[0],
-      } as typeof accountPayable.$inferInsert)
+      } as any)
     }
 
     return receipt

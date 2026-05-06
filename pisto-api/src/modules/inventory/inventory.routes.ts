@@ -38,7 +38,7 @@ inventory.post('/categories', vValidator('json', createCategorySchema), async (c
 
 inventory.put('/categories/:id', vValidator('json', updateCategorySchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = parseInt(c.req.param('id'))
+  const id = c.req.param('id')
   const body = c.req.valid('json')
   const cat = await catService.updateCategory(businessId, id, body)
   return c.json(cat)
@@ -46,7 +46,7 @@ inventory.put('/categories/:id', vValidator('json', updateCategorySchema), async
 
 inventory.delete('/categories/:id', async (c) => {
   const businessId = c.get('businessId')
-  const id = parseInt(c.req.param('id'))
+  const id = c.req.param('id')
   await catService.deleteCategory(businessId, id)
   return c.json({ message: 'Categoría eliminada' })
 })
@@ -66,7 +66,7 @@ inventory.post('/warehouses', vValidator('json', createWarehouseSchema), async (
 
 inventory.put('/warehouses/:id', vValidator('json', updateWarehouseSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = parseInt(c.req.param('id'))
+  const id = c.req.param('id')
   const body = c.req.valid('json')
   const wh = await whService.updateWarehouse(businessId, id, body)
   return c.json(wh)
@@ -74,7 +74,7 @@ inventory.put('/warehouses/:id', vValidator('json', updateWarehouseSchema), asyn
 
 inventory.delete('/warehouses/:id', async (c) => {
   const businessId = c.get('businessId')
-  const id = parseInt(c.req.param('id'))
+  const id = c.req.param('id')
   await whService.deleteWarehouse(businessId, id)
   return c.json({ message: 'Bodega eliminada' })
 })
@@ -131,8 +131,9 @@ inventory.delete('/products/:id', async (c) => {
 })
 
 inventory.get('/products/:id/movements', async (c) => {
+  const businessId = c.get('businessId')
   const id = c.req.param('id')
-  const movements = await movService.getProductMovements(id)
+  const movements = await movService.getProductMovements(id, businessId)
   return c.json(movements)
 })
 

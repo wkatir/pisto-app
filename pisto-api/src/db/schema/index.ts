@@ -1,5 +1,5 @@
 export * from './core'
 export * from './inventory'
 export * from './sales'
-export * from './collections'
 export * from './purchases'
+export * from './collections'

@@ -3,6 +3,7 @@ import { db } from '../../config/database'
 import { purchaseOrder, purchaseOrderLine, tax } from '../../db/schema'
 import { generateCorrelative } from '../../shared/utils/correlative'
 import { AppError } from '../../shared/errors/app-error'
+import { paginatedResponse } from '../../shared/utils/pagination'
 import Decimal from 'decimal.js'
 
 interface POLineInput {
@@ -18,7 +19,7 @@ export async function createPurchaseOrder(
     lines: POLineInput[]
   }
 ) {
-  const orderNumber = await generateCorrelative(businessId, 'OC', 'purchase_order', 'order_number')
+  const orderNumber = await generateCorrelative(businessId, 'OC', 'purchase_order')
 
   return db.transaction(async (tx) => {
     let subtotal = new Decimal(0)
@@ -36,7 +37,7 @@ export async function createPurchaseOrder(
 
       let lineTaxAmount = new Decimal(0)
       if (line.taxId) {
-        const [t] = await tx.select().from(tax).where(eq(tax.id, line.taxId))
+        const [t] = await tx.select().from(tax).where(eq(tax.id, String(line.taxId)))
         if (t) lineTaxAmount = lineSubtotal.mul(new Decimal(t.rate))
       }
 
@@ -56,7 +57,7 @@ export async function createPurchaseOrder(
 
     const total = subtotal.plus(totalTax)
 
-    const [po] = await tx.insert(purchaseOrder).values({
+    const [po] = await tx.insert(purchaseOrder).output().values({
       businessId,
       supplierId: data.supplierId,
       warehouseId: data.warehouseId,
@@ -68,7 +69,7 @@ export async function createPurchaseOrder(
       total: total.toFixed(2),
       notes: data.notes,
       createdBy: userId,
-    }).returning()
+    } as any)
 
     for (const line of lineData) {
       await tx.insert(purchaseOrderLine).values({
@@ -79,7 +80,7 @@ export async function createPurchaseOrder(
         taxId: line.taxId,
         taxAmount: line.taxAmount,
         lineTotal: line.lineTotal,
-      })
+      } as any)
     }
 
     return po
@@ -92,13 +93,10 @@ export async function listPurchaseOrders(businessId: string, page = 1, limit = 2
     db.select().from(purchaseOrder)
       .where(eq(purchaseOrder.businessId, businessId))
       .orderBy(desc(purchaseOrder.createdAt))
-      .limit(limit).offset(offset),
+      .offset(offset).fetch(limit),
     db.select({ count: count() }).from(purchaseOrder).where(eq(purchaseOrder.businessId, businessId)),
   ])
-  return {
-    data: items,
-    pagination: { page, limit, total: total!.count, pages: Math.ceil(total!.count / limit) },
-  }
+  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }
 
 export async function getPurchaseOrder(businessId: string, id: string) {
@@ -120,7 +118,7 @@ export async function updatePurchaseOrder(businessId: string, id: string, data: 
 
   const [updated] = await db.update(purchaseOrder)
     .set(data as any)
+    .output()
     .where(eq(purchaseOrder.id, id))
-    .returning()
   return updated
 }

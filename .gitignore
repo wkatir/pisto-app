@@ -25,3 +25,6 @@ ehthumbs.db
 
 # Claude Code
 .claude/
+
+# Kilo Code
+.kilo/

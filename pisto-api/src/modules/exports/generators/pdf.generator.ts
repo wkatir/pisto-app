@@ -26,13 +26,11 @@ export async function generatePDF(
   const fontRegular = await pdfDoc.embedStandardFont(StandardFonts.Helvetica)
   const fontBold    = await pdfDoc.embedStandardFont(StandardFonts.HelveticaBold)
 
-  // LETTER size: 612 x 792 pt
   const [pageWidth, pageHeight] = PageSizes.Letter
 
   const usableWidth = pageWidth - MARGIN * 2
   const colWidth    = usableWidth / columns.length
 
-  // Helper: add a fresh page and return its cursor Y (from top)
   const addPage = () => {
     const page = pdfDoc.addPage([pageWidth, pageHeight])
     return page
@@ -40,13 +38,10 @@ export async function generatePDF(
 
   let page     = addPage()
 
-  // We track from the TOP and convert: pdf_y = pageHeight - topOffset
-  // Let's use a simpler model: track "topOffset" (distance from page top) and convert
   let topOffset = MARGIN
 
   const getY = () => pageHeight - topOffset
 
-  // ---- Title ----
   const titleWidth = fontBold.widthOfTextAtSize(title, FONT_SIZE_TITLE)
   page.drawText(title, {
     x: MARGIN + (usableWidth - titleWidth) / 2,
@@ -57,7 +52,6 @@ export async function generatePDF(
   })
   topOffset += FONT_SIZE_TITLE + 6
 
-  // ---- Subtitle: generated date ----
   const dateStr = `Generado: ${new Date().toLocaleString('es-SV')}`
   const dateWidth = fontRegular.widthOfTextAtSize(dateStr, FONT_SIZE_SUB)
   page.drawText(dateStr, {
@@ -69,7 +63,6 @@ export async function generatePDF(
   })
   topOffset += FONT_SIZE_SUB + 10
 
-  // ---- Table header row ----
   const drawTableHeader = (p: ReturnType<typeof pdfDoc.getPage>, to: number) => {
     const rowY = pageHeight - to - HEADER_HEIGHT
     p.drawRectangle({
@@ -94,9 +87,7 @@ export async function generatePDF(
 
   topOffset = drawTableHeader(page, topOffset)
 
-  // ---- Data rows ----
   for (let r = 0; r < rows.length; r++) {
-    // Check if we need a new page (leave 60pt bottom margin)
     if (pageHeight - topOffset - ROW_HEIGHT < 60) {
       page = addPage()
       topOffset = MARGIN
@@ -105,7 +96,6 @@ export async function generatePDF(
 
     const rowY = pageHeight - topOffset - ROW_HEIGHT
 
-    // Alternating row background
     if (r % 2 === 0) {
       page.drawRectangle({
         x: MARGIN,
@@ -131,7 +121,6 @@ export async function generatePDF(
     topOffset += ROW_HEIGHT
   }
 
-  // ---- Footer: total records ----
   topOffset += 10
   if (pageHeight - topOffset < 20) {
     page = addPage()

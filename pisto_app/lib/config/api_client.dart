@@ -81,7 +81,8 @@ class ApiClient {
       final baseUrl =
           kIsWeb ? AppConstants.apiBaseUrlWeb : AppConstants.apiBaseUrl;
 
-      final res = await Dio().post(
+      final refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
+      final res = await refreshDio.post(
         '$baseUrl/auth/refresh',
         data: {'refreshToken': _refreshTokenValue},
       );

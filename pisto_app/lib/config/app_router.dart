@@ -11,7 +11,7 @@ import '../features/purchases/screens/purchases_screen.dart';
 import '../features/reports/screens/reports_screen.dart';
 import '../shared/layouts/shell_layout.dart';
 
-class AuthChangeNotifier extends ChangeNotifier {
+class AuthRouterDelegate extends ChangeNotifier {
   bool _authenticated = false;
   bool get authenticated => _authenticated;
 
@@ -21,13 +21,13 @@ class AuthChangeNotifier extends ChangeNotifier {
   }
 }
 
-final authChangeNotifier = AuthChangeNotifier();
+final authRouterDelegate = AuthRouterDelegate();
 
 final appRouter = GoRouter(
   initialLocation: '/',
-  refreshListenable: authChangeNotifier,
+  refreshListenable: authRouterDelegate,
   redirect: (context, state) {
-    final loggedIn = authChangeNotifier.authenticated;
+    final loggedIn = authRouterDelegate.authenticated;
     final path = state.matchedLocation;
     final isPublic = path == '/' || path == '/login' || path == '/register';
 
