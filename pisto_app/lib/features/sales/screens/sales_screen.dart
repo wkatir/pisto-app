@@ -84,7 +84,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                   children: [
                     FilledButton.icon(
                       onPressed: () async {
-                        await Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateSaleScreen()));
+                        await Navigator.push(context, PageRouteBuilder(
+                          pageBuilder: (context, _, __) => const CreateSaleScreen(),
+                          transitionDuration: Duration.zero,
+                          reverseTransitionDuration: Duration.zero,
+                        ));
                         _loadData();
                       },
                       icon: const Icon(LucideIcons.plus, size: 18),
@@ -404,7 +408,11 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
               const Spacer(),
               OutlinedButton.icon(
                 onPressed: () async {
-                  await Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomerFormScreen()));
+                  await Navigator.push(context, PageRouteBuilder(
+                    pageBuilder: (context, _, __) => const CustomerFormScreen(),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
+                  ));
                   _loadData();
                 },
                 icon: const Icon(LucideIcons.userPlus, size: 18),

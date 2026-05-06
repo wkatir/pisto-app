@@ -138,7 +138,7 @@ class _HeroSection extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-        ).animate().fadeIn(duration: const Duration(milliseconds: 400)).slideY(begin: -0.2),
+        ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
         const SizedBox(height: 20),
         Text(
           t.controlYourBusiness,
@@ -147,7 +147,7 @@ class _HeroSection extends StatelessWidget {
             height: 1.1,
           ),
           textAlign: isWide ? TextAlign.start : TextAlign.center,
-        ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 100)).slideY(begin: 0.1),
+        ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
         const SizedBox(height: 16),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
@@ -159,7 +159,7 @@ class _HeroSection extends StatelessWidget {
             ),
             textAlign: isWide ? TextAlign.start : TextAlign.center,
           ),
-        ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 200)),
+        ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
         const SizedBox(height: 32),
         Wrap(
           spacing: 12,
@@ -179,7 +179,7 @@ class _HeroSection extends StatelessWidget {
               style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16)),
             ),
           ],
-        ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 300)).slideY(begin: 0.2),
+        ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
       ],
     );
 
@@ -280,7 +280,7 @@ class _HeroSection extends StatelessWidget {
           ],
         ),
       ),
-    ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 200)).slideX(begin: 0.1);
+    ).animate().fadeIn(duration: const Duration(milliseconds: 400));
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 48 : 24, vertical: isWide ? 64 : 40),
@@ -426,7 +426,7 @@ class _StatsBar extends StatelessWidget {
                   Text(stats[i].$2, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                 ],
               ),
-            ).animate().fadeIn(duration: const Duration(milliseconds: 400), delay: Duration(milliseconds: 100 * i)),
+            ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
         ],
       ),
     );
@@ -517,7 +517,7 @@ class _FeaturesSection extends StatelessWidget {
                         ],
                       ),
                     ),
-                  ).animate().fadeIn(duration: const Duration(milliseconds: 400), delay: Duration(milliseconds: 80 * i)).slideY(begin: 0.1);
+                  ).animate().fadeIn(duration: const Duration(milliseconds: 400));
                 },
               );
             },
@@ -594,7 +594,7 @@ class _HowItWorksSection extends StatelessWidget {
                         Text(desc, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, height: 1.5), textAlign: TextAlign.center),
                       ],
                     ),
-                  ).animate().fadeIn(duration: const Duration(milliseconds: 400), delay: Duration(milliseconds: 150 * entry.key)).slideY(begin: 0.15),
+                  ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
                 );
               }).toList();
 
@@ -626,7 +626,7 @@ class _HowItWorksSection extends StatelessWidget {
                         ),
                       ],
                     ),
-                  ).animate().fadeIn(duration: const Duration(milliseconds: 400), delay: Duration(milliseconds: 150 * entry.key));
+                  ).animate().fadeIn(duration: const Duration(milliseconds: 400));
                 }).toList(),
               );
             },
@@ -678,7 +678,7 @@ class _CtaSection extends StatelessWidget {
             ),
           ],
         ),
-      ).animate().fadeIn(duration: const Duration(milliseconds: 500)).scale(begin: const Offset(0.97, 0.97)),
+      ).animate().fadeIn(duration: const Duration(milliseconds: 400)),
     );
   }
 }

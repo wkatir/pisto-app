@@ -38,42 +38,42 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const LandingScreen(),
+      pageBuilder: (context, state) => const NoTransitionPage(child: LandingScreen()),
     ),
     GoRoute(
       path: '/login',
-      builder: (context, state) => const LoginScreen(),
+      pageBuilder: (context, state) => const NoTransitionPage(child: LoginScreen()),
     ),
     GoRoute(
       path: '/register',
-      builder: (context, state) => const RegisterScreen(),
+      pageBuilder: (context, state) => const NoTransitionPage(child: RegisterScreen()),
     ),
     ShellRoute(
       builder: (context, state, child) => ShellLayout(child: child),
       routes: [
         GoRoute(
           path: '/dashboard',
-          builder: (context, state) => const DashboardScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: DashboardScreen()),
         ),
         GoRoute(
           path: '/inventory',
-          builder: (context, state) => const InventoryScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: InventoryScreen()),
         ),
         GoRoute(
           path: '/sales',
-          builder: (context, state) => const SalesScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: SalesScreen()),
         ),
         GoRoute(
           path: '/collections',
-          builder: (context, state) => const CollectionsScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: CollectionsScreen()),
         ),
         GoRoute(
           path: '/purchases',
-          builder: (context, state) => const PurchasesScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: PurchasesScreen()),
         ),
         GoRoute(
           path: '/reports',
-          builder: (context, state) => const ReportsScreen(),
+          pageBuilder: (context, state) => const NoTransitionPage(child: ReportsScreen()),
         ),
       ],
     ),
