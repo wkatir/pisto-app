@@ -6,17 +6,18 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../core/providers/theme_provider.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../i18n/translations.g.dart';
+import '../../config/app_theme.dart';
 
 class ShellLayout extends ConsumerWidget {
   final Widget child;
-
   const ShellLayout({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.t;
     final size = MediaQuery.sizeOf(context);
-    final useMobileNav = size.width < 600;
+    final useMobileNav = size.width < Breakpoints.compact;
+    final isExtended = size.width >= Breakpoints.sidebarExtended;
 
     final destinations = [
       _NavDest(LucideIcons.layoutDashboard, t.dashboard, '/dashboard'),
@@ -24,199 +25,340 @@ class ShellLayout extends ConsumerWidget {
       _NavDest(LucideIcons.receipt, t.sales, '/sales'),
       _NavDest(LucideIcons.wallet, t.collections, '/collections'),
       _NavDest(LucideIcons.shoppingCart, t.purchases, '/purchases'),
-      _NavDest(LucideIcons.barChart3, t.reports, '/reports'),
+      _NavDest(LucideIcons.walletMinimal, t.expenses, '/expenses'),
+      _NavDest(LucideIcons.chartColumn, t.reports, '/reports'),
     ];
 
-    final selected = _selectedIndex(context, destinations);
-
-    void onDestination(BuildContext context, int index) {
-      context.go(destinations[index].path);
-    }
+    final path = GoRouterState.of(context).uri.path;
+    final selectedIdx = destinations.indexWhere((d) => d.path == path).clamp(0, destinations.length - 1);
 
     if (useMobileNav) {
       return Scaffold(
         body: child,
         bottomNavigationBar: NavigationBar(
-          selectedIndex: selected,
-          onDestinationSelected: (i) => onDestination(context, i),
+          selectedIndex: selectedIdx,
+          onDestinationSelected: (i) => context.go(destinations[i].path),
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
           destinations: destinations
-              .map((d) => NavigationDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.icon),
-                    label: d.label,
-                  ))
+              .map((d) => NavigationDestination(icon: Icon(d.icon), label: d.label))
               .toList(),
         ),
       );
     }
 
-    final isExtended = size.width >= 1200;
-
     return Scaffold(
       body: Row(
         children: [
-          SizedBox(
-            width: isExtended ? 220 : 72,
-            child: NavigationRail(
-              selectedIndex: selected,
-              onDestinationSelected: (i) => onDestination(context, i),
-              extended: isExtended,
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              leading: _RailHeader(isExtended: isExtended),
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: _RailFooter(isExtended: isExtended),
-                ),
-              ),
-              destinations: destinations
-                  .map((d) => NavigationRailDestination(
-                        icon: Icon(d.icon),
-                        selectedIcon: Icon(d.icon),
-                        label: Text(d.label),
-                      ))
-                  .toList(),
-            ),
+          _Sidebar(
+            destinations: destinations,
+            selectedIdx: selectedIdx,
+            isExtended: isExtended,
+            ref: ref,
+            t: t,
           ),
-          VerticalDivider(
-            width: 1,
-            thickness: 1,
-            color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
-          ),
+          Container(width: 1, color: const Color(0xFF1F1F1F)),
           Expanded(child: child),
         ],
       ),
     );
   }
+}
 
-  int _selectedIndex(BuildContext context, List<_NavDest> destinations) {
-    final path = GoRouterState.of(context).uri.path;
-    final idx = destinations.indexWhere((d) => d.path == path);
-    return idx >= 0 ? idx : 0;
+// ── Sidebar completo (reemplaza NavigationRail) ───────────────────────────────
+
+class _Sidebar extends ConsumerWidget {
+  final List<_NavDest> destinations;
+  final int selectedIdx;
+  final bool isExtended;
+  final WidgetRef ref;
+  final Translations t;
+
+  const _Sidebar({
+    required this.destinations,
+    required this.selectedIdx,
+    required this.isExtended,
+    required this.ref,
+    required this.t,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final width = isExtended ? 224.0 : 72.0;
+
+    return Container(
+      width: width,
+      color: const Color(0xFF0D0D0D),
+      child: Column(
+        children: [
+          // Logo
+          _SidebarLogo(isExtended: isExtended),
+          const SizedBox(height: 8),
+          // Nav items
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.symmetric(horizontal: isExtended ? 12 : 8, vertical: 4),
+              children: destinations.asMap().entries.map((e) {
+                return _NavItem(
+                  dest: e.value,
+                  selected: e.key == selectedIdx,
+                  isExtended: isExtended,
+                  onTap: () => context.go(e.value.path),
+                );
+              }).toList(),
+            ),
+          ),
+          // Footer
+          _SidebarFooter(isExtended: isExtended, t: t),
+        ],
+      ),
+    );
   }
 }
 
-class _RailHeader extends StatelessWidget {
+class _SidebarLogo extends StatelessWidget {
   final bool isExtended;
-  const _RailHeader({required this.isExtended});
+  const _SidebarLogo({required this.isExtended});
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
-
     return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: isExtended ? 16 : 0,
-        vertical: 12,
-      ),
+      padding: EdgeInsets.fromLTRB(isExtended ? 16 : 0, 20, isExtended ? 16 : 0, 4),
       child: isExtended
           ? Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
-                    color: cs.primary,
-                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.turquoise,
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(LucideIcons.landmark, size: 20, color: cs.onPrimary),
+                  child: const Icon(LucideIcons.landmark, size: 16, color: Colors.black),
                 ),
                 const SizedBox(width: 10),
-                Text(
+                const Text(
                   'Pisto',
-                  style: theme.textTheme.titleLarge?.copyWith(
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: cs.primary,
+                    letterSpacing: -0.3,
                   ),
                 ),
               ],
             )
-          : Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: cs.primary,
-                borderRadius: BorderRadius.circular(10),
+          : Center(
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: AppTheme.turquoise,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: const Icon(LucideIcons.landmark, size: 18, color: Colors.black),
               ),
-              child: Icon(LucideIcons.landmark, size: 20, color: cs.onPrimary),
             ),
     );
   }
 }
 
-class _RailFooter extends ConsumerWidget {
+class _NavItem extends StatelessWidget {
+  final _NavDest dest;
+  final bool selected;
   final bool isExtended;
-  const _RailFooter({required this.isExtended});
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.dest,
+    required this.selected,
+    required this.isExtended,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = selected ? Colors.black : AppTheme.sidebarMuted;
+    final labelColor = selected ? AppTheme.turquoise : AppTheme.sidebarMuted;
+    final bg = selected ? AppTheme.turquoise : Colors.transparent;
+    final hoverBg = selected ? AppTheme.turquoise : AppTheme.sidebarHover;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Material(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          hoverColor: hoverBg,
+          splashColor: AppTheme.turquoise.withValues(alpha: 0.2),
+          child: Container(
+            height: 40,
+            padding: EdgeInsets.symmetric(horizontal: isExtended ? 12 : 0),
+            child: isExtended
+                ? Row(
+                    children: [
+                      Icon(dest.icon, size: 18, color: iconColor),
+                      const SizedBox(width: 10),
+                      Text(
+                        dest.label,
+                        style: TextStyle(
+                          color: labelColor,
+                          fontSize: 13,
+                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                    ],
+                  )
+                : Center(
+                    child: Icon(dest.icon, size: 20, color: selected ? Colors.black : AppTheme.sidebarMuted),
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SidebarFooter extends ConsumerWidget {
+  final bool isExtended;
+  final Translations t;
+  const _SidebarFooter({required this.isExtended, required this.t});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final t = context.t;
-    final cs = Theme.of(context).colorScheme;
     final ThemeMode mode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
 
-    final (themeIcon, themeTooltip) = switch (mode) {
-      ThemeMode.system => (LucideIcons.monitor, t.systemTheme),
-      ThemeMode.light => (LucideIcons.sun, t.lightTheme),
-      ThemeMode.dark => (LucideIcons.moon, t.darkTheme),
+    final themeIcon = switch (mode) {
+      ThemeMode.system => LucideIcons.monitor,
+      ThemeMode.light => LucideIcons.sun,
+      ThemeMode.dark => LucideIcons.moon,
     };
-
+    final themeLabel = switch (mode) {
+      ThemeMode.system => t.systemTheme,
+      ThemeMode.light => t.lightTheme,
+      ThemeMode.dark => t.darkTheme,
+    };
     final langLabel = locale.languageCode == 'es' ? 'ES' : 'EN';
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (isExtended)
-          ListTile(
-            dense: true,
-            leading: Icon(themeIcon, size: 20),
-            title: Text('${t.theme}: $themeTooltip', style: const TextStyle(fontSize: 13)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            onTap: () => ref.read(themeModeProvider.notifier).cycle(),
-          )
-        else
-          IconButton(
-            icon: Icon(themeIcon, size: 20),
-            tooltip: '${t.theme}: $themeTooltip',
-            onPressed: () => ref.read(themeModeProvider.notifier).cycle(),
+        Container(height: 1, color: const Color(0xFF1F1F1F)),
+        Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isExtended ? 12 : 8,
+            vertical: 8,
           ),
-        if (isExtended)
-          ListTile(
-            dense: true,
-            leading: const Icon(LucideIcons.globe, size: 20),
-            title: Text('${t.language}: $langLabel', style: const TextStyle(fontSize: 13)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            onTap: () => ref.read(localeProvider.notifier).toggleLocale(),
-          )
-        else
-          IconButton(
-            icon: const Icon(LucideIcons.globe, size: 20),
-            tooltip: '${t.language}: $langLabel',
-            onPressed: () => ref.read(localeProvider.notifier).toggleLocale(),
-          ),
+          child: isExtended
+              ? Column(
+                  children: [
+                    _FooterTile(
+                      icon: themeIcon,
+                      label: '${t.theme}: $themeLabel',
+                      onTap: () => ref.read(themeModeProvider.notifier).cycle(),
+                    ),
+                    _FooterTile(
+                      icon: LucideIcons.globe,
+                      label: '${t.language}: $langLabel',
+                      onTap: () => ref.read(localeProvider.notifier).toggleLocale(),
+                    ),
+                    _FooterTile(
+                      icon: LucideIcons.settings,
+                      label: t.settings,
+                      onTap: () => context.go('/settings'),
+                    ),
+                    _FooterTile(
+                      icon: LucideIcons.logOut,
+                      label: t.logout,
+                      color: const Color(0xFFEF4444),
+                      onTap: () {
+                        ref.read(authProvider.notifier).logout();
+                        context.go('/login');
+                      },
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    _IconBtn(icon: themeIcon, tooltip: '${t.theme}: $themeLabel', onTap: () => ref.read(themeModeProvider.notifier).cycle()),
+                    _IconBtn(icon: LucideIcons.globe, tooltip: '${t.language}: $langLabel', onTap: () => ref.read(localeProvider.notifier).toggleLocale()),
+                    _IconBtn(icon: LucideIcons.settings, tooltip: t.settings, onTap: () => context.go('/settings')),
+                    _IconBtn(icon: LucideIcons.logOut, tooltip: t.logout, color: const Color(0xFFEF4444), onTap: () {
+                      ref.read(authProvider.notifier).logout();
+                      context.go('/login');
+                    }),
+                  ],
+                ),
+        ),
         const SizedBox(height: 4),
-        if (isExtended)
-          ListTile(
-            dense: true,
-            leading: Icon(LucideIcons.logOut, size: 20, color: cs.error),
-            title: Text(t.logout, style: TextStyle(color: cs.error, fontSize: 13)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            onTap: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
-            },
-          )
-        else
-          IconButton(
-            icon: Icon(LucideIcons.logOut, size: 20, color: cs.error),
-            tooltip: t.logout,
-            onPressed: () {
-              ref.read(authProvider.notifier).logout();
-              context.go('/login');
-            },
-          ),
-        const SizedBox(height: 16),
       ],
+    );
+  }
+}
+
+class _FooterTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _FooterTile({required this.icon, required this.label, this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? const Color(0xFFAAAAAA);
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(6),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(6),
+        hoverColor: const Color(0xFF1A1A1A),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          child: Row(
+            children: [
+              Icon(icon, size: 14, color: c),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(label, style: TextStyle(fontSize: 12, color: c, fontWeight: FontWeight.w400), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final String tooltip;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _IconBtn({required this.icon, required this.tooltip, this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          hoverColor: const Color(0xFF1A1A1A),
+          child: SizedBox(
+            width: 40,
+            height: 36,
+            child: Icon(icon, size: 17, color: color ?? const Color(0xFFAAAAAA)),
+          ),
+        ),
+      ),
     );
   }
 }

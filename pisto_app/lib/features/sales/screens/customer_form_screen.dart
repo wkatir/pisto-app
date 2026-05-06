@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 
 class CustomerFormScreen extends ConsumerStatefulWidget {
@@ -72,7 +73,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 500;
+          final isNarrow = constraints.maxWidth < Breakpoints.formStack;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
@@ -81,7 +82,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _customerType,
+                    initialValue: _customerType,
                     decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: 'person', child: Text('Persona')),
@@ -92,32 +93,86 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                   const SizedBox(height: 16),
                   if (_customerType == 'person') ...[
                     if (isNarrow) ...[
-                      TextFormField(controller: _firstNameCtrl, decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder())),
+                      TextFormField(
+                        controller: _firstNameCtrl,
+                        decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder()),
+                        validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                      ),
                       const SizedBox(height: 16),
                       TextFormField(controller: _lastNameCtrl, decoration: const InputDecoration(labelText: 'Apellido', border: OutlineInputBorder())),
                     ] else
                       Row(
                         children: [
-                          Expanded(child: TextFormField(controller: _firstNameCtrl, decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder()))),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _firstNameCtrl,
+                              decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder()),
+                              validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                            ),
+                          ),
                           const SizedBox(width: 16),
                           Expanded(child: TextFormField(controller: _lastNameCtrl, decoration: const InputDecoration(labelText: 'Apellido', border: OutlineInputBorder()))),
                         ],
                       ),
                   ] else
-                    TextFormField(controller: _companyCtrl, decoration: const InputDecoration(labelText: 'Nombre Empresa', border: OutlineInputBorder())),
+                    TextFormField(
+                      controller: _companyCtrl,
+                      decoration: const InputDecoration(labelText: 'Nombre Empresa', border: OutlineInputBorder()),
+                      validator: (v) => (v == null || v.isEmpty) ? 'Requerido' : null,
+                    ),
                   const SizedBox(height: 16),
                   TextFormField(controller: _taxIdCtrl, decoration: const InputDecoration(labelText: 'NIT / DUI', border: OutlineInputBorder())),
                   const SizedBox(height: 16),
                   if (isNarrow) ...[
-                    TextFormField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder())),
+                    TextFormField(
+                      controller: _emailCtrl,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return null; // opcional
+                        if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v)) return 'Email inválido';
+                        return null;
+                      },
+                    ),
                     const SizedBox(height: 16),
-                    TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder())),
+                    TextFormField(
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder()),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return null; // opcional
+                        if (!RegExp(r'^\+?[\d\s\-]{7,15}$').hasMatch(v)) return 'Teléfono inválido (7-15 dígitos)';
+                        return null;
+                      },
+                    ),
                   ] else
                     Row(
                       children: [
-                        Expanded(child: TextFormField(controller: _emailCtrl, decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()))),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _emailCtrl,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return null; // opcional
+                              if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v)) return 'Email inválido';
+                              return null;
+                            },
+                          ),
+                        ),
                         const SizedBox(width: 16),
-                        Expanded(child: TextFormField(controller: _phoneCtrl, decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder()))),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _phoneCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: const InputDecoration(labelText: 'Teléfono', border: OutlineInputBorder()),
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return null; // opcional
+                              if (!RegExp(r'^\+?[\d\s\-]{7,15}$').hasMatch(v)) return 'Teléfono inválido (7-15 dígitos)';
+                              return null;
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   const SizedBox(height: 16),

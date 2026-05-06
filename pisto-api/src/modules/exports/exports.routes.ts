@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import * as reportService from '../reports/report.service'
+import * as invoiceService from '../sales/invoice.service'
 import { generateExcel } from './generators/excel.generator'
 import { generatePDF } from './generators/pdf.generator'
 import { generateCSV } from './generators/csv.generator'
@@ -7,6 +8,10 @@ import { AppError } from '../../shared/errors/app-error'
 import type { AppEnv } from '../../types/app-env'
 
 const exports_ = new Hono<AppEnv>()
+
+function safeFilename(name: string): string {
+  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'export'
+}
 
 const reportConfigs: Record<string, {
   title: string
@@ -68,7 +73,7 @@ exports_.get('/:report/excel', async (c) => {
   const buffer = await generateExcel(config.title, config.columns, data)
 
   c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  c.header('Content-Disposition', `attachment; filename="${report}.xlsx"`)
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.xlsx"`)
   return c.body(new Uint8Array(buffer))
 })
 
@@ -85,7 +90,7 @@ exports_.get('/:report/pdf', async (c) => {
   const buffer = await generatePDF(config.title, config.columns, data)
 
   c.header('Content-Type', 'application/pdf')
-  c.header('Content-Disposition', `attachment; filename="${report}.pdf"`)
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.pdf"`)
   return c.body(buffer as unknown as ArrayBuffer)
 })
 
@@ -102,8 +107,47 @@ exports_.get('/:report/csv', async (c) => {
   const csv = await generateCSV(config.columns, data)
 
   c.header('Content-Type', 'text/csv')
-  c.header('Content-Disposition', `attachment; filename="${report}.csv"`)
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.csv"`)
   return c.body(csv)
+})
+
+exports_.get('/invoices/:id/pdf', async (c) => {
+  const businessId = c.get('businessId')
+  const id = c.req.param('id')
+
+  const sale = await invoiceService.getSale(businessId, id)
+
+  const columns = [
+    { header: 'Producto', key: 'productName', width: 30 },
+    { header: 'Cantidad', key: 'quantity', width: 12 },
+    { header: 'Precio Unit.', key: 'unitPrice', width: 15 },
+    { header: 'Descuento', key: 'discountAmount', width: 15 },
+    { header: 'Impuesto', key: 'taxAmount', width: 15 },
+    { header: 'Total', key: 'lineTotal', width: 15 },
+  ]
+
+  const rows = (sale.lines as any[]).map((l: any) => ({
+    productName: l.productName ?? l.productId,
+    quantity: l.quantity,
+    unitPrice: l.unitPrice,
+    discountAmount: l.discountAmount ?? '0.00',
+    taxAmount: l.taxAmount ?? '0.00',
+    lineTotal: l.lineTotal,
+  }))
+
+  rows.push(
+    { productName: '', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: '' },
+    { productName: 'Subtotal', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.subtotal ?? '') },
+    { productName: 'Impuestos', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.taxAmount ?? '') },
+    { productName: 'TOTAL', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.total ?? '') },
+  )
+
+  const title = `Factura ${sale.saleNumber ?? id}`
+  const buffer = await generatePDF(title, columns, rows)
+
+  c.header('Content-Type', 'application/pdf')
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(`factura-${sale.saleNumber ?? id}`)}.pdf"`)
+  return c.body(buffer as unknown as ArrayBuffer)
 })
 
 export { exports_ as exports }

@@ -7,14 +7,14 @@ import { paginatedResponse } from '../../shared/utils/pagination'
 import Decimal from 'decimal.js'
 
 interface POLineInput {
-  productId: string; quantityOrdered: string; unitCost: string; taxId?: number
+  productId: string; quantityOrdered: string; unitCost: string; taxId?: string
 }
 
 export async function createPurchaseOrder(
   businessId: string,
   userId: string,
   data: {
-    supplierId: string; warehouseId: number
+    supplierId: string; warehouseId: string
     expectedDate?: string; notes?: string
     lines: POLineInput[]
   }
@@ -27,7 +27,7 @@ export async function createPurchaseOrder(
 
     const lineData: {
       productId: string; quantityOrdered: string; unitCost: string
-      taxId?: number; taxAmount: string; lineTotal: string
+      taxId?: string; taxAmount: string; lineTotal: string
     }[] = []
 
     for (const line of data.lines) {
@@ -37,7 +37,7 @@ export async function createPurchaseOrder(
 
       let lineTaxAmount = new Decimal(0)
       if (line.taxId) {
-        const [t] = await tx.select().from(tax).where(eq(tax.id, String(line.taxId)))
+        const [t] = await tx.select().from(tax).where(eq(tax.id, line.taxId))
         if (t) lineTaxAmount = lineSubtotal.mul(new Decimal(t.rate))
       }
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 
@@ -73,7 +74,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       children: [
                         Row(
                           children: [
-                            Icon(LucideIcons.barChart3, size: 28, color: cs.primary),
+                            Icon(LucideIcons.chartColumn, size: 28, color: cs.primary),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text('Reportes', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
@@ -144,7 +145,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
-            final crossCount = constraints.maxWidth > 700 ? 4 : 2;
+            final crossCount = constraints.maxWidth > Breakpoints.gridDense ? 4 : 2;
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -179,7 +180,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         const SizedBox(height: 8),
                         AutoSizeText(
                           item.value,
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+                          style: AppTheme.mono(fontSize: 20, fontWeight: FontWeight.w700),
                           maxLines: 1,
                           minFontSize: 12,
                           overflow: TextOverflow.ellipsis,
@@ -236,7 +237,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   showTitles: true,
                   reservedSize: 55,
                   interval: maxRevenue > 0 ? maxRevenue / 4 : 1,
-                  getTitlesWidget: (value, meta) => Text('\$${value.toInt()}', style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: cs.onSurfaceVariant)),
+                  getTitlesWidget: (value, meta) => Text('\$${value.toInt()}', style: AppTheme.mono(fontSize: 10, color: cs.onSurfaceVariant)),
                 ),
               ),
               bottomTitles: AxisTitles(
@@ -257,7 +258,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 getTooltipColor: (group) => cs.inverseSurface,
                 getTooltipItem: (group, groupIndex, rod, rodIndex) {
                   final name = (_topProducts[group.x] as Map<String, dynamic>)['name'] ?? '';
-                  return BarTooltipItem('$name\n${_fmt.format(rod.toY)}', TextStyle(color: cs.onInverseSurface, fontSize: 12, fontWeight: FontWeight.w500));
+                  return BarTooltipItem('$name\n${_fmt.format(rod.toY)}', AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w500, color: cs.onInverseSurface));
                 },
               ),
             ),
@@ -284,15 +285,14 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   Widget _buildGrossProfitSection(ThemeData theme) {
     final cs = theme.colorScheme;
 
-    if (_grossProfit == null || _grossProfit is! List || (_grossProfit as List).isEmpty) {
+    final data = _grossProfit is Map<String, dynamic> ? (_grossProfit as Map<String, dynamic>) : null;
+    if (data == null) {
       return _SectionCard(
         title: 'Margen Bruto',
         icon: LucideIcons.percent,
         child: SizedBox(height: 200, child: Center(child: Text('Sin datos', style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)))),
       );
     }
-
-    final data = (_grossProfit as List)[0] as Map<String, dynamic>;
     final revenue = double.tryParse(data['revenue']?.toString() ?? '0') ?? 0;
     final cost = double.tryParse(data['cost']?.toString() ?? '0') ?? 0;
     final profit = double.tryParse(data['gross_profit']?.toString() ?? '0') ?? 0;
@@ -378,10 +378,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               DataCell(Text(p['name']?.toString() ?? '', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500))),
               DataCell(Text(p['sku']?.toString() ?? '', style: theme.textTheme.bodySmall)),
               DataCell(Text(p['total_stock']?.toString() ?? '0', style: theme.textTheme.bodySmall)),
-              DataCell(Text(_fmt.format(double.tryParse(p['cost_price']?.toString() ?? '0') ?? 0), style: theme.textTheme.bodySmall)),
+              DataCell(Text(_fmt.format(double.tryParse(p['cost_price']?.toString() ?? '0') ?? 0), style: AppTheme.mono(fontSize: 12))),
               DataCell(Text(
                 _fmt.format(double.tryParse(p['valuation']?.toString() ?? '0') ?? 0),
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+                style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w600),
               )),
             ]);
           }).toList(),
@@ -458,7 +458,7 @@ class _ProfitRow extends StatelessWidget {
         Icon(icon, size: 16, color: color),
         const SizedBox(width: 8),
         Expanded(child: Text(label, style: theme.textTheme.bodySmall)),
-        Text(value, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+        Text(value, style: AppTheme.mono(fontSize: 14, fontWeight: FontWeight.w600, color: color)),
       ],
     );
   }

@@ -25,7 +25,7 @@ dependencies:
   freezed_annotation: ^3.1.0
   json_annotation: ^4.11.0
   flutter_animate: ^4.5.2
-  lucide_icons_flutter: ^3.1.11
+  lucide_icons_flutter: ^3.1.13
   slang: ^4.14.0
   slang_flutter: ^4.14.0
   auto_size_text: ^3.0.0
@@ -39,6 +39,7 @@ dev_dependencies:
   freezed: ^3.2.5
   json_serializable: ^6.13.0
   riverpod_generator: ^4.0.3
+  slang_build_runner: ^4.14.0
 
 flutter:
   uses-material-design: true

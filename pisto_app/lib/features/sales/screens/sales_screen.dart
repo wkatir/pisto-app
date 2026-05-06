@@ -1,6 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -20,6 +25,10 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
   List<dynamic> _customers = [];
   List<dynamic> _creditNotes = [];
   bool _loading = true;
+
+  // ── Bulk selection (TAREA 2.6) ──
+  bool _selectionMode = false;
+  final Set<String> _selectedIds = {};
 
   final _fmt = currencyFmt;
 
@@ -46,9 +55,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
         svc.listCreditNotes(),
       ]);
       setState(() {
-        _invoices = (results[0])['data'] as List<dynamic>;
-        _customers = (results[1])['data'] as List<dynamic>;
-        _creditNotes = (results[2])['data'] as List<dynamic>;
+        _invoices = ((results[0])['data'] as List<dynamic>?) ?? [];
+        _customers = ((results[1])['data'] as List<dynamic>?) ?? [];
+        _creditNotes = ((results[2])['data'] as List<dynamic>?) ?? [];
         _loading = false;
       });
     } catch (e) {
@@ -62,6 +71,13 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
     final cs = theme.colorScheme;
 
     return Scaffold(
+      floatingActionButton: _selectionMode && _selectedIds.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _bulkMarkPaid,
+              icon: const Icon(LucideIcons.circleCheck),
+              label: Text('Marcar ${_selectedIds.length} como pagadas'),
+            )
+          : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -75,6 +91,15 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                     Icon(LucideIcons.receipt, size: 28, color: cs.primary),
                     const SizedBox(width: 12),
                     Expanded(child: Text('Ventas', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    if (_selectionMode)
+                      IconButton(
+                        icon: const Icon(LucideIcons.x),
+                        tooltip: 'Cancelar selección',
+                        onPressed: () => setState(() {
+                          _selectionMode = false;
+                          _selectedIds.clear();
+                        }),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -85,7 +110,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                     FilledButton.icon(
                       onPressed: () async {
                         await Navigator.push(context, PageRouteBuilder(
-                          pageBuilder: (context, _, __) => const CreateSaleScreen(),
+                          pageBuilder: (context, _, _) => const CreateSaleScreen(),
                           transitionDuration: Duration.zero,
                           reverseTransitionDuration: Duration.zero,
                         ));
@@ -115,7 +140,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const _SalesListSkeleton()
                 : TabBarView(
                     controller: _tabController,
                     children: [
@@ -156,31 +181,49 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
         final status = inv['status'] ?? 'completed';
         final paymentStatus = inv['paymentStatus'] ?? 'paid';
         final total = double.tryParse(inv['total']?.toString() ?? '0') ?? 0;
+        final invoiceId = inv['id'] as String? ?? '';
+        final isSelected = _selectedIds.contains(invoiceId);
 
         return Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 8),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+            side: BorderSide(
+              color: isSelected
+                  ? cs.primary.withValues(alpha: 0.6)
+                  : cs.outlineVariant.withValues(alpha: 0.4),
+            ),
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: status == 'cancelled'
-                    ? cs.errorContainer.withValues(alpha: 0.5)
-                    : cs.primaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                status == 'cancelled' ? LucideIcons.fileX : LucideIcons.fileText,
-                size: 20,
-                color: status == 'cancelled' ? cs.error : cs.primary,
-              ),
-            ),
+            leading: _selectionMode
+                ? Checkbox(
+                    value: isSelected,
+                    onChanged: (v) => setState(() {
+                      if (v == true) {
+                        _selectedIds.add(invoiceId);
+                      } else {
+                        _selectedIds.remove(invoiceId);
+                        if (_selectedIds.isEmpty) _selectionMode = false;
+                      }
+                    }),
+                  )
+                : Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: status == 'cancelled'
+                          ? cs.errorContainer.withValues(alpha: 0.5)
+                          : cs.primaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      status == 'cancelled' ? LucideIcons.fileX : LucideIcons.fileText,
+                      size: 20,
+                      color: status == 'cancelled' ? cs.error : cs.primary,
+                    ),
+                  ),
             title: Text(inv['saleNumber'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Row(
               children: [
@@ -189,21 +232,65 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                 _PaymentChip(status: paymentStatus),
               ],
             ),
-            trailing: Flexible(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_fmt.format(total), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  _StatusChip(status: status),
-                ],
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _fmt.format(total),
+                      style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    _StatusChip(status: status),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                IconButton(
+                  icon: const Icon(LucideIcons.fileDown, size: 18),
+                  tooltip: 'Descargar PDF',
+                  onPressed: () => _downloadInvoicePdf(context, invoiceId),
+                ),
+              ],
             ),
-            onTap: () => _showInvoiceDetail(context, inv),
+            onLongPress: () => setState(() {
+              _selectionMode = true;
+              _selectedIds.add(invoiceId);
+            }),
+            onTap: _selectionMode
+                ? () => setState(() {
+                    if (isSelected) {
+                      _selectedIds.remove(invoiceId);
+                      if (_selectedIds.isEmpty) _selectionMode = false;
+                    } else {
+                      _selectedIds.add(invoiceId);
+                    }
+                  })
+                : () => _showInvoiceDetail(context, inv),
           ),
         );
       },
+    );
+  }
+
+  // ── PDF Download ──
+
+  void _downloadInvoicePdf(BuildContext context, String invoiceId) {
+    final baseUrl = kIsWeb ? AppConstants.apiBaseUrlWeb : AppConstants.apiBaseUrl;
+    final pdfUrl = '$baseUrl/exports/invoices/$invoiceId/pdf';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('PDF: $pdfUrl'),
+        action: SnackBarAction(
+          label: 'Copiar',
+          onPressed: () => Clipboard.setData(ClipboardData(text: pdfUrl)),
+        ),
+        duration: const Duration(seconds: 5),
+      ),
     );
   }
 
@@ -311,7 +398,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(LucideIcons.alertTriangle, size: 22, color: cs.error),
+            Icon(LucideIcons.triangleAlert, size: 22, color: cs.error),
             const SizedBox(width: 8),
             const Text('Anular Venta'),
           ],
@@ -394,6 +481,42 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
     );
   }
 
+  // ── Bulk Mark Paid ──
+
+  void _bulkMarkPaid() {
+    final count = _selectedIds.length;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(LucideIcons.circleCheck, size: 22, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('Marcar como pagadas'),
+          ],
+        ),
+        content: Text('¿Marcar $count factura${count == 1 ? '' : 's'} como pagadas?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _selectionMode = false;
+                _selectedIds.clear();
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$count factura${count == 1 ? '' : 's'} marcada${count == 1 ? '' : 's'} como pagadas')),
+              );
+              _loadData();
+            },
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Customers Tab ──
 
   Widget _buildCustomersTab(ThemeData theme) {
@@ -409,7 +532,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
               OutlinedButton.icon(
                 onPressed: () async {
                   await Navigator.push(context, PageRouteBuilder(
-                    pageBuilder: (context, _, __) => const CustomerFormScreen(),
+                    pageBuilder: (context, _, _) => const CustomerFormScreen(),
                     transitionDuration: Duration.zero,
                     reverseTransitionDuration: Duration.zero,
                   ));
@@ -638,6 +761,81 @@ class _PaymentChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500)),
+    );
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+class _SalesSkeletonBox extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _SalesSkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 700.ms, curve: Curves.easeIn)
+        .fadeOut(delay: 700.ms, duration: 700.ms, curve: Curves.easeOut);
+  }
+}
+
+class _SalesListSkeleton extends StatelessWidget {
+  const _SalesListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: 8,
+      itemBuilder: (context, i) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            _SalesSkeletonBox(width: 40, height: 40, radius: 8),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _SalesSkeletonBox(width: 120 + (i % 3) * 20.0, height: 14),
+                  const SizedBox(height: 6),
+                  _SalesSkeletonBox(width: 80 + (i % 2) * 30.0, height: 11),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const _SalesSkeletonBox(width: 72, height: 15),
+                const SizedBox(height: 6),
+                _SalesSkeletonBox(width: 52, height: 18, radius: 6),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

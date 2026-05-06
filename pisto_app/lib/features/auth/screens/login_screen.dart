@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/auth_provider.dart';
 import '../../../i18n/translations.g.dart';
+import '_auth_panel.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -27,12 +28,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     await ref.read(authProvider.notifier).login(
           _emailCtrl.text.trim(),
           _passwordCtrl.text,
         );
-
     if (mounted) {
       final authState = ref.read(authProvider);
       if (authState.hasError) {
@@ -56,99 +55,117 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 400),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: cs.primary,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(LucideIcons.landmark, size: 32, color: cs.onPrimary),
-                  ),
-                  Text(
-                    t.appTitle,
-                    style: theme.textTheme.headlineLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: cs.primary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    t.financialManagement,
-                    style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 40),
-                  TextFormField(
-                    controller: _emailCtrl,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: t.email,
-                      prefixIcon: const Icon(LucideIcons.mail, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return t.emailRequired;
-                      if (!v.contains('@')) return t.invalidEmail;
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordCtrl,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
-                    decoration: InputDecoration(
-                      labelText: t.password,
-                      prefixIcon: const Icon(LucideIcons.lock, size: 20),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      suffixIcon: IconButton(
-                        icon: Icon(_obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff, size: 20),
-                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
-                      ),
-                    ),
-                    validator: (v) {
-                      if (v == null || v.length < 6) return t.minChars(count: 6);
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: isLoading ? null : _submit,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: isLoading
-                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : Text(t.login, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: () => context.go('/register'),
-                    child: Text(t.dontHaveAccount),
-                  ),
-                ],
+    return AuthSplitLayout(
+      form: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Bienvenido de nuevo',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
+                letterSpacing: -0.3,
               ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              'Ingresa a tu cuenta para continuar',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 32),
+            TextFormField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              decoration: InputDecoration(
+                labelText: t.email,
+                prefixIcon: const Icon(LucideIcons.mail, size: 18),
+              ),
+              validator: (v) {
+                if (v == null || v.isEmpty) return t.emailRequired;
+                if (!v.contains('@')) return t.invalidEmail;
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _passwordCtrl,
+              obscureText: _obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                labelText: t.password,
+                prefixIcon: const Icon(LucideIcons.lock, size: 18),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff,
+                    size: 18,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
+              ),
+              validator: (v) {
+                if (v == null || v.length < 6) return t.minChars(count: 6);
+                return null;
+              },
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: isLoading ? null : _submit,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 15),
+              ),
+              child: isLoading
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : Text(
+                      t.login,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.center,
+              child: GestureDetector(
+                onTap: () => context.go('/forgot-password'),
+                child: Text(
+                  '¿Olvidaste tu contraseña?',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '¿No tienes cuenta? ',
+                  style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFF64748B)),
+                ),
+                GestureDetector(
+                  onTap: () => context.go('/register'),
+                  child: Text(
+                    'Crear cuenta',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

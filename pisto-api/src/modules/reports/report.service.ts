@@ -123,11 +123,19 @@ export async function getGrossProfit(businessId: string, from?: string, to?: str
   return rows[0]
 }
 
-export async function getSalesTrend(businessId: string, days = 30) {
-  const fromDate = new Date()
-  fromDate.setDate(fromDate.getDate() - days)
-  const fromStr = fromDate.toISOString().split('T')[0]
-  const toStr = new Date().toISOString().split('T')[0]
+export async function getSalesTrend(businessId: string, days = 30, startDate?: string, endDate?: string) {
+  const today = new Date().toISOString().slice(0, 10)
+  let fromStr: string
+  let toStr: string
+  if (startDate) {
+    fromStr = startDate
+    toStr = endDate ?? today
+  } else {
+    const fromDate = new Date()
+    fromDate.setDate(fromDate.getDate() - days)
+    fromStr = fromDate.toISOString().slice(0, 10)
+    toStr = today
+  }
 
   return execRows(sql`
     SELECT
@@ -160,9 +168,9 @@ export async function getSalesByCategory(businessId: string) {
   `)
 }
 
-export async function getDashboardKPIs(businessId: string) {
-  const today = new Date().toISOString().split('T')[0]
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
+export async function getDashboardKPIs(businessId: string, startDate?: string, endDate?: string) {
+  const today = endDate || new Date().toISOString().split('T')[0]
+  const monthStart = startDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]
 
   const [salesRows, receivablesRows, inventoryRows] = await Promise.all([
     execRows(sql`

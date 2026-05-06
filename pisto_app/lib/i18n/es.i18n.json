@@ -85,6 +85,7 @@
   "systemTheme": "Sistema",
   "lightTheme": "Claro",
   "darkTheme": "Oscuro",
+  "expenses": "Gastos",
   "settings": "Configuración",
   "language": "Idioma",
   "getStarted": "Empezar",
@@ -143,5 +144,7 @@
   "uneteEmpresas": "Únete a las empresas que ya gestionan su negocio con Pisto.",
   "crearCuentaGratis": "Crear Cuenta Gratis",
   "todosDerechosReservados": "© 2026 Pisto App. Todos los derechos reservados.",
-  "sistemaGestionFinanciera": "Gestión Financiera y Ventas"
+  "sistemaGestionFinanciera": "Gestión Financiera y Ventas",
+  "pricing": "Precios",
+  "trustedBySmbs": "Más de 500 PYMEs confían en Pisto"
 }

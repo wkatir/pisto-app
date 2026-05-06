@@ -83,7 +83,7 @@ class ApiClient {
 
       final refreshDio = Dio(BaseOptions(baseUrl: baseUrl));
       final res = await refreshDio.post(
-        '$baseUrl/auth/refresh',
+        '/auth/refresh',
         data: {'refreshToken': _refreshTokenValue},
       );
 
@@ -91,7 +91,8 @@ class ApiClient {
       final newRefresh = res.data['refreshToken'] as String;
       await setTokens(newAccess, newRefresh);
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('Token refresh failed: $e\n$st');
       await clearTokens();
       return false;
     } finally {

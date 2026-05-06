@@ -5,7 +5,7 @@ import * as supplierService from './supplier.service'
 import * as poService from './purchase-order.service'
 import * as grService from './goods-receipt.service'
 import * as payableService from './payable.service'
-import { AppError } from '../../shared/errors/app-error'
+import { paginationQuerySchema } from '../../shared/schemas/pagination'
 import type { AppEnv } from '../../types/app-env'
 
 const purchases = new Hono<AppEnv>()
@@ -19,13 +19,8 @@ purchases.get('/suppliers', async (c) => {
 purchases.get('/suppliers/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  try {
-    const s = await supplierService.getSupplier(businessId, id)
-    return c.json(s)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const s = await supplierService.getSupplier(businessId, id)
+  return c.json(s)
 })
 
 purchases.post('/suppliers', vValidator('json', createSupplierSchema), async (c) => {
@@ -39,25 +34,15 @@ purchases.put('/suppliers/:id', vValidator('json', updateSupplierSchema), async 
   const businessId = c.get('businessId')
   const id = c.req.param('id')
   const body = c.req.valid('json')
-  try {
-    const s = await supplierService.updateSupplier(businessId, id, body)
-    return c.json(s)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const s = await supplierService.updateSupplier(businessId, id, body)
+  return c.json(s)
 })
 
 purchases.delete('/suppliers/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  try {
-    await supplierService.deleteSupplier(businessId, id)
-    return c.json({ success: true })
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  await supplierService.deleteSupplier(businessId, id)
+  return c.json({ success: true })
 })
 
 purchases.get('/supplier-products', async (c) => {
@@ -70,44 +55,28 @@ purchases.get('/supplier-products', async (c) => {
 purchases.post('/supplier-products', async (c) => {
   const businessId = c.get('businessId')
   const body = await c.req.json()
-  try {
-    const sp = await supplierService.createSupplierProduct(businessId, body)
-    return c.json(sp, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const sp = await supplierService.createSupplierProduct(businessId, body)
+  return c.json(sp, 201)
 })
 
 purchases.put('/supplier-products/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
   const body = await c.req.json()
-  try {
-    const sp = await supplierService.updateSupplierProduct(businessId, id, body)
-    return c.json(sp)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const sp = await supplierService.updateSupplierProduct(businessId, id, body)
+  return c.json(sp)
 })
 
 purchases.delete('/supplier-products/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  try {
-    await supplierService.deleteSupplierProduct(businessId, id)
-    return c.json({ success: true })
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  await supplierService.deleteSupplierProduct(businessId, id)
+  return c.json({ success: true })
 })
 
-purchases.get('/orders', async (c) => {
+purchases.get('/orders', vValidator('query', paginationQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const page = parseInt(c.req.query('page') || '1')
-  const limit = parseInt(c.req.query('limit') || '20')
+  const { page = 1, limit = 20 } = c.req.valid('query')
   const result = await poService.listPurchaseOrders(businessId, page, limit)
   return c.json(result)
 })
@@ -115,39 +84,24 @@ purchases.get('/orders', async (c) => {
 purchases.get('/orders/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  try {
-    const po = await poService.getPurchaseOrder(businessId, id)
-    return c.json(po)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const po = await poService.getPurchaseOrder(businessId, id)
+  return c.json(po)
 })
 
 purchases.post('/orders', vValidator('json', createPurchaseOrderSchema), async (c) => {
   const businessId = c.get('businessId')
   const userId = c.get('userId')
   const body = c.req.valid('json')
-  try {
-    const po = await poService.createPurchaseOrder(businessId, userId, body)
-    return c.json(po, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const po = await poService.createPurchaseOrder(businessId, userId, body)
+  return c.json(po, 201)
 })
 
 purchases.put('/orders/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
   const body = await c.req.json()
-  try {
-    const po = await poService.updatePurchaseOrder(businessId, id, body)
-    return c.json(po)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const po = await poService.updatePurchaseOrder(businessId, id, body)
+  return c.json(po)
 })
 
 purchases.post('/orders/:id/receive', vValidator('json', receiveGoodsSchema), async (c) => {
@@ -155,19 +109,13 @@ purchases.post('/orders/:id/receive', vValidator('json', receiveGoodsSchema), as
   const userId = c.get('userId')
   const id = c.req.param('id')
   const body = c.req.valid('json')
-  try {
-    const receipt = await grService.receiveGoods(businessId, userId, id, body)
-    return c.json(receipt, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const receipt = await grService.receiveGoods(businessId, userId, id, body)
+  return c.json(receipt, 201)
 })
 
-purchases.get('/payables', async (c) => {
+purchases.get('/payables', vValidator('query', paginationQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const page = parseInt(c.req.query('page') || '1')
-  const limit = parseInt(c.req.query('limit') || '20')
+  const { page = 1, limit = 20 } = c.req.valid('query')
   const result = await payableService.listPayables(businessId, page, limit)
   return c.json(result)
 })
@@ -177,13 +125,8 @@ purchases.post('/payables/:id/payments', vValidator('json', supplierPaymentSchem
   const userId = c.get('userId')
   const id = c.req.param('id')
   const body = c.req.valid('json')
-  try {
-    const payment = await payableService.createSupplierPayment(businessId, userId, id, body)
-    return c.json(payment, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const payment = await payableService.createSupplierPayment(businessId, userId, id, body)
+  return c.json(payment, 201)
 })
 
 export { purchases }

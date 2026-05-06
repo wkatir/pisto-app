@@ -85,6 +85,7 @@
   "systemTheme": "System",
   "lightTheme": "Light",
   "darkTheme": "Dark",
+  "expenses": "Expenses",
   "settings": "Settings",
   "language": "Language",
   "getStarted": "Get Started",
@@ -143,5 +144,7 @@
   "uneteEmpresas": "Join the companies already managing their business with Pisto.",
   "crearCuentaGratis": "Create Free Account",
   "todosDerechosReservados": "© 2026 Pisto App. All rights reserved.",
-  "sistemaGestionFinanciera": "Financial and Sales Management"
+  "sistemaGestionFinanciera": "Financial and Sales Management",
+  "pricing": "Pricing",
+  "trustedBySmbs": "Trusted by 500+ SMBs across Central America"
 }

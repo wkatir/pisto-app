@@ -33,7 +33,7 @@ class AuthService {
       'firstName': firstName,
       'lastName': lastName,
       'businessName': businessName,
-      'phone': ?phone,
+      if (phone != null && phone.isNotEmpty) 'phone': phone,
     });
 
     final authResponse =
@@ -49,5 +49,9 @@ class AuthService {
 
   bool hasValidSession() {
     return _apiClient.hasTokens;
+  }
+
+  Future<void> forgotPassword(String email) async {
+    await _apiClient.dio.post('/auth/forgot-password', data: {'email': email});
   }
 }

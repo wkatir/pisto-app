@@ -29,7 +29,7 @@ export async function createSupplierPayment(
   businessId: string,
   userId: string,
   payableId: string,
-  data: { paymentMethodId: number; amount: string; reference?: string; notes?: string }
+  data: { paymentMethodId: string; amount: string; reference?: string; notes?: string }
 ) {
   const [ap] = await db.select().from(accountPayable)
     .where(and(eq(accountPayable.id, payableId), eq(accountPayable.businessId, businessId)))

@@ -299,6 +299,9 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 	/// en: 'Dark'
 	String get darkTheme => 'Dark';
 
+	/// en: 'Expenses'
+	String get expenses => 'Expenses';
+
 	/// en: 'Settings'
 	String get settings => 'Settings';
 
@@ -475,6 +478,12 @@ class Translations with BaseTranslations<AppLocale, Translations> {
 
 	/// en: 'Financial and Sales Management'
 	String get sistemaGestionFinanciera => 'Financial and Sales Management';
+
+	/// en: 'Pricing'
+	String get pricing => 'Pricing';
+
+	/// en: 'Trusted by 500+ SMBs across Central America'
+	String get trustedBySmbs => 'Trusted by 500+ SMBs across Central America';
 }
 
 /// The flat map containing all translations for locale <en>.
@@ -571,6 +580,7 @@ extension on Translations {
 			'systemTheme' => 'System',
 			'lightTheme' => 'Light',
 			'darkTheme' => 'Dark',
+			'expenses' => 'Expenses',
 			'settings' => 'Settings',
 			'language' => 'Language',
 			'getStarted' => 'Get Started',
@@ -630,6 +640,8 @@ extension on Translations {
 			'crearCuentaGratis' => 'Create Free Account',
 			'todosDerechosReservados' => '© 2026 Pisto App. All rights reserved.',
 			'sistemaGestionFinanciera' => 'Financial and Sales Management',
+			'pricing' => 'Pricing',
+			'trustedBySmbs' => 'Trusted by 500+ SMBs across Central America',
 			_ => null,
 		};
 	}

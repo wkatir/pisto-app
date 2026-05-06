@@ -122,11 +122,14 @@ async function main() {
         )
       }
 
-      const passwordHash = await Bun.password.hash('admin123')
+      const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@pistoapp.com'
+      const adminPassword = process.env.ADMIN_PASSWORD
+        ?? `${crypto.randomUUID().replace(/-/g, '')}!Aa1`
+      const passwordHash = await Bun.password.hash(adminPassword)
       const adminUser = await tryInsertOne(() =>
         db.insert(appUser).output().values({
           businessId: BIZ_ID,
-          email: 'admin@pistoapp.com',
+          email: adminEmail,
           passwordHash,
           firstName: 'Admin',
           lastName: 'Pisto',
@@ -138,7 +141,15 @@ async function main() {
           db.insert(userRole).output().values({ userId: (adminUser as any).id, roleId: (adminRole as any).id })
         )
         adminUserId = (adminUser as any).id
-        console.log(`  + Admin user: admin@pistoapp.com / admin123`)
+        console.log('  + Admin user created')
+        console.log(`    email:    ${adminEmail}`)
+        if (!process.env.ADMIN_PASSWORD) {
+          console.log(`    password: ${adminPassword}`)
+          console.log('    >> IMPORTANT: store this password now. It will not be shown again.')
+          console.log('    >> Set ADMIN_PASSWORD env var to control credentials in production.')
+        } else {
+          console.log('    password: (from ADMIN_PASSWORD env)')
+        }
       } else {
         const existing = await db.select().from(appUser).where(eq(appUser.email, 'admin@pistoapp.com'))
         adminUserId = existing[0]!.id
@@ -152,7 +163,8 @@ async function main() {
       db.insert(tax).output().values({
         businessId: BIZ_ID,
         name: 'IVA 13%',
-        rate: 0.13,
+        rate: '13.00',
+        isActive: true,
       } as any)
     )
 
@@ -165,11 +177,11 @@ async function main() {
     )
 
     const docTypeDefs = [
-      { businessId: BIZ_ID, code: 'FAC', name: 'Factura', isFiscal: true, affectsTax: true },
-      { businessId: BIZ_ID, code: 'CCF', name: 'Comprobante de Crédito Fiscal', isFiscal: true, affectsTax: true },
-      { businessId: BIZ_ID, code: 'TKT', name: 'Ticket', isFiscal: false, affectsTax: false },
-      { businessId: BIZ_ID, code: 'NC', name: 'Nota de Crédito', isFiscal: true, affectsTax: true },
-      { businessId: BIZ_ID, code: 'COT', name: 'Cotización', isFiscal: false, affectsTax: false },
+      { businessId: BIZ_ID, code: 'FAC', name: 'Factura', isActive: true },
+      { businessId: BIZ_ID, code: 'CCF', name: 'Comprobante de Crédito Fiscal', isActive: true },
+      { businessId: BIZ_ID, code: 'TKT', name: 'Ticket', isActive: true },
+      { businessId: BIZ_ID, code: 'NC', name: 'Nota de Crédito', isActive: true },
+      { businessId: BIZ_ID, code: 'COT', name: 'Cotización', isActive: true },
     ]
     for (const dt of docTypeDefs) {
       await tryInsertOne(() => db.insert(documentType).output().values(dt as any))
@@ -177,11 +189,11 @@ async function main() {
     console.log(`  + ${docTypeDefs.length} document types`)
 
     const payMethodDefs = [
-      { businessId: BIZ_ID, name: 'Efectivo' },
-      { businessId: BIZ_ID, name: 'Tarjeta de Crédito' },
-      { businessId: BIZ_ID, name: 'Tarjeta de Débito' },
-      { businessId: BIZ_ID, name: 'Transferencia Bancaria' },
-      { businessId: BIZ_ID, name: 'Cheque' },
+      { businessId: BIZ_ID, name: 'Efectivo', isActive: true },
+      { businessId: BIZ_ID, name: 'Tarjeta de Crédito', isActive: true },
+      { businessId: BIZ_ID, name: 'Tarjeta de Débito', isActive: true },
+      { businessId: BIZ_ID, name: 'Transferencia Bancaria', isActive: true },
+      { businessId: BIZ_ID, name: 'Cheque', isActive: true },
     ]
     for (const pm of payMethodDefs) {
       await tryInsertOne(() => db.insert(paymentMethod).output().values(pm as any))

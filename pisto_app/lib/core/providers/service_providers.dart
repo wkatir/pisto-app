@@ -6,6 +6,8 @@ import '../services/collections_service.dart';
 import '../services/purchases_service.dart';
 import '../services/reports_service.dart';
 import '../services/exports_service.dart';
+import '../services/settings_service.dart';
+import '../services/expenses_service.dart';
 
 final inventoryServiceProvider = Provider<InventoryService>((ref) {
   return InventoryService(ref.watch(apiClientProvider));
@@ -29,4 +31,12 @@ final reportsServiceProvider = Provider<ReportsService>((ref) {
 
 final exportsServiceProvider = Provider<ExportsService>((ref) {
   return ExportsService(ref.watch(apiClientProvider));
+});
+
+final expensesServiceProvider = Provider<ExpensesService>((ref) {
+  return ExpensesService(ref.watch(apiClientProvider));
+});
+
+final settingsServiceProvider = Provider<SettingsService>((ref) {
+  return SettingsService(ref.watch(apiClientProvider));
 });

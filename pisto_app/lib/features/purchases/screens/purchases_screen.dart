@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
+import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -44,13 +46,18 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
         svc.listPayables(),
       ]);
       setState(() {
-        _orders = (results[0] as Map<String, dynamic>)['data'] as List<dynamic>;
-        _suppliers = results[1] as List<dynamic>;
-        _payables = (results[2] as Map<String, dynamic>)['data'] as List<dynamic>;
+        _orders = ((results[0] as Map<String, dynamic>)['data'] as List<dynamic>?) ?? [];
+        _suppliers = (results[1] as List<dynamic>?) ?? [];
+        _payables = ((results[2] as Map<String, dynamic>)['data'] as List<dynamic>?) ?? [];
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.parseError(e))),
+        );
+      }
     }
   }
 
@@ -179,7 +186,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
               ],
             ),
             trailing: Flexible(
-              child: Text(_fmt.format(total), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
+              child: Text(_fmt.format(total), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
             ),
             onTap: () => _showOrderDetail(context, o),
           ),
@@ -199,6 +206,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -244,7 +252,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                               Expanded(child: Text(line['productName'] ?? '', style: theme.textTheme.bodySmall)),
                               Text('x${line['quantity'] ?? 1}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                               const SizedBox(width: 12),
-                              Text(_fmt.format(lineTotal), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+                              Text(_fmt.format(lineTotal), style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         );
@@ -279,6 +287,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -329,6 +338,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Row(
@@ -345,7 +355,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedSupplier,
+                    initialValue: selectedSupplier,
                     decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
                     items: _suppliers.map((s) => DropdownMenuItem(value: s['id'] as String, child: Text(s['companyName'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedSupplier = v),
@@ -454,6 +464,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -513,7 +524,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.checkCircle, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
+            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text('No hay cuentas por pagar', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
           ],
@@ -563,8 +574,8 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(_fmt.format(balance), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.error), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('de ${_fmt.format(original)}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(_fmt.format(balance), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.negative), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text('de ${_fmt.format(original)}', style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w400, color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ],
               ),
             ),
@@ -586,6 +597,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -643,6 +655,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -662,7 +675,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                     Icon(LucideIcons.wallet, size: 16, color: cs.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Flexible(child: Text('Saldo: ${_fmt.format(double.tryParse(ap['balance']?.toString() ?? '0') ?? 0)}',
-                        style: TextStyle(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        style: AppTheme.mono(fontSize: 14, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ],
                 ),
                 const SizedBox(height: 16),

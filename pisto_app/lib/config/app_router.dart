@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
+import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/inventory/screens/inventory_screen.dart';
 import '../features/landing/screens/landing_screen.dart';
 import '../features/sales/screens/sales_screen.dart';
+import '../features/sales/screens/customer_detail_screen.dart';
 import '../features/collections/screens/collections_screen.dart';
 import '../features/purchases/screens/purchases_screen.dart';
 import '../features/reports/screens/reports_screen.dart';
+import '../features/expenses/screens/expenses_screen.dart';
+import '../features/settings/screens/settings_screen.dart';
 import '../shared/layouts/shell_layout.dart';
 
 class AuthRouterDelegate extends ChangeNotifier {
@@ -29,7 +33,7 @@ final appRouter = GoRouter(
   redirect: (context, state) {
     final loggedIn = authRouterDelegate.authenticated;
     final path = state.matchedLocation;
-    final isPublic = path == '/' || path == '/login' || path == '/register';
+    final isPublic = path == '/' || path == '/login' || path == '/register' || path == '/forgot-password';
 
     if (!loggedIn && !isPublic) return '/login';
     if (loggedIn && isPublic) return '/dashboard';
@@ -48,6 +52,10 @@ final appRouter = GoRouter(
       path: '/register',
       pageBuilder: (context, state) => const NoTransitionPage(child: RegisterScreen()),
     ),
+    GoRoute(
+      path: '/forgot-password',
+      pageBuilder: (context, state) => const NoTransitionPage(child: ForgotPasswordScreen()),
+    ),
     ShellRoute(
       builder: (context, state, child) => ShellLayout(child: child),
       routes: [
@@ -64,6 +72,14 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => const NoTransitionPage(child: SalesScreen()),
         ),
         GoRoute(
+          path: '/sales/customers/:id',
+          pageBuilder: (context, state) => NoTransitionPage(
+            child: CustomerDetailScreen(
+              customerId: state.pathParameters['id']!,
+            ),
+          ),
+        ),
+        GoRoute(
           path: '/collections',
           pageBuilder: (context, state) => const NoTransitionPage(child: CollectionsScreen()),
         ),
@@ -74,6 +90,14 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/reports',
           pageBuilder: (context, state) => const NoTransitionPage(child: ReportsScreen()),
+        ),
+        GoRoute(
+          path: '/expenses',
+          pageBuilder: (context, state) => const NoTransitionPage(child: ExpensesScreen()),
+        ),
+        GoRoute(
+          path: '/settings',
+          pageBuilder: (context, state) => const NoTransitionPage(child: SettingsScreen()),
         ),
       ],
     ),

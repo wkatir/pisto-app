@@ -3,15 +3,14 @@ import { vValidator } from '@hono/valibot-validator'
 import { createPaymentSchema } from './collections.schemas'
 import * as receivableService from './receivable.service'
 import * as paymentService from './payment.service'
-import { AppError } from '../../shared/errors/app-error'
+import { paginationQuerySchema } from '../../shared/schemas/pagination'
 import type { AppEnv } from '../../types/app-env'
 
 const collections = new Hono<AppEnv>()
 
-collections.get('/receivables', async (c) => {
+collections.get('/receivables', vValidator('query', paginationQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const page = parseInt(c.req.query('page') || '1')
-  const limit = parseInt(c.req.query('limit') || '20')
+  const { page = 1, limit = 20 } = c.req.valid('query')
   const result = await receivableService.listReceivables(businessId, page, limit)
   return c.json(result)
 })
@@ -25,13 +24,8 @@ collections.get('/receivables/aging', async (c) => {
 collections.get('/receivables/:id', async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  try {
-    const ar = await receivableService.getReceivable(businessId, id)
-    return c.json(ar)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const ar = await receivableService.getReceivable(businessId, id)
+  return c.json(ar)
 })
 
 collections.get('/receivables/:id/payments', async (c) => {
@@ -45,13 +39,8 @@ collections.post('/receivables/:id/payments', vValidator('json', createPaymentSc
   const userId = c.get('userId')
   const id = c.req.param('id')
   const body = c.req.valid('json')
-  try {
-    const payment = await paymentService.createCollectionPayment(businessId, userId, id, body)
-    return c.json(payment, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const payment = await paymentService.createCollectionPayment(businessId, userId, id, body)
+  return c.json(payment, 201)
 })
 
 collections.get('/customers/:customerId/statement', async (c) => {

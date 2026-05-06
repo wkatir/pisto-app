@@ -95,7 +95,7 @@ export const tax = mssqlTable('tax', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   businessId: varchar('business_id', { length: 36 }).notNull().references(() => business.id),
   name: nvarchar('name', { length: 50 }).notNull(),
-  rate: decimal('rate', { precision: 5, scale: 2 }).notNull(),
+  rate: decimal('rate', { precision: 5, scale: 2 }).$type<string>().notNull(),
   isActive: bit('is_active').default(true).notNull(),
   createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
 })

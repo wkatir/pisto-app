@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
@@ -43,12 +45,17 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
         svc.getAgingReport(),
       ]);
       setState(() {
-        _receivables = (results[0] as Map<String, dynamic>)['data'] as List<dynamic>;
-        _aging = results[1] as List<dynamic>;
+        _receivables = ((results[0] as Map<String, dynamic>)['data'] as List<dynamic>?) ?? [];
+        _aging = (results[1] as List<dynamic>?) ?? [];
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.parseError(e))),
+        );
+      }
     }
   }
 
@@ -86,7 +93,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
           ),
           Expanded(
             child: _loading
-                ? const Center(child: CircularProgressIndicator())
+                ? const _CollectionsListSkeleton()
                 : TabBarView(
                     controller: _tabController,
                     children: [
@@ -110,7 +117,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.checkCircle, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
+            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text('No hay cuentas pendientes', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
           ],
@@ -129,6 +136,9 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
         final balance = double.tryParse(ar['balance']?.toString() ?? '0') ?? 0;
         final original = double.tryParse(ar['originalAmount']?.toString() ?? '0') ?? 0;
         final customerId = item['customerId']?.toString() ?? ar['customerId']?.toString();
+        final phone = item['customerPhone']?.toString() ?? ar['customerPhone']?.toString();
+        final dueDateRaw = ar['dueDate']?.toString();
+        final dueDate = dueDateRaw != null ? DateTime.tryParse(dueDateRaw) : null;
 
         return Card(
           elevation: 0,
@@ -138,7 +148,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
             side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            contentPadding: const EdgeInsets.only(left: 16, right: 4, top: 6, bottom: 6),
             leading: Container(
               width: 40,
               height: 40,
@@ -160,16 +170,24 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                 Flexible(child: Text('${ar['dueDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
               ],
             ),
-            trailing: Flexible(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(_fmt.format(balance), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.error), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('de ${_fmt.format(original)}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_fmt.format(balance), style: AppTheme.mono(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.negative), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    Text('de ${_fmt.format(original)}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(LucideIcons.messageCircle, size: 20, color: AppTheme.whatsappBrand),
+                  tooltip: 'Enviar cobro por WhatsApp',
+                  onPressed: () => _sendWhatsApp(context, phone, customerName.isEmpty ? 'Sin cliente' : customerName, 'Mi Negocio', balance, dueDate),
+                ),
+              ],
             ),
             onTap: () => _showReceivableDetail(context, ar, customerName, customerId),
           ),
@@ -189,6 +207,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -204,8 +223,8 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                DetailRow(theme: theme, label: 'Monto Original', value: _fmt.format(original), labelWidth: 120),
-                DetailRow(theme: theme, label: 'Saldo', value: _fmt.format(balance), labelWidth: 120),
+                _MonoDetailRow(theme: theme, label: 'Monto Original', amount: original, labelWidth: 120),
+                _MonoDetailRow(theme: theme, label: 'Saldo', amount: balance, isNegative: true, labelWidth: 120),
                 DetailRow(theme: theme, label: 'Vencimiento', value: ar['dueDate'] ?? '', labelWidth: 120),
                 const Divider(height: 24),
                 Row(
@@ -240,7 +259,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                               Icon(LucideIcons.banknote, size: 14, color: cs.secondary),
                               const SizedBox(width: 6),
                               Expanded(child: Text(payment['paymentDate']?.toString().substring(0, 10) ?? '', style: theme.textTheme.bodySmall)),
-                              Text(_fmt.format(amount), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: cs.secondary)),
+                              Text(_fmt.format(amount), style: AppTheme.mono(fontSize: 13, fontWeight: FontWeight.w600, color: cs.secondary)),
                             ],
                           ),
                         );
@@ -257,7 +276,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                         Navigator.pop(ctx);
                         _showCustomerStatement(context, customerId, customerName);
                       },
-                      icon: const Icon(LucideIcons.fileBarChart, size: 16),
+                      icon: const Icon(LucideIcons.fileChartColumn, size: 16),
                       label: const Text('Ver Estado de Cuenta'),
                     ),
                   ),
@@ -290,10 +309,11 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(LucideIcons.fileBarChart, size: 22, color: cs.primary),
+            Icon(LucideIcons.fileChartColumn, size: 22, color: cs.primary),
             const SizedBox(width: 8),
             Expanded(child: Text('Estado de Cuenta', maxLines: 1, overflow: TextOverflow.ellipsis)),
           ],
@@ -332,7 +352,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                           const SizedBox(width: 8),
                           Text('Saldo Total:', style: theme.textTheme.bodyMedium),
                           const Spacer(),
-                          Text(_fmt.format(totalBalance), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.error)),
+                          Text(_fmt.format(totalBalance), style: AppTheme.mono(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.negative)),
                         ],
                       ),
                     ),
@@ -356,7 +376,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                                   ],
                                 ),
                               ),
-                              Text(_fmt.format(entryBalance), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: cs.error)),
+                              Text(_fmt.format(entryBalance), style: AppTheme.mono(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.negative)),
                             ],
                           ),
                         );
@@ -393,7 +413,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
       );
     }
 
-    final agingColors = [cs.secondary, cs.primary, cs.tertiary, AppTheme.chartOrange, cs.error];
+    final agingColors = [cs.secondary, cs.primary, cs.tertiary, AppTheme.chartAmber, cs.error];
 
     return ListView.builder(
       padding: const EdgeInsets.all(24),
@@ -426,7 +446,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                     ],
                   ),
                 ),
-                Text(_fmt.format(total), style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                Text(_fmt.format(total), style: AppTheme.mono(fontSize: 16, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -446,6 +466,60 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
     };
   }
 
+  // ── WhatsApp Cobro ──
+
+  void _sendWhatsApp(BuildContext context, String? phone, String customerName, String businessName, double amount, DateTime? dueDate) {
+    if (phone == null || phone.isEmpty) {
+      final phoneCtrl = TextEditingController();
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Número de WhatsApp'),
+          content: TextField(
+            controller: phoneCtrl,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(labelText: 'Teléfono (ej: +50312345678)'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                if (phoneCtrl.text.isNotEmpty) {
+                  _sendWhatsApp(context, phoneCtrl.text, customerName, businessName, amount, dueDate);
+                }
+              },
+              child: const Text('Enviar'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final dueDateStr = dueDate != null
+        ? '${dueDate.day}/${dueDate.month}/${dueDate.year}'
+        : 'pendiente';
+    final amountStr = '\$${amount.toStringAsFixed(2)}';
+    final message = Uri.encodeComponent(
+      'Hola $customerName, le saludamos de $businessName.\n'
+      'Le recordamos que tiene un saldo pendiente de $amountStr con fecha de vencimiento $dueDateStr.\n'
+      'Puede contactarnos para coordinar su pago.\n¡Gracias!',
+    );
+
+    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    final url = Uri.parse('https://wa.me/$cleanPhone?text=$message');
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('WhatsApp: $url'),
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(label: 'OK', onPressed: () {}),
+      ),
+    );
+  }
+
   // ── Payment Dialog ──
 
   void _showPaymentDialog(BuildContext context, Map<String, dynamic> ar) {
@@ -454,6 +528,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -473,7 +548,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                     Icon(LucideIcons.wallet, size: 16, color: cs.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Flexible(child: Text('Saldo: ${_fmt.format(double.tryParse(ar['balance']?.toString() ?? '0') ?? 0)}',
-                        style: TextStyle(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                        style: AppTheme.mono(fontSize: 13, fontWeight: FontWeight.w500, color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -504,6 +579,128 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
             child: const Text('Pagar'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Private helper widget ──────────────────────────────────────────────────
+
+class _MonoDetailRow extends StatelessWidget {
+  final ThemeData theme;
+  final String label;
+  final double amount;
+  final double labelWidth;
+  final bool isNegative;
+
+  const _MonoDetailRow({
+    required this.theme,
+    required this.label,
+    required this.amount,
+    this.labelWidth = 120,
+    this.isNegative = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          SizedBox(
+            width: labelWidth,
+            child: Text(label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+          ),
+          Expanded(
+            child: Text(
+              currencyFmt.format(amount),
+              style: AppTheme.mono(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: isNegative ? AppTheme.negative : null,
+              ),
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+class _CollectionsSkeletonBox extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _CollectionsSkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 700.ms, curve: Curves.easeIn)
+        .fadeOut(delay: 700.ms, duration: 700.ms, curve: Curves.easeOut);
+  }
+}
+
+class _CollectionsListSkeleton extends StatelessWidget {
+  const _CollectionsListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(24),
+      itemCount: 7,
+      itemBuilder: (context, i) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            _CollectionsSkeletonBox(width: 40, height: 40, radius: 8),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CollectionsSkeletonBox(width: 120 + (i % 3) * 20.0, height: 14),
+                  const SizedBox(height: 6),
+                  _CollectionsSkeletonBox(width: 80 + (i % 2) * 30.0, height: 11),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: const [
+                _CollectionsSkeletonBox(width: 72, height: 14),
+                SizedBox(height: 4),
+                _CollectionsSkeletonBox(width: 52, height: 11),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

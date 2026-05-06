@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
-import { loginSchema, registerSchema, refreshSchema } from './auth.schemas'
+import { loginSchema, registerSchema, refreshSchema, forgotPasswordSchema } from './auth.schemas'
 import { loginUser, registerUser, refreshTokens } from './auth.service'
 import { AppError } from '../../shared/errors/app-error'
 
@@ -37,6 +37,10 @@ auth.post('/refresh', vValidator('json', refreshSchema), async (c) => {
     if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 401)
     throw e
   }
+})
+
+auth.post('/forgot-password', vValidator('json', forgotPasswordSchema), async (c) => {
+  return c.json({ message: 'Si el email existe, recibirás instrucciones.' });
 })
 
 export { auth }

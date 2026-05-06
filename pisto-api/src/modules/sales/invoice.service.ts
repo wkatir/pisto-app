@@ -44,7 +44,7 @@ export async function createSale(
     let totalDiscount = new Decimal(0)
 
     const taxIds = [...new Set(data.lines.filter(l => l.taxId).map(l => l.taxId!))]
-    const taxMap = new Map<string, number>()
+    const taxMap = new Map<string, string>()
     if (taxIds.length > 0) {
       const taxes = await tx.select({ id: tax.id, rate: tax.rate }).from(tax)
         .where(inArray(tax.id, taxIds))

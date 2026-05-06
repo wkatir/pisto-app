@@ -4,7 +4,7 @@ class InventoryService {
   final ApiClient _api;
   InventoryService(this._api);
 
-  Future<Map<String, dynamic>> listProducts({int page = 1, int limit = 20, String? search, int? categoryId}) async {
+  Future<Map<String, dynamic>> listProducts({int page = 1, int limit = 20, String? search, String? categoryId}) async {
     final params = <String, dynamic>{'page': page, 'limit': limit};
     if (search != null && search.isNotEmpty) params['search'] = search;
     if (categoryId != null) params['categoryId'] = categoryId;
@@ -41,7 +41,7 @@ class InventoryService {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<void> deleteCategory(int id) async {
+  Future<void> deleteCategory(String id) async {
     await _api.dio.delete('/inventory/categories/$id');
   }
 

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
-import { rateLimitMiddleware } from './middleware/rate-limit'
+import { rateLimitMiddleware, authRateLimitMiddleware } from './middleware/rate-limit'
 import { auth } from './modules/auth/auth.routes'
 import { inventory } from './modules/inventory/inventory.routes'
 import { sales } from './modules/sales/sales.routes'
@@ -10,6 +10,8 @@ import { collections } from './modules/collections/collections.routes'
 import { purchases } from './modules/purchases/purchases.routes'
 import { reports } from './modules/reports/reports.routes'
 import { exports } from './modules/exports/exports.routes'
+import { settings } from './modules/settings/settings.routes'
+import { expenses } from './modules/expenses/expenses.routes'
 import { authGuard } from './middleware/auth.middleware'
 import { AppError } from './shared/errors/app-error'
 import type { AppEnv } from './types/app-env'
@@ -17,33 +19,40 @@ import { env } from './config/env'
 
 const app = new Hono<AppEnv>().basePath('/api/v1')
 
+const corsOrigin = env.CORS_ORIGIN
+const corsConfig =
+  corsOrigin === '*'
+    ? { origin: '*' as const }
+    : Array.isArray(corsOrigin)
+      ? {
+          origin: (origin: string) => (corsOrigin.includes(origin) ? origin : null),
+        }
+      : { origin: corsOrigin }
+
 app.use('*', logger())
 app.use('*', cors({
-  origin: env.CORS_ORIGIN,
+  ...corsConfig,
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   maxAge: 86400,
+  credentials: true,
 }))
 app.use('*', secureHeaders({ crossOriginResourcePolicy: false, crossOriginOpenerPolicy: false }))
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
+if (env.RATE_LIMIT_ENABLED) {
+  app.use('/auth/*', authRateLimitMiddleware)
+}
 app.route('/auth', auth)
 
-if (env.RATE_LIMIT_ENABLED) {
-  app.use('/inventory/*', authGuard, rateLimitMiddleware)
-  app.use('/sales/*', authGuard, rateLimitMiddleware)
-  app.use('/collections/*', authGuard, rateLimitMiddleware)
-  app.use('/purchases/*', authGuard, rateLimitMiddleware)
-  app.use('/reports/*', authGuard, rateLimitMiddleware)
-  app.use('/exports/*', authGuard, rateLimitMiddleware)
-} else {
-  app.use('/inventory/*', authGuard)
-  app.use('/sales/*', authGuard)
-  app.use('/collections/*', authGuard)
-  app.use('/purchases/*', authGuard)
-  app.use('/reports/*', authGuard)
-  app.use('/exports/*', authGuard)
+const protectedRoutes = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses']
+for (const path of protectedRoutes) {
+  if (env.RATE_LIMIT_ENABLED) {
+    app.use(`${path}/*`, authGuard, rateLimitMiddleware)
+  } else {
+    app.use(`${path}/*`, authGuard)
+  }
 }
 
 app.route('/inventory', inventory)
@@ -52,10 +61,13 @@ app.route('/collections', collections)
 app.route('/purchases', purchases)
 app.route('/reports', reports)
 app.route('/exports', exports)
+app.route('/settings', settings)
+app.route('/expenses', expenses)
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
-    return c.json({ error: err.message }, err.statusCode as 400)
+    const status = err.statusCode
+    return c.json({ error: err.message }, status as Parameters<typeof c.json>[1])
   }
   console.error('Unhandled error:', err)
   return c.json({ error: 'Error interno del servidor' }, 500)

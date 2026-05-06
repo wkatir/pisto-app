@@ -7,23 +7,36 @@ import { env } from '../../config/env'
 import { AppError } from '../../shared/errors/app-error'
 
 export async function loginUser(email: string, password: string) {
-  const users = await db.select().from(appUser)
+  const rows = await db
+    .select({
+      id: appUser.id,
+      email: appUser.email,
+      firstName: appUser.firstName,
+      lastName: appUser.lastName,
+      passwordHash: appUser.passwordHash,
+      businessId: appUser.businessId,
+      isActive: appUser.isActive,
+      roleName: role.name,
+    })
+    .from(appUser)
+    .leftJoin(userRole, eq(userRole.userId, appUser.id))
+    .leftJoin(role, eq(role.id, userRole.roleId))
     .where(eq(appUser.email, email))
 
-  const user = users[0]
-  if (!user || !user.isActive) throw new AppError(401, 'Credenciales inválidas')
+  const first = rows[0]
+  if (!first || !first.isActive) throw new AppError(401, 'Credenciales inválidas')
 
-  const isValid = await Bun.password.verify(password, user.passwordHash)
+  const isValid = await Bun.password.verify(password, first.passwordHash)
   if (!isValid) throw new AppError(401, 'Credenciales inválidas')
 
-  const roles = await getUserRoles(user.id)
-  const tokens = await generateTokens(user.id, user.businessId, roles)
-  await createRefreshToken(user.id, tokens.refreshToken)
+  const roles = rows.map((r) => r.roleName).filter((n): n is string => Boolean(n))
+  const tokens = await generateTokens(first.id, first.businessId, roles)
+  await createRefreshToken(first.id, tokens.refreshToken)
 
   return {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
-    user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, roles },
+    user: { id: first.id, email: first.email, firstName: first.firstName, lastName: first.lastName, roles },
   }
 }
 

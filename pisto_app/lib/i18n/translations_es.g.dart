@@ -123,6 +123,7 @@ class TranslationsEs with BaseTranslations<AppLocale, Translations> implements T
 	@override String get systemTheme => 'Sistema';
 	@override String get lightTheme => 'Claro';
 	@override String get darkTheme => 'Oscuro';
+	@override String get expenses => 'Gastos';
 	@override String get settings => 'Configuración';
 	@override String get language => 'Idioma';
 	@override String get getStarted => 'Empezar';
@@ -182,6 +183,8 @@ class TranslationsEs with BaseTranslations<AppLocale, Translations> implements T
 	@override String get crearCuentaGratis => 'Crear Cuenta Gratis';
 	@override String get todosDerechosReservados => '© 2026 Pisto App. Todos los derechos reservados.';
 	@override String get sistemaGestionFinanciera => 'Gestión Financiera y Ventas';
+	@override String get pricing => 'Precios';
+	@override String get trustedBySmbs => 'Más de 500 PYMEs confían en Pisto';
 }
 
 /// The flat map containing all translations for locale <es>.
@@ -278,6 +281,7 @@ extension on TranslationsEs {
 			'systemTheme' => 'Sistema',
 			'lightTheme' => 'Claro',
 			'darkTheme' => 'Oscuro',
+			'expenses' => 'Gastos',
 			'settings' => 'Configuración',
 			'language' => 'Idioma',
 			'getStarted' => 'Empezar',
@@ -337,6 +341,8 @@ extension on TranslationsEs {
 			'crearCuentaGratis' => 'Crear Cuenta Gratis',
 			'todosDerechosReservados' => '© 2026 Pisto App. Todos los derechos reservados.',
 			'sistemaGestionFinanciera' => 'Gestión Financiera y Ventas',
+			'pricing' => 'Precios',
+			'trustedBySmbs' => 'Más de 500 PYMEs confían en Pisto',
 			_ => null,
 		};
 	}

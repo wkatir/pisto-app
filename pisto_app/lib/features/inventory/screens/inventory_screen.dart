@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../core/providers/service_providers.dart';
@@ -54,9 +55,9 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
       ]);
       final productsData = results[0] as Map<String, dynamic>;
       setState(() {
-        _products = productsData['data'] as List<dynamic>;
-        final pagination = productsData['pagination'] as Map<String, dynamic>;
-        _totalPages = pagination['pages'] as int;
+        _products = (productsData['data'] as List<dynamic>?) ?? [];
+        final meta = productsData['meta'] as Map<String, dynamic>?;
+        _totalPages = int.tryParse(meta?['totalPages']?.toString() ?? '1') ?? 1;
         _categories = results[1] as List<dynamic>;
         _warehouses = results[2] as List<dynamic>;
         _units = results[3] as List<dynamic>;
@@ -100,7 +101,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   children: [
                     OutlinedButton.icon(
                       onPressed: () => _showAdjustmentForm(context),
-                      icon: const Icon(LucideIcons.clipboardEdit, size: 18),
+                      icon: const Icon(LucideIcons.clipboardPen, size: 18),
                       label: const Text('Ajuste'),
                     ),
                     FilledButton.icon(
@@ -126,7 +127,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.warehouse, size: 16), const SizedBox(width: 6), Text('Bodegas (${_warehouses.length})')])),
                 Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.ruler, size: 16), const SizedBox(width: 6), Text('Unidades (${_units.length})')])),
                 Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.arrowLeftRight, size: 16), const SizedBox(width: 6), Text('Transferencias (${_transfers.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.alertTriangle, size: 16), const SizedBox(width: 6), Text('Alertas (${_alerts.length})')])),
+                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.triangleAlert, size: 16), const SizedBox(width: 6), Text('Alertas (${_alerts.length})')])),
               ],
             ),
           ),
@@ -174,7 +175,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
         ),
         Expanded(
           child: _loading
-              ? const Center(child: CircularProgressIndicator())
+              ? const _InventoryListSkeleton()
               : _products.isEmpty
                   ? Center(
                       child: Column(
@@ -527,7 +528,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(LucideIcons.checkCircle, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
+            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
             const SizedBox(height: 12),
             Text('Sin alertas de stock bajo', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
           ],
@@ -556,7 +557,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
               width: 40,
               height: 40,
               decoration: BoxDecoration(color: cs.errorContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-              child: Icon(LucideIcons.alertTriangle, size: 20, color: cs.error),
+              child: Icon(LucideIcons.triangleAlert, size: 20, color: cs.error),
             ),
             title: Text(a['name'] ?? a['productName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
             subtitle: Text('SKU: ${a['sku'] ?? 'N/A'}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
@@ -587,6 +588,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -641,7 +643,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Row(
                             children: [
-                              Icon(isIn ? LucideIcons.arrowDownCircle : LucideIcons.arrowUpCircle, size: 14, color: isIn ? cs.secondary : cs.error),
+                              Icon(isIn ? LucideIcons.circleArrowDown : LucideIcons.circleArrowUp, size: 14, color: isIn ? cs.secondary : cs.error),
                               const SizedBox(width: 6),
                               Expanded(child: Text(type, style: theme.textTheme.bodySmall)),
                               Text('${isIn ? '+' : '-'}$qty', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: isIn ? cs.secondary : cs.error)),
@@ -689,6 +691,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -744,10 +747,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final cs = Theme.of(context).colorScheme;
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(LucideIcons.alertTriangle, size: 22, color: cs.error),
+            Icon(LucideIcons.triangleAlert, size: 22, color: cs.error),
             const SizedBox(width: 8),
             const Text('Eliminar Producto'),
           ],
@@ -779,10 +783,11 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final cs = Theme.of(context).colorScheme;
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
-            Icon(LucideIcons.alertTriangle, size: 22, color: cs.error),
+            Icon(LucideIcons.triangleAlert, size: 22, color: cs.error),
             const SizedBox(width: 8),
             const Text('Eliminar Categoria'),
           ],
@@ -794,7 +799,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             style: FilledButton.styleFrom(backgroundColor: cs.error),
             onPressed: () async {
               try {
-                await ref.read(inventoryServiceProvider).deleteCategory(category['id'] as int);
+                await ref.read(inventoryServiceProvider).deleteCategory(category['id'] as String);
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
@@ -812,17 +817,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
   void _showTransferForm(BuildContext context) {
     final qtyCtrl = TextEditingController(text: '1');
-    int? fromWarehouse;
-    int? toWarehouse;
+    String? fromWarehouse;
+    String? toWarehouse;
     String? selectedProduct;
 
     if (_warehouses.length >= 2) {
-      fromWarehouse = _warehouses[0]['id'] as int;
-      toWarehouse = _warehouses[1]['id'] as int;
+      fromWarehouse = _warehouses[0]['id'] as String;
+      toWarehouse = _warehouses[1]['id'] as String;
     }
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Row(
@@ -839,23 +845,23 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedProduct,
+                    initialValue: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedProduct = v),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: fromWarehouse,
+                  DropdownButtonFormField<String>(
+                    initialValue: fromWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Origen', border: OutlineInputBorder()),
-                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
+                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => fromWarehouse = v),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: toWarehouse,
+                  DropdownButtonFormField<String>(
+                    initialValue: toWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Destino', border: OutlineInputBorder()),
-                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
+                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => toWarehouse = v),
                   ),
                   const SizedBox(height: 12),
@@ -896,16 +902,17 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final qtyCtrl = TextEditingController(text: '1');
     final reasonCtrl = TextEditingController();
     String? selectedProduct;
-    int? selectedWarehouse = _warehouses.isNotEmpty ? _warehouses[0]['id'] as int : null;
+    String? selectedWarehouse = _warehouses.isNotEmpty ? _warehouses[0]['id'] as String : null;
     String adjustmentType = 'in';
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: Row(
             children: [
-              Icon(LucideIcons.clipboardEdit, size: 22, color: Theme.of(context).colorScheme.primary),
+              Icon(LucideIcons.clipboardPen, size: 22, color: Theme.of(context).colorScheme.primary),
               const SizedBox(width: 8),
               const Text('Ajuste de Inventario'),
             ],
@@ -917,21 +924,21 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                    value: selectedProduct,
+                    initialValue: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedProduct = v),
                   ),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<int>(
-                    value: selectedWarehouse,
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
-                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as int, child: Text(w['name'] ?? ''))).toList(),
+                    items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
                     onChanged: (v) => setDialogState(() => selectedWarehouse = v),
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: adjustmentType,
+                    initialValue: adjustmentType,
                     decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
                     items: const [
                       DropdownMenuItem(value: 'in', child: Text('Entrada')),
@@ -984,6 +991,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -1040,6 +1048,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final nameCtrl = TextEditingController();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -1075,6 +1084,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final addressCtrl = TextEditingController();
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         title: Row(
           children: [
@@ -1112,6 +1122,74 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             child: const Text('Crear'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+class _InventorySkeletonBox extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _InventorySkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 700.ms, curve: Curves.easeIn)
+        .fadeOut(delay: 700.ms, duration: 700.ms, curve: Curves.easeOut);
+  }
+}
+
+class _InventoryListSkeleton extends StatelessWidget {
+  const _InventoryListSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      itemCount: 8,
+      itemBuilder: (context, i) => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          children: [
+            _InventorySkeletonBox(width: 40, height: 40, radius: 8),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _InventorySkeletonBox(width: 130 + (i % 3) * 20.0, height: 14),
+                  const SizedBox(height: 6),
+                  _InventorySkeletonBox(width: 90 + (i % 2) * 25.0, height: 11),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            const _InventorySkeletonBox(width: 68, height: 16),
+          ],
+        ),
       ),
     );
   }

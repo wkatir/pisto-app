@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'package:go_router/go_router.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../i18n/translations.g.dart';
+
+enum _Period { week, month, quarter, year }
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -23,8 +27,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   List<dynamic> _topProducts = [];
   List<dynamic> _salesByCategory = [];
   bool _loading = true;
+  _Period _period = _Period.month;
 
   final _fmt = currencyFmt;
+
+  (DateTime, DateTime) _periodDates() {
+    final now = DateTime.now();
+    return switch (_period) {
+      _Period.week => (now.subtract(const Duration(days: 7)), now),
+      _Period.month => (DateTime(now.year, now.month, 1), now),
+      _Period.quarter => (DateTime(now.year, (now.month - 1) ~/ 3 * 3 + 1, 1), now),
+      _Period.year => (DateTime(now.year, 1, 1), now),
+    };
+  }
 
   @override
   void initState() {
@@ -33,12 +48,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _loadData() async {
+    final (start, end) = _periodDates();
     try {
       final svc = ref.read(reportsServiceProvider);
       final results = await Future.wait([
-        svc.getDashboardKPIs(),
-        svc.getSalesTrend(days: 30),
-        svc.getTopProducts(limit: 5),
+        svc.getDashboardKPIs(startDate: start, endDate: end),
+        svc.getSalesTrend(days: 30, startDate: start, endDate: end),
+        svc.getTopProducts(limit: 5, startDate: start, endDate: end),
         svc.getSalesByCategory(),
       ]);
       setState(() {
@@ -64,7 +80,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final authState = ref.watch(authProvider);
     final user = authState.value;
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 900;
 
@@ -72,56 +87,82 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: _loadData,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? _DashboardSkeleton(isWide: isWide)
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Icon(LucideIcons.layoutDashboard, size: 28, color: cs.primary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    t.dashboard,
-                                    style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  if (user != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 4),
-                                      child: Text(
-                                        t.welcome(name: user.firstName),
-                                        style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant),
-                                      ),
-                                    ),
-                                ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user != null ? 'Hola, ${user.firstName}' : t.dashboard,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 4),
+                              Text(
+                                'Panel de control',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.5,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Resumen en tiempo real de tu negocio',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.tonalIcon(
-                              onPressed: _loadData,
-                              icon: const Icon(LucideIcons.refreshCw, size: 16),
-                              label: Text(t.refresh),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: _loadData,
+                          icon: const Icon(LucideIcons.refreshCw, size: 16),
+                          tooltip: t.refresh,
+                          style: IconButton.styleFrom(
+                            foregroundColor: theme.colorScheme.onSurfaceVariant,
+                            backgroundColor: theme.colorScheme.surfaceContainerHigh,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          for (final p in _Period.values)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 6),
+                              child: _PeriodChip(
+                                label: switch (p) {
+                                  _Period.week => '7 días',
+                                  _Period.month => 'Este mes',
+                                  _Period.quarter => 'Trimestre',
+                                  _Period.year => 'Este año',
+                                },
+                                selected: _period == p,
+                                onTap: () => setState(() { _period = p; _loadData(); }),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     _buildKpiCards(theme, t),
                     const SizedBox(height: 24),
                     if (isWide)
@@ -154,27 +195,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final lowStock = _kpis?['lowStock'] as Map<String, dynamic>? ?? {};
 
     final revenue = double.tryParse(monthlySales['revenue']?.toString() ?? '0') ?? 0;
-    final salesCount = monthlySales['sales_count'] as int? ?? 0;
+    final salesCount = int.tryParse(monthlySales['sales_count']?.toString() ?? '0') ?? 0;
     final avgSale = salesCount > 0 ? revenue / salesCount : 0.0;
 
     final kpis = [
       _KpiData(t.monthlySales, _fmt.format(revenue), t.invoicesCount(count: salesCount), LucideIcons.trendingUp, cs.primary, cs.primary.withValues(alpha: 0.1)),
-      _KpiData(t.accountsReceivable, _fmt.format(double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0), t.accounts(count: receivables['pending_count'] ?? 0), LucideIcons.wallet, cs.tertiary, cs.tertiary.withValues(alpha: 0.1)),
-      _KpiData(t.lowStock, '${lowStock['low_stock_count'] ?? 0}', t.products_low, LucideIcons.alertTriangle, cs.error, cs.error.withValues(alpha: 0.1)),
-      _KpiData(t.averagePerSale, _fmt.format(avgSale), t.thisMonth, LucideIcons.barChart3, cs.secondary, cs.secondary.withValues(alpha: 0.1)),
+      _KpiData(t.accountsReceivable, _fmt.format(double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0), t.accounts(count: int.tryParse(receivables['pending_count']?.toString() ?? '0') ?? 0), LucideIcons.wallet, cs.tertiary, cs.tertiary.withValues(alpha: 0.1)),
+      _KpiData(t.lowStock, '${int.tryParse(lowStock['low_stock_count']?.toString() ?? '0') ?? 0}', t.products_low, LucideIcons.triangleAlert, cs.error, cs.error.withValues(alpha: 0.1), route: '/inventory?tab=alerts'),
+      _KpiData(t.averagePerSale, _fmt.format(avgSale), t.thisMonth, LucideIcons.chartColumn, cs.secondary, cs.secondary.withValues(alpha: 0.1)),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossCount = constraints.maxWidth > 800 ? 4 : 2;
+        final crossCount = constraints.maxWidth > Breakpoints.gridDense + 100 ? 4 : 2;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossCount,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.5,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.7,
           ),
           itemCount: kpis.length,
           itemBuilder: (context, i) => _KpiCard(data: kpis[i]),
@@ -189,7 +230,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (_salesTrend.isEmpty) {
       return _ChartCard(
         title: t.salesTrend,
-        icon: LucideIcons.lineChart,
+        icon: LucideIcons.chartLine,
         child: const Center(child: Text('Sin datos de ventas')),
       );
     }
@@ -214,7 +255,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return _ChartCard(
       title: t.salesTrend,
-      icon: LucideIcons.lineChart,
+      icon: LucideIcons.chartLine,
       child: SizedBox(
         height: 250,
         child: LineChart(
@@ -316,7 +357,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (_salesByCategory.isEmpty) {
       return _ChartCard(
         title: t.salesByCategory,
-        icon: LucideIcons.pieChart,
+        icon: LucideIcons.chartPie,
         child: const Center(child: Text('Sin datos')),
       );
     }
@@ -325,8 +366,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       cs.primary,
       cs.tertiary,
       cs.secondary,
-      AppTheme.chartOrange,
-      AppTheme.chartPurple,
+      AppTheme.chartAmber,
+      AppTheme.chartViolet,
       cs.error,
     ];
 
@@ -358,7 +399,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return _ChartCard(
       title: t.salesByCategory,
-      icon: LucideIcons.pieChart,
+      icon: LucideIcons.chartPie,
       child: Column(
         children: [
           SizedBox(
@@ -507,8 +548,9 @@ class _KpiData {
   final IconData icon;
   final Color color;
   final Color bgColor;
+  final String? route;
 
-  const _KpiData(this.title, this.value, this.subtitle, this.icon, this.color, this.bgColor);
+  const _KpiData(this.title, this.value, this.subtitle, this.icon, this.color, this.bgColor, {this.route});
 }
 
 class _KpiCard extends StatelessWidget {
@@ -519,54 +561,72 @@ class _KpiCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: data.route != null ? () => context.go(data.route!) : null,
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Flexible(
-                  child: Text(
-                    data.title,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+        child: Container(
+          decoration: BoxDecoration(
+            color: cs.surfaceContainer,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      data.title,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: data.bgColor,
-                    borderRadius: BorderRadius.circular(8),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: data.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(data.icon, size: 15, color: data.color),
                   ),
-                  child: Icon(data.icon, size: 18, color: data.color),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            AutoSizeText(
-              data.value,
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
-              maxLines: 1,
-              minFontSize: 14,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              data.subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
-          ],
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AutoSizeText(
+                    data.value,
+                    style: AppTheme.mono(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    minFontSize: 14,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    data.subtitle,
+                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -625,4 +685,201 @@ class _LegendItem {
   final String value;
 
   const _LegendItem(this.color, this.label, this.value);
+}
+
+// ── Period chip ───────────────────────────────────────────────────────────────
+
+class _PeriodChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _PeriodChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.turquoise : const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: selected ? AppTheme.turquoise : const Color(0xFF2A2A2A),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? Colors.black : const Color(0xFFAAAAAA),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+class _SkeletonBox extends StatelessWidget {
+  final double width;
+  final double height;
+  final double radius;
+
+  const _SkeletonBox({
+    required this.width,
+    required this.height,
+    this.radius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFFE2E8F0),
+        borderRadius: BorderRadius.circular(radius),
+      ),
+    )
+        .animate(onPlay: (c) => c.repeat(reverse: true))
+        .fadeIn(duration: 700.ms, curve: Curves.easeIn)
+        .fadeOut(delay: 700.ms, duration: 700.ms, curve: Curves.easeOut);
+  }
+}
+
+class _DashboardSkeleton extends StatelessWidget {
+  final bool isWide;
+  const _DashboardSkeleton({required this.isWide});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          const _SkeletonBox(width: 200, height: 28),
+          const SizedBox(height: 8),
+          const _SkeletonBox(width: 260, height: 16),
+          const SizedBox(height: 16),
+          // Period chips
+          Row(
+            children: List.generate(4, (i) => Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: _SkeletonBox(width: 60 + i * 12.0, height: 32, radius: 20),
+            )),
+          ),
+          const SizedBox(height: 16),
+          // KPI grid
+          LayoutBuilder(
+            builder: (ctx, constraints) {
+              final crossCount = constraints.maxWidth > Breakpoints.gridDense + 100 ? 4 : 2;
+              final cardWidth = (constraints.maxWidth - (crossCount - 1) * 16) / crossCount;
+              return Wrap(
+                spacing: 16,
+                runSpacing: 16,
+                children: List.generate(4, (_) => _KpiSkeleton(width: cardWidth)),
+              );
+            },
+          ),
+          const SizedBox(height: 24),
+          // Charts row
+          if (isWide)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 3, child: _ChartSkeleton(height: 310)),
+                const SizedBox(width: 24),
+                Expanded(flex: 2, child: _ChartSkeleton(height: 310)),
+              ],
+            )
+          else ...[
+            _ChartSkeleton(height: 310),
+            const SizedBox(height: 24),
+            _ChartSkeleton(height: 310),
+          ],
+          const SizedBox(height: 24),
+          _ChartSkeleton(height: 340),
+        ],
+      ),
+    );
+  }
+}
+
+class _KpiSkeleton extends StatelessWidget {
+  final double width;
+  const _KpiSkeleton({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: width / 1.5,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const _SkeletonBox(width: 90, height: 12),
+              _SkeletonBox(width: 28, height: 28, radius: 7),
+            ],
+          ),
+          const Spacer(),
+          const _SkeletonBox(width: 110, height: 22),
+          const SizedBox(height: 6),
+          const _SkeletonBox(width: 70, height: 12),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChartSkeleton extends StatelessWidget {
+  final double height;
+  const _ChartSkeleton({required this.height});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              _SkeletonBox(width: 18, height: 18),
+              SizedBox(width: 8),
+              _SkeletonBox(width: 140, height: 16),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: _SkeletonBox(
+              width: double.infinity,
+              height: double.infinity,
+              radius: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

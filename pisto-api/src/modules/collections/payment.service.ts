@@ -9,7 +9,7 @@ export async function createCollectionPayment(
   businessId: string,
   userId: string,
   receivableId: string,
-  data: { paymentMethodId: number; amount: string; reference?: string; notes?: string }
+  data: { paymentMethodId: string; amount: string; reference?: string; notes?: string }
 ) {
   const [ar] = await db.select().from(accountReceivable)
     .where(and(eq(accountReceivable.id, receivableId), eq(accountReceivable.businessId, businessId)))
