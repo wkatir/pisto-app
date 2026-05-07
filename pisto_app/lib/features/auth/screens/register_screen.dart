@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/auth_provider.dart';
+import '../../../config/app_theme.dart';
 import '../../../i18n/translations.g.dart';
 import '_auth_panel.dart';
 
@@ -77,18 +78,21 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'Crea tu cuenta',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
-                letterSpacing: -0.3,
+              'Creá tu cuenta',
+              style: AppTheme.serif(
+                fontSize: 32,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface,
+                letterSpacing: -0.5,
+                height: 1.1,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
-              'Empieza gratis, sin tarjeta de crédito',
+              'Empezá gratis, sin tarjeta de crédito.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: const Color(0xFF64748B),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
+                height: 1.4,
               ),
             ),
             const SizedBox(height: 28),
@@ -213,7 +217,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 Text(
                   '¿Ya tienes cuenta? ',
-                  style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFF64748B)),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
                 GestureDetector(
                   onTap: () => context.go('/login'),

@@ -146,50 +146,48 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         LayoutBuilder(
           builder: (context, constraints) {
             final crossCount = constraints.maxWidth > Breakpoints.gridDense ? 4 : 2;
-            return GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossCount,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 2.0,
-              ),
-              itemCount: items.length,
-              itemBuilder: (context, i) {
+            const gap = 12.0;
+            final cardWidth = (constraints.maxWidth - gap * (crossCount - 1)) / crossCount;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: List.generate(items.length, (i) {
                 final item = items[i];
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(item.icon, size: 16, color: item.color),
-                            const SizedBox(width: 6),
-                            Expanded(child: Text(item.label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        AutoSizeText(
-                          item.value,
-                          style: AppTheme.mono(fontSize: 20, fontWeight: FontWeight.w700),
-                          maxLines: 1,
-                          minFontSize: 12,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                return SizedBox(
+                  width: cardWidth,
+                  child: Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(item.icon, size: 16, color: item.color),
+                              const SizedBox(width: 6),
+                              Expanded(child: Text(item.label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          AutoSizeText(
+                            item.value,
+                            style: AppTheme.mono(fontSize: 20, fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            minFontSize: 12,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );
-              },
+              }),
             );
           },
         ),
@@ -313,7 +311,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     color: cs.primary,
                     radius: 45,
                     title: 'Utilidad\n${marginPct.toStringAsFixed(1)}%',
-                    titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                    titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onPrimary),
                     titlePositionPercentageOffset: 0.55,
                   ),
                   PieChartSectionData(
@@ -321,7 +319,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     color: cs.error.withValues(alpha: 0.7),
                     radius: 40,
                     title: 'Costo',
-                    titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+                    titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onPrimary),
                     titlePositionPercentageOffset: 0.55,
                   ),
                 ],

@@ -739,7 +739,7 @@ class _StatusChip extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
+      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(6)),
       child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
     );
   }
@@ -759,7 +759,7 @@ class _PaymentChip extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500)),
     );
   }
@@ -784,7 +784,7 @@ class _SalesSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
+        color: Theme.of(context).colorScheme.outlineVariant,
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -806,9 +806,9 @@ class _SalesListSkeleton extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [

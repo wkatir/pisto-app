@@ -179,6 +179,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<String>(
+                isExpanded: true,
                         initialValue: _selectedWarehouse,
                         decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
                         items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
@@ -188,6 +189,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<String?>(
+                isExpanded: true,
                         initialValue: _selectedCustomer,
                         decoration: const InputDecoration(labelText: 'Cliente (opcional)', border: OutlineInputBorder()),
                         items: [
@@ -209,6 +211,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                     SizedBox(
                       width: isNarrow ? constraints.maxWidth : 200,
                       child: DropdownButtonFormField<String>(
+                isExpanded: true,
                         initialValue: _paymentStatus,
                         decoration: const InputDecoration(labelText: 'Tipo Pago', border: OutlineInputBorder()),
                         items: const [
@@ -222,6 +225,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                       SizedBox(
                         width: isNarrow ? constraints.maxWidth : 200,
                         child: DropdownButtonFormField<String>(
+                isExpanded: true,
                           initialValue: _selectedPaymentMethodId,
                           decoration: const InputDecoration(labelText: 'Método de pago', border: OutlineInputBorder()),
                           items: _paymentMethods.map((pm) => DropdownMenuItem(
@@ -235,6 +239,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                       SizedBox(
                         width: isNarrow ? constraints.maxWidth : 200,
                         child: DropdownButtonFormField<String>(
+                isExpanded: true,
                           initialValue: _selectedDocumentTypeId,
                           decoration: const InputDecoration(labelText: 'Tipo de documento', border: OutlineInputBorder()),
                           items: _documentTypes.map((dt) => DropdownMenuItem(
@@ -421,6 +426,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 if (_taxes.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
+                isExpanded: true,
                     initialValue: selectedTaxId,
                     decoration: const InputDecoration(labelText: 'Impuesto (opcional)', border: OutlineInputBorder()),
                     items: [
@@ -513,6 +519,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 if (_taxes.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String?>(
+                isExpanded: true,
                     initialValue: selectedTaxId,
                     decoration: const InputDecoration(labelText: 'Impuesto (opcional)', border: OutlineInputBorder()),
                     items: [

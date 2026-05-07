@@ -1,3 +1,4 @@
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -17,335 +18,315 @@ class Breakpoints {
 class AppTheme {
   AppTheme._();
 
-  // ── Brand colors ──────────────────────────────────────────────────────────
+  // ── Brand ──────────────────────────────────────────────────────────────────
   static const turquoise = Color(0xFF1DE9B6);
-  static const _black = Color(0xFF000000);
-  static const _surface = Color(0xFF0D0D0D);
-  static const _surfaceContainer = Color(0xFF161616);
-  static const _surfaceContainerHigh = Color(0xFF1F1F1F);
-  static const _border = Color(0xFF2A2A2A);
+  static const _lightPrimary = Color(0xFF00897B);
 
-  // ── Sidebar / dark navigation ─────────────────────────────────────────────
-  static const sidebarMuted = Color(0xFFAAAAAA);
-  static const sidebarHover = Color(0xFF1A1A1A);
+  // ── Sidebar ────────────────────────────────────────────────────────────────
+  static const sidebarMuted = Color(0xFFA0A0A8);
+  static const sidebarHover = Color(0xFF1A1A1F);
+  static const sidebarBgDark = Color(0xFF0F0F12);
+  static const sidebarDividerDark = Color(0xFF1F1F25);
 
-  // ── Light theme tokens (used in landing/auth/sales detail screens) ────────
-  static const lightTextPrimary = Color(0xFF0F172A);
-  static const lightTextSecondary = Color(0xFF64748B);
-  static const lightBorder = Color(0xFFE2E8F0);
-  static const lightSurface = Color(0xFFF6F9FC);
-  static const lightSurfaceAlt = Color(0xFFF8FAFC);
+  static const sidebarBgLight = Color(0xFFFAFAF9);
+  static const sidebarMutedLight = Color(0xFF64748B);
+  static const sidebarHoverLight = Color(0xFFF1F1EE);
+  static const sidebarDividerLight = Color(0xFFE7E5E4);
+  static const sidebarTextLight = Color(0xFF0F172A);
 
-  // ── Third-party brand colors ──────────────────────────────────────────────
+  static Color sidebarBg(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? sidebarBgDark : sidebarBgLight;
+  static Color sidebarMutedFg(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? sidebarMuted : sidebarMutedLight;
+  static Color sidebarHoverBg(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? sidebarHover : sidebarHoverLight;
+  static Color sidebarDivider(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? sidebarDividerDark : sidebarDividerLight;
+  static Color sidebarLogoText(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? Colors.white : sidebarTextLight;
+
+  // ── Borders contextuales (light/dark) ──────────────────────────────────────
+  // Reemplazo del patrón `cs.outlineVariant.withValues(alpha: 0.5)` que en light
+  // sale casi invisible y en dark inconsistente. Estos están calibrados para
+  // dar el mismo nivel de "presencia" sutil en ambos modos.
+  static const _borderLight = Color(0xFFE7E5E4); // stone-200
+  static const _borderDark = Color(0xFF26262B);  // entre scaffold y surface dark
+
+  /// Border sutil para cards/contenedores. Más fuerte que outlineVariant default
+  /// en light (donde es casi imperceptible) y consistente en dark.
+  static Color borderSubtle(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark ? _borderDark : _borderLight;
+
+  /// Border más prominente (separadores fuertes, divisores entre secciones).
+  static Color borderStrong(BuildContext c) =>
+      Theme.of(c).brightness == Brightness.dark
+          ? const Color(0xFF35353C)
+          : const Color(0xFFD4D4D8);
+
+  /// Background sutil tinted con [color] para containers de íconos/avatares/chips.
+  ///
+  /// **Por qué existe**: usar `color.withValues(alpha: 0.10)` directo causa
+  /// "glow" en dark mode cuando [color] es saturado (ej. primary turquoise
+  /// `#1DE9B6` brillante). El alpha sobre fondo oscuro deja pasar mucha
+  /// luminosidad del color puro y se ve como un brillo decorativo de IA-slop.
+  ///
+  /// Solución: en dark hacemos `alphaBlend` del color con surfaceContainer.
+  /// El resultado es un tono mate apagado del color sobre el fondo del card
+  /// — no glow, pero conserva la conexión visual de intent.
+  ///
+  /// En light, `color.withValues(alpha: 0.10)` ya da el resultado correcto
+  /// (pálido natural sobre fondo claro), así que usamos eso.
+  static Color tintBg(BuildContext c, Color color) {
+    if (Theme.of(c).brightness == Brightness.dark) {
+      final cs = Theme.of(c).colorScheme;
+      return Color.alphaBlend(color.withValues(alpha: 0.14), cs.surfaceContainer);
+    }
+    return color.withValues(alpha: 0.10);
+  }
+
+  /// Background tinted más fuerte — para selection states (sidebar item activo,
+  /// list row selected). Mismo principio anti-glow que [tintBg].
+  static Color tintBgStrong(BuildContext c, Color color) {
+    if (Theme.of(c).brightness == Brightness.dark) {
+      final cs = Theme.of(c).colorScheme;
+      return Color.alphaBlend(color.withValues(alpha: 0.20), cs.surfaceContainer);
+    }
+    return color.withValues(alpha: 0.12);
+  }
+
+  // ── Channel brands ─────────────────────────────────────────────────────────
   static const whatsappBrand = Color(0xFF25D366);
 
-  // ── Chart colors ──────────────────────────────────────────────────────────
+  // ── Chart palette (decorativo, no semántico) ───────────────────────────────
   static const chartAmber = Color(0xFFF59E0B);
   static const chartViolet = Color(0xFF8B5CF6);
-  static const chartCoral = Color(0xFFF97316);
+  static const chartCoral = Color(0xFFFB923C);
   static const chartTeal = Color(0xFF14B8A6);
 
-  // ── Semantic ──────────────────────────────────────────────────────────────
-  static const positive = Color(0xFF1DE9B6);
-  static const negative = Color(0xFFEF4444);
+  // ── Semantic intent (uso en chips, deltas, status) ─────────────────────────
+  // Reemplaza positive/negative/warning con tokens claros y consistentes.
+  static const success = Color(0xFF22C55E);
   static const warning = Color(0xFFF59E0B);
+  static const danger = Color(0xFFEF4444);
+  static const info = Color(0xFF3B82F6);
 
+  // Aliases legacy — deprecated, usa success/warning/danger.
+  static const positive = success;
+  static const negative = danger;
 
-  // ── Dark theme (principal) ────────────────────────────────────────────────
-  static ThemeData get dark => ThemeData(
+  // ── Tinte cálido para datos no financieros (clientes, novedades) ───────────
+  static const accent = Color(0xFFFB923C);
+
+  // ── Color schemes ──────────────────────────────────────────────────────────
+  static const FlexSchemeColor _lightColors = FlexSchemeColor(
+    primary: _lightPrimary,
+    primaryContainer: Color(0xFFB2DFDB),
+    secondary: Color(0xFF00897B),
+    secondaryContainer: Color(0xFFE0F2F1),
+    tertiary: Color(0xFF475569),
+    tertiaryContainer: Color(0xFFF1F5F9),
+    appBarColor: Colors.white,
+    error: Color(0xFFEF4444),
+    errorContainer: Color(0xFFFEE2E2),
+  );
+
+  static const FlexSchemeColor _darkColors = FlexSchemeColor(
+    primary: turquoise,
+    primaryContainer: Color(0xFF003D30),
+    secondary: Color(0xFF00BFA5),
+    secondaryContainer: Color(0xFF002E26),
+    tertiary: Color(0xFF94A3B8),
+    tertiaryContainer: Color(0xFF1E293B),
+    appBarColor: Color(0xFF0F0F12),
+    error: Color(0xFFF87171),
+    errorContainer: Color(0xFF3B0A0A),
+  );
+
+  static ThemeData get light => FlexThemeData.light(
+        colors: _lightColors,
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 4,
+        appBarStyle: FlexAppBarStyle.surface,
+        appBarElevation: 0,
+        scaffoldBackground: const Color(0xFFFAFAF9),
         useMaterial3: true,
-        brightness: Brightness.dark,
-        colorScheme: const ColorScheme.dark(
-          brightness: Brightness.dark,
-          primary: turquoise,
-          onPrimary: _black,
-          primaryContainer: Color(0xFF003D30),
-          onPrimaryContainer: turquoise,
-          secondary: Color(0xFF00BFA5),
-          onSecondary: _black,
-          secondaryContainer: Color(0xFF002E26),
-          onSecondaryContainer: Color(0xFF80FFEA),
-          tertiary: Color(0xFF94A3B8),
-          onTertiary: _black,
-          tertiaryContainer: Color(0xFF1E293B),
-          onTertiaryContainer: Color(0xFFCBD5E1),
-          error: Color(0xFFEF4444),
-          onError: _black,
-          errorContainer: Color(0xFF3B0A0A),
-          onErrorContainer: Color(0xFFFCA5A5),
-          surface: _surface,
-          onSurface: Colors.white,
-          surfaceContainerLowest: _black,
-          surfaceContainerLow: _surface,
-          surfaceContainer: _surfaceContainer,
-          surfaceContainerHigh: _surfaceContainerHigh,
-          surfaceContainerHighest: Color(0xFF262626),
-          onSurfaceVariant: Color(0xFFB0B0B0),
-          outline: Color(0xFF3A3A3A),
-          outlineVariant: _border,
-          shadow: Colors.black,
-          scrim: Colors.black,
-          inverseSurface: Colors.white,
-          onInverseSurface: _black,
-          inversePrimary: Color(0xFF00695C),
-        ),
-        scaffoldBackgroundColor: _black,
-        textTheme: _buildTextTheme(Brightness.dark),
-        primaryTextTheme: _buildTextTheme(Brightness.dark),
         visualDensity: VisualDensity.comfortable,
-        // Cards
-        cardTheme: CardThemeData(
-          color: _surfaceContainer,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: _border),
-          ),
-          margin: EdgeInsets.zero,
+        subThemesData: const FlexSubThemesData(
+          interactionEffects: true,
+          tintedDisabledControls: true,
+          blendOnLevel: 6,
+          blendOnColors: false,
+          useMaterial3Typography: true,
+          useM2StyleDividerInM3: false,
+          defaultRadius: 10,
+          inputDecoratorRadius: 10,
+          inputDecoratorBorderType: FlexInputBorderType.outline,
+          inputDecoratorIsFilled: true,
+          cardRadius: 14,
+          cardElevation: 0,
+          dialogRadius: 16,
+          dialogElevation: 0,
+          chipRadius: 8,
+          popupMenuElevation: 0,
+          menuElevation: 0,
+          drawerElevation: 0,
+          bottomSheetElevation: 0,
+          bottomSheetModalElevation: 0,
+          tabBarItemSchemeColor: SchemeColor.primary,
+          tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
+          tabBarIndicatorSize: TabBarIndicatorSize.label,
+          tabBarDividerColor: Color(0xFFE7E5E4),
+          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+          snackBarElevation: 0,
+          fabUseShape: true,
+          fabAlwaysCircular: false,
+          elevatedButtonElevation: 0,
         ),
-        // Inputs
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: _surfaceContainerHigh,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: _border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: _border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: turquoise, width: 1.5),
-          ),
-          hintStyle: const TextStyle(color: Color(0xFF666666)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        keyColors: const FlexKeyColors(
+          useKeyColors: true,
+          useSecondary: true,
+          useTertiary: true,
         ),
-        // Botones
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            backgroundColor: turquoise,
-            foregroundColor: _black,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.white,
-            side: const BorderSide(color: Color(0xFF3A3A3A)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            textStyle: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w500),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: turquoise,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _surfaceContainerHigh,
-            foregroundColor: Colors.white,
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-              side: const BorderSide(color: _border),
-            ),
-          ),
-        ),
-        // Tabs
-        tabBarTheme: const TabBarThemeData(
-          labelColor: turquoise,
-          unselectedLabelColor: Color(0xFF808080),
-          indicatorColor: turquoise,
-          indicatorSize: TabBarIndicatorSize.label,
-          dividerColor: _border,
-        ),
-        // Divider
-        dividerTheme: const DividerThemeData(color: _border, thickness: 1, space: 1),
-        // AppBar
-        appBarTheme: AppBarTheme(
-          backgroundColor: _black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          surfaceTintColor: Colors.transparent,
-          titleTextStyle: GoogleFonts.plusJakartaSans(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        // Dialog
-        dialogTheme: DialogThemeData(
-          backgroundColor: _surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: _border),
-          ),
-          elevation: 0,
-        ),
-        // Chips
-        chipTheme: ChipThemeData(
-          backgroundColor: _surfaceContainerHigh,
-          selectedColor: const Color(0xFF003D30),
-          labelStyle: const TextStyle(color: Colors.white),
-          side: const BorderSide(color: _border),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-        ),
-        // Switch
-        switchTheme: SwitchThemeData(
-          thumbColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected) ? _black : const Color(0xFF666666)),
-          trackColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected) ? turquoise : const Color(0xFF2A2A2A)),
-        ),
-        // Checkbox
-        checkboxTheme: CheckboxThemeData(
-          fillColor: WidgetStateProperty.resolveWith((s) =>
-              s.contains(WidgetState.selected) ? turquoise : Colors.transparent),
-          checkColor: WidgetStateProperty.all(_black),
-          side: const BorderSide(color: Color(0xFF3A3A3A), width: 1.5),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-        ),
-        // FloatingActionButton
-        floatingActionButtonTheme: const FloatingActionButtonThemeData(
-          backgroundColor: turquoise,
-          foregroundColor: _black,
-        ),
-        // Snackbar
-        snackBarTheme: SnackBarThemeData(
-          backgroundColor: _surfaceContainerHigh,
-          contentTextStyle: const TextStyle(color: Colors.white),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: _border),
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-        // PopupMenu
-        popupMenuTheme: PopupMenuThemeData(
-          color: _surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: _border),
-          ),
-          elevation: 0,
-        ),
-        // NavigationRail
-        navigationRailTheme: const NavigationRailThemeData(
-          backgroundColor: _surface,
-          selectedIconTheme: IconThemeData(color: turquoise),
-          unselectedIconTheme: IconThemeData(color: Color(0xFFAAAAAA)),
-          selectedLabelTextStyle: TextStyle(color: turquoise, fontWeight: FontWeight.w600, fontSize: 12),
-          unselectedLabelTextStyle: TextStyle(color: Color(0xFFAAAAAA), fontSize: 12),
-          indicatorColor: Color(0x331DE9B6),
-        ),
-        // ListTile
-        listTileTheme: const ListTileThemeData(
-          tileColor: Colors.transparent,
-          iconColor: Color(0xFF808080),
-          textColor: Colors.white,
-        ),
-        // Icon
-        iconTheme: const IconThemeData(color: Color(0xFF808080)),
-        // BottomSheet
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: _surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-          ),
-        ),
-      );
-
-  // ── Light theme (complementario) ──────────────────────────────────────────
-  static ThemeData get light => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: turquoise,
-          brightness: Brightness.light,
-          primary: const Color(0xFF00897B),
-          onPrimary: Colors.white,
-        ),
-        scaffoldBackgroundColor: const Color(0xFFF6F9FC),
         textTheme: _buildTextTheme(Brightness.light),
         primaryTextTheme: _buildTextTheme(Brightness.light),
-        visualDensity: VisualDensity.comfortable,
-        cardTheme: CardThemeData(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF00897B), width: 1.5),
-          ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        ),
-        filledButtonTheme: FilledButtonThemeData(
-          style: FilledButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
-        dividerTheme: const DividerThemeData(color: Color(0xFFE2E8F0), thickness: 1),
       );
 
-  // ── Mono helper ───────────────────────────────────────────────────────────
+  static ThemeData get dark => FlexThemeData.dark(
+        colors: _darkColors,
+        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+        blendLevel: 13,
+        darkIsTrueBlack: false,
+        appBarStyle: FlexAppBarStyle.background,
+        appBarElevation: 0,
+        scaffoldBackground: const Color(0xFF0F0F12),
+        useMaterial3: true,
+        visualDensity: VisualDensity.comfortable,
+        subThemesData: const FlexSubThemesData(
+          interactionEffects: true,
+          tintedDisabledControls: true,
+          blendOnLevel: 20,
+          blendOnColors: false,
+          useMaterial3Typography: true,
+          useM2StyleDividerInM3: false,
+          defaultRadius: 10,
+          inputDecoratorRadius: 10,
+          inputDecoratorBorderType: FlexInputBorderType.outline,
+          inputDecoratorIsFilled: true,
+          cardRadius: 14,
+          cardElevation: 0,
+          dialogRadius: 16,
+          dialogElevation: 0,
+          chipRadius: 8,
+          popupMenuElevation: 0,
+          menuElevation: 0,
+          drawerElevation: 0,
+          bottomSheetElevation: 0,
+          bottomSheetModalElevation: 0,
+          tabBarItemSchemeColor: SchemeColor.primary,
+          tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
+          tabBarIndicatorSize: TabBarIndicatorSize.label,
+          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+          snackBarElevation: 0,
+          fabUseShape: true,
+          fabAlwaysCircular: false,
+          elevatedButtonElevation: 0,
+        ),
+        keyColors: const FlexKeyColors(
+          useKeyColors: true,
+          useSecondary: true,
+          useTertiary: true,
+        ),
+        textTheme: _buildTextTheme(Brightness.dark),
+        primaryTextTheme: _buildTextTheme(Brightness.dark),
+      );
+
+  // ── Typography ─────────────────────────────────────────────────────────────
+  // Plus Jakarta Sans → UI body, labels, buttons.
+  // Lora           → display headlines (24px+) — alta legibilidad en pantalla.
+  // DM Mono        → números financieros, monetarios y datos tabulares.
+
+  /// Mono para cifras monetarias y datos densos.
   static TextStyle mono({
     double fontSize = 14,
     FontWeight fontWeight = FontWeight.w500,
     Color? color,
     double? letterSpacing,
+    double? height,
   }) =>
       GoogleFonts.dmMono(
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
         letterSpacing: letterSpacing ?? -0.3,
-        height: 1.2,
+        height: height ?? 1.2,
       );
 
-  // ── Typography ────────────────────────────────────────────────────────────
-  static TextTheme _buildTextTheme(Brightness brightness) {
-    final base = GoogleFonts.plusJakartaSansTextTheme();
-    final bodyColor = brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
-    final subtleColor = brightness == Brightness.dark ? const Color(0xFFB0B0B0) : const Color(0xFF64748B);
+  /// Serif Lora — solo para titulares display (24px+).
+  /// Da personality editorial sin sacrificar legibilidad en pantalla.
+  static TextStyle serif({
+    double fontSize = 32,
+    FontWeight fontWeight = FontWeight.w600,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+    FontStyle? fontStyle,
+  }) =>
+      GoogleFonts.lora(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing ?? -0.5,
+        height: height ?? 1.15,
+        fontStyle: fontStyle,
+      );
 
-    return base.copyWith(
-      displayLarge: base.displayLarge?.copyWith(letterSpacing: -1.5, fontWeight: FontWeight.w800, color: bodyColor),
-      displayMedium: base.displayMedium?.copyWith(letterSpacing: -1.0, fontWeight: FontWeight.w700, color: bodyColor),
-      displaySmall: base.displaySmall?.copyWith(letterSpacing: -0.75, fontWeight: FontWeight.w700, color: bodyColor),
-      headlineLarge: base.headlineLarge?.copyWith(letterSpacing: -0.5, fontWeight: FontWeight.w700, color: bodyColor),
-      headlineMedium: base.headlineMedium?.copyWith(letterSpacing: -0.25, fontWeight: FontWeight.w600, color: bodyColor),
-      headlineSmall: base.headlineSmall?.copyWith(letterSpacing: -0.15, fontWeight: FontWeight.w600, color: bodyColor),
-      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.1, color: bodyColor),
-      titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w500, color: bodyColor),
-      titleSmall: base.titleSmall?.copyWith(fontWeight: FontWeight.w500, color: bodyColor),
-      bodyLarge: base.bodyLarge?.copyWith(fontWeight: FontWeight.w400, height: 1.6, color: bodyColor),
-      bodyMedium: base.bodyMedium?.copyWith(fontWeight: FontWeight.w400, height: 1.5, color: bodyColor),
-      bodySmall: base.bodySmall?.copyWith(fontWeight: FontWeight.w400, height: 1.4, color: subtleColor),
-      labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0, color: bodyColor),
-      labelMedium: base.labelMedium?.copyWith(fontWeight: FontWeight.w500, color: subtleColor),
-      labelSmall: base.labelSmall?.copyWith(fontWeight: FontWeight.w500, letterSpacing: 0.1, color: subtleColor),
+  /// Eyebrow style — uppercase mono pequeño para labels contextuales arriba de
+  /// titulares ("HOY · 7 MAY", "VENTAS · ESTE MES").
+  static TextStyle eyebrow(BuildContext context, {Color? color}) {
+    final cs = Theme.of(context).colorScheme;
+    return GoogleFonts.dmMono(
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+      color: color ?? cs.onSurfaceVariant,
+      letterSpacing: 1.2,
+      height: 1.2,
     );
   }
+
+  /// Construye el text theme con colores correctos por brightness.
+  ///
+  /// **Importante**: `Typography.englishLike2021` viene con colores hardcoded
+  /// (negros para light) que `copyWith` preserva. Si pasamos ese theme tal cual
+  /// a light y dark, los textos quedan negros incluso en dark mode (bug).
+  ///
+  /// Aplicamos `apply(displayColor/bodyColor)` ANTES del copyWith para que cada
+  /// brightness tenga sus colores correctos. FlexColorScheme respeta esos
+  /// colores y no los pisa.
+  static TextTheme _buildTextTheme(Brightness brightness) {
+    final color = brightness == Brightness.dark
+        ? const Color(0xFFE7E5E4) // matched con onSurface dark de FlexColorScheme
+        : const Color(0xFF1C1B1F); // matched con onSurface light
+    final base = GoogleFonts.plusJakartaSansTextTheme(
+      Typography.englishLike2021.apply(displayColor: color, bodyColor: color),
+    );
+    return base.copyWith(
+      displayLarge:   base.displayLarge?.copyWith(fontWeight: FontWeight.w800, letterSpacing: -1.5),
+      displayMedium:  base.displayMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -1.0),
+      displaySmall:   base.displaySmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.75),
+      headlineLarge:  base.headlineLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+      headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.25),
+      headlineSmall:  base.headlineSmall?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.15),
+      titleLarge:     base.titleLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: -0.1),
+      labelLarge:     base.labelLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0),
+    );
+  }
+}
+
+/// Color helpers para semántica de intent en widgets.
+extension SemanticColors on BuildContext {
+  Color get successFg => AppTheme.success;
+  Color get warningFg => AppTheme.warning;
+  Color get dangerFg => AppTheme.danger;
+  Color get infoFg => AppTheme.info;
+  Color get accentFg => AppTheme.accent;
 }

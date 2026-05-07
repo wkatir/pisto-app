@@ -50,13 +50,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           children: [
             Container(
               width: 52, height: 52,
-              decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+              decoration: BoxDecoration(color: AppTheme.tintBg(context, cs.primary), borderRadius: BorderRadius.circular(14)),
               child: Icon(LucideIcons.mailCheck, color: cs.primary, size: 24),
             ),
             const SizedBox(height: 20),
-            Text('Revisa tu correo', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: AppTheme.lightTextPrimary, letterSpacing: -0.3)),
-            const SizedBox(height: 8),
-            Text('Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.', style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.lightTextSecondary, height: 1.5)),
+            Text('Revisá tu correo', style: AppTheme.serif(fontSize: 28, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, letterSpacing: -0.5, height: 1.1)),
+            const SizedBox(height: 10),
+            Text('Si el email está registrado, recibirás instrucciones para restablecer tu contraseña.', style: theme.textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75), height: 1.5)),
             const SizedBox(height: 28),
             OutlinedButton(
               onPressed: () => context.go('/login'),
@@ -75,9 +75,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Recuperar contraseña', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: AppTheme.lightTextPrimary, letterSpacing: -0.3)),
-            const SizedBox(height: 6),
-            Text('Ingresa tu email y te enviaremos instrucciones.', style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.lightTextSecondary)),
+            Text('Recuperar contraseña', style: AppTheme.serif(fontSize: 28, fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, letterSpacing: -0.5, height: 1.1)),
+            const SizedBox(height: 10),
+            Text('Ingresá tu email y te enviaremos instrucciones.', style: theme.textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75), height: 1.4)),
             const SizedBox(height: 32),
             TextFormField(
               controller: _emailCtrl,
@@ -106,7 +106,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('¿Recordaste tu contraseña? ', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.lightTextSecondary)),
+                Text('¿Recordaste tu contraseña? ', style: theme.textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                 GestureDetector(
                   onTap: () => context.go('/login'),
                   child: Text('Iniciar sesión', style: theme.textTheme.bodySmall?.copyWith(color: cs.primary, fontWeight: FontWeight.w600)),

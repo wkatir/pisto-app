@@ -42,3 +42,15 @@ export const refreshSchema = v.object({
 export const forgotPasswordSchema = v.object({
   email: emailSchema,
 })
+
+export const updateProfileSchema = v.object({
+  firstName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1, 'Nombre requerido'))),
+  lastName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1, 'Apellido requerido'))),
+  phone: v.optional(v.pipe(v.string(), v.trim())),
+  email: v.optional(emailSchema),
+})
+
+export const changePasswordSchema = v.object({
+  currentPassword: v.pipe(v.string(), v.minLength(1, 'Contraseña actual requerida')),
+  newPassword: strongPasswordSchema,
+})

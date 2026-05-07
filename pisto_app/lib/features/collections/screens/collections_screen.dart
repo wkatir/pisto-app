@@ -650,7 +650,7 @@ class _CollectionsSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
+        color: Theme.of(context).colorScheme.outlineVariant,
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -672,9 +672,9 @@ class _CollectionsListSkeleton extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [

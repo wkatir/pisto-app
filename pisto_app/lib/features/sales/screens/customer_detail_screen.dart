@@ -86,9 +86,9 @@ class _CustomerDetailScreenState
         double.tryParse(_customer!['creditLimit']?.toString() ?? '0') ?? 0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.colorScheme.surfaceContainer,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft),
@@ -120,9 +120,9 @@ class _CustomerDetailScreenState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -164,8 +164,8 @@ class _CustomerDetailScreenState
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Icon(LucideIcons.phone,
-                            size: 14, color: AppTheme.lightTextSecondary),
+                        Icon(LucideIcons.phone,
+                            size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Text(
                           _customer!['phone'] as String,
@@ -178,8 +178,8 @@ class _CustomerDetailScreenState
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(LucideIcons.mail,
-                            size: 14, color: AppTheme.lightTextSecondary),
+                        Icon(LucideIcons.mail,
+                            size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         const SizedBox(width: 6),
                         Text(
                           _customer!['email'] as String,
@@ -204,9 +204,9 @@ class _CustomerDetailScreenState
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).colorScheme.surfaceContainer,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                 ),
                 child: Center(
                   child: Text(
@@ -236,9 +236,9 @@ class _CustomerDetailScreenState
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: Theme.of(context).colorScheme.surfaceContainer,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                   ),
                   child: Row(
                     children: [
@@ -255,7 +255,7 @@ class _CustomerDetailScreenState
                             Text(
                               dateStr,
                               style: theme.textTheme.bodySmall?.copyWith(
-                                  color: const Color(0xFF64748B)),
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
                             ),
                           ],
                         ),
@@ -273,9 +273,10 @@ class _CustomerDetailScreenState
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: isPaid
-                                  ? AppTheme.positive.withValues(alpha: 0.1)
-                                  : AppTheme.warning.withValues(alpha: 0.1),
+                              color: AppTheme.tintBg(
+                                context,
+                                isPaid ? AppTheme.success : AppTheme.warning,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(

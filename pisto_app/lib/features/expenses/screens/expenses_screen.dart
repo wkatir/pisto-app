@@ -4,6 +4,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class ExpensesScreen extends ConsumerStatefulWidget {
   const ExpensesScreen({super.key});
@@ -82,6 +84,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 const SizedBox(height: 12),
                 if (_categories.isNotEmpty)
                   DropdownButtonFormField<String?>(
+                isExpanded: true,
                     initialValue: selectedCategoryId,
                     decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
                     items: [
@@ -147,171 +150,175 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
+    final fmt = currencyFmt;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Gastos',
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Este mes',
-                        style: theme.textTheme.bodySmall?.copyWith(),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton.outlined(
-                  icon: const Icon(LucideIcons.refreshCw, size: 18),
+      body: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            PageHeader(
+              eyebrow: 'GASTOS · ESTE MES',
+              title: 'Adónde se va tu dinero',
+              meta: '${_expenses.length} gasto${_expenses.length == 1 ? '' : 's'} registrado${_expenses.length == 1 ? '' : 's'}',
+              metaIsMono: true,
+              actions: [
+                OutlinedButton.icon(
                   onPressed: _loadData,
+                  icon: const Icon(LucideIcons.refreshCw, size: 14),
+                  label: const Text('Actualizar'),
+                ),
+                FilledButton.icon(
+                  onPressed: _showAddExpenseDialog,
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Nuevo gasto'),
                 ),
               ],
             ),
-          ),
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total gastos del mes',
-                        style: theme.textTheme.bodySmall?.copyWith(),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '\$${_totalMonth.toStringAsFixed(2)}',
-                        style: AppTheme.mono(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.negative,
-                        ),
-                      ),
-                    ],
+            const SizedBox(height: 24),
+            // ── Total card (mismo lenguaje que hero del dashboard) ──
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppTheme.borderSubtle(context)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppTheme.tintBg(context, AppTheme.danger),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(LucideIcons.trendingDown, size: 20, color: AppTheme.danger),
                   ),
-                ),
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.negative.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(LucideIcons.trendingDown, color: AppTheme.negative, size: 20),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _expenses.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(LucideIcons.receipt, size: 48, color: theme.colorScheme.onSurfaceVariant),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Sin gastos este mes',
-                              style: theme.textTheme.bodyMedium,
-                            ),
-                          ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'TOTAL GASTOS DEL MES',
+                          style: AppTheme.eyebrow(context, color: cs.onSurfaceVariant),
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _expenses.length,
-                        itemBuilder: (ctx, i) {
-                          final exp = _expenses[i];
-                          final amount =
-                              double.tryParse(exp['amount']?.toString() ?? '0') ?? 0;
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainer,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: theme.colorScheme.outlineVariant),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        exp['description'] as String? ?? '',
-                                        style: theme.textTheme.bodyMedium?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        exp['expenseDate']?.toString() ?? '',
-                                        style: theme.textTheme.bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Text(
-                                  '\$${amount.toStringAsFixed(2)}',
-                                  style: AppTheme.mono(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.negative,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                IconButton(
-                                  icon: Icon(
-                                    LucideIcons.trash2,
-                                    size: 16,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                  onPressed: () async {
-                                    await ref
-                                        .read(expensesServiceProvider)
-                                        .deleteExpense(exp['id'] as String);
-                                    _loadData();
-                                  },
-                                ),
-                              ],
-                            ),
-                          );
-                        },
+                        const SizedBox(height: 6),
+                        Text(
+                          fmt.format(_totalMonth),
+                          style: AppTheme.mono(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.danger,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 64),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_expenses.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32),
+                child: EmptyState(
+                  icon: LucideIcons.receipt,
+                  title: 'Sin gastos este mes',
+                  description: 'Cuando registrés un gasto aparecerá acá. Empezá a llevar el control de adónde se va tu dinero.',
+                  actionLabel: 'Registrar gasto',
+                  actionIcon: LucideIcons.plus,
+                  onAction: _showAddExpenseDialog,
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12, left: 4),
+                    child: Text(
+                      'Movimientos',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
                       ),
+                    ),
+                  ),
+                  ..._expenses.map((exp) {
+                    final amount = double.tryParse(exp['amount']?.toString() ?? '0') ?? 0;
+                    final description = exp['description'] as String? ?? '';
+                    final date = exp['expenseDate']?.toString() ?? '';
+                    final categoryName = exp['categoryName']?.toString() ?? '';
+                    return FinancialListRow(
+                      leading: RowLeadingIcon(
+                        icon: LucideIcons.receipt,
+                        color: AppTheme.danger,
+                        size: 38,
+                      ),
+                      title: description.isEmpty ? 'Gasto sin descripción' : description,
+                      subtitleParts: [
+                        if (date.isNotEmpty) date,
+                        if (categoryName.isNotEmpty) categoryName,
+                      ],
+                      trailingValue: '−${fmt.format(amount)}',
+                      trailingColor: AppTheme.danger,
+                      onTap: () => _confirmDelete(exp),
+                    );
+                  }),
+                ],
+              ),
+          ],
+        ),
+      ),
+      floatingActionButton: _expenses.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _showAddExpenseDialog,
+              icon: const Icon(LucideIcons.plus, size: 18),
+              label: const Text('Gasto'),
+            ),
+    );
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> exp) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar gasto'),
+        content: Text('¿Eliminar "${exp['description'] ?? ''}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Eliminar'),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddExpenseDialog,
-        child: const Icon(LucideIcons.plus),
-      ),
     );
+    if (ok != true) return;
+    try {
+      await ref.read(expensesServiceProvider).deleteExpense(exp['id'] as String);
+      await _loadData();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
+    }
   }
 }

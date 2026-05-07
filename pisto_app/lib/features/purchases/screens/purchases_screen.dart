@@ -185,9 +185,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 _OrderStatusChip(status: status),
               ],
             ),
-            trailing: Flexible(
-              child: Text(_fmt.format(total), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
-            ),
+            trailing: Text(_fmt.format(total), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
             onTap: () => _showOrderDetail(context, o),
           ),
         );
@@ -355,6 +353,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: selectedSupplier,
                     decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
                     items: _suppliers.map((s) => DropdownMenuItem(value: s['id'] as String, child: Text(s['companyName'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
@@ -728,7 +727,7 @@ class _OrderStatusChip extends StatelessWidget {
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
     );
   }

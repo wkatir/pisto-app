@@ -35,25 +35,28 @@ class _LandingScreenState extends State<LandingScreen> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 800;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Stack(
-        children: [
-          CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              SliverToBoxAdapter(child: SizedBox(height: isWide ? 72 : 64)),
-              SliverToBoxAdapter(child: _HeroSection(isWide: isWide)),
-              SliverToBoxAdapter(child: _LogosBar(isWide: isWide)),
-              SliverToBoxAdapter(child: _FeaturesSection(isWide: isWide)),
-              SliverToBoxAdapter(child: _TestimonialsSection(isWide: isWide)),
-              SliverToBoxAdapter(child: _HowItWorksSection(isWide: isWide)),
-              SliverToBoxAdapter(child: _CtaSection(isWide: isWide)),
-              SliverToBoxAdapter(child: _Footer(isWide: isWide)),
-            ],
-          ),
-          _TopBar(isWide: isWide, isScrolled: _scrollOffset > 20),
-        ],
+    return Theme(
+      data: AppTheme.light,
+      child: Scaffold(
+        backgroundColor: AppTheme.light.colorScheme.surface,
+        body: Stack(
+          children: [
+            CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                SliverToBoxAdapter(child: SizedBox(height: isWide ? 72 : 64)),
+                SliverToBoxAdapter(child: _HeroSection(isWide: isWide)),
+                SliverToBoxAdapter(child: _MetricsBar(isWide: isWide)),
+                SliverToBoxAdapter(child: _FeaturesSection(isWide: isWide)),
+                SliverToBoxAdapter(child: _TestimonialsSection(isWide: isWide)),
+                SliverToBoxAdapter(child: _HowItWorksSection(isWide: isWide)),
+                SliverToBoxAdapter(child: _CtaSection(isWide: isWide)),
+                SliverToBoxAdapter(child: _Footer(isWide: isWide)),
+              ],
+            ),
+            _TopBar(isWide: isWide, isScrolled: _scrollOffset > 20),
+          ],
+        ),
       ),
     );
   }
@@ -83,7 +86,7 @@ class _TopBar extends StatelessWidget {
         border: Border(
           bottom: BorderSide(
             color: isScrolled
-                ? const Color(0xFFE2E8F0)
+                ? Theme.of(context).colorScheme.outlineVariant
                 : Colors.transparent,
             width: 1,
           ),
@@ -111,7 +114,7 @@ class _TopBar extends StatelessWidget {
                   'Pisto',
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: Theme.of(context).colorScheme.onSurface,
                     letterSpacing: -0.3,
                   ),
                 ),
@@ -124,7 +127,7 @@ class _TopBar extends StatelessWidget {
                 child: Text(
                   t.features,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -134,7 +137,7 @@ class _TopBar extends StatelessWidget {
                 child: Text(
                   t.pricing,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF64748B),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -146,7 +149,7 @@ class _TopBar extends StatelessWidget {
               child: Text(
                 t.login,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: const Color(0xFF0F172A),
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -180,11 +183,10 @@ class _HeroSection extends StatelessWidget {
     final theme = Theme.of(context);
 
     final badge = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -193,16 +195,17 @@ class _HeroSection extends StatelessWidget {
             width: 6,
             height: 6,
             decoration: BoxDecoration(
-              color: AppTheme.positive,
+              color: AppTheme.success,
               shape: BoxShape.circle,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Text(
-            t.managementForSMEs,
+            'Hecho para PYMES de Centroamérica',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: const Color(0xFF475569),
-              fontWeight: FontWeight.w500,
+              color: cs.primary,
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.1,
             ),
           ),
         ],
@@ -213,11 +216,12 @@ class _HeroSection extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 640),
       child: Text(
         t.controlYourBusiness,
-        style: theme.textTheme.displaySmall?.copyWith(
-          fontWeight: FontWeight.w800,
-          height: 1.1,
-          color: const Color(0xFF0F172A),
-          letterSpacing: -1.0,
+        style: AppTheme.serif(
+          fontSize: isWide ? 56 : 40,
+          fontWeight: FontWeight.w600,
+          height: 1.05,
+          color: Theme.of(context).colorScheme.onSurface,
+          letterSpacing: -1.5,
         ),
         textAlign: isWide ? TextAlign.start : TextAlign.center,
       ),
@@ -228,7 +232,7 @@ class _HeroSection extends StatelessWidget {
       child: Text(
         t.everythingNeeded,
         style: theme.textTheme.bodyLarge?.copyWith(
-          color: const Color(0xFF64748B),
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           height: 1.65,
         ),
         textAlign: isWide ? TextAlign.start : TextAlign.center,
@@ -252,57 +256,34 @@ class _HeroSection extends StatelessWidget {
           onPressed: () => context.go('/login'),
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            side: const BorderSide(color: Color(0xFFCBD5E1)),
-            foregroundColor: const Color(0xFF0F172A),
+            side: BorderSide(color: Theme.of(context).colorScheme.outline),
+            foregroundColor: Theme.of(context).colorScheme.onSurface,
           ),
           child: Text(t.viewDemo),
         ),
       ],
     ).animate().fadeIn(duration: 400.ms, delay: 240.ms);
 
-    // Badge de prueba social debajo de CTAs
-    final socialProof = Row(
-      mainAxisSize: isWide ? MainAxisSize.min : MainAxisSize.max,
-      mainAxisAlignment: isWide ? MainAxisAlignment.start : MainAxisAlignment.center,
-      children: [
-        // Avatares apilados
-        SizedBox(
-          width: 72,
-          height: 24,
-          child: Stack(
-            children: List.generate(4, (i) => Positioned(
-              left: i * 16.0,
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: [
-                    cs.primary,
-                    AppTheme.positive,
-                    AppTheme.chartAmber,
-                    AppTheme.chartViolet,
-                  ][i],
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-                child: Center(
-                  child: Text(
-                    ['C', 'M', 'A', 'L'][i],
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                  ),
+    // Bullets honestos en lugar de avatares falsos
+    final bullets = ['Sin tarjeta de crédito', 'Configurás en 5 minutos', 'Soporte en español'];
+    final socialProof = Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      alignment: isWide ? WrapAlignment.start : WrapAlignment.center,
+      children: bullets.map((b) => Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(LucideIcons.check, size: 14, color: AppTheme.success),
+              const SizedBox(width: 5),
+              Text(
+                b,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            )),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          t.trustedBySmbs,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: const Color(0xFF64748B),
-          ),
-        ),
-      ],
+            ],
+          )).toList(),
     ).animate().fadeIn(duration: 400.ms, delay: 320.ms);
 
     final content = Column(
@@ -363,19 +344,7 @@ class _DashboardMockup extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-            blurRadius: 32,
-            offset: const Offset(0, 12),
-          ),
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -397,7 +366,7 @@ class _DashboardMockup extends StatelessWidget {
                           'Dashboard',
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         const Spacer(),
@@ -451,9 +420,9 @@ class _DashboardMockup extends StatelessWidget {
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF8FAFC),
+                          color: Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
                         ),
                         padding: const EdgeInsets.all(14),
                         child: Column(
@@ -465,7 +434,7 @@ class _DashboardMockup extends StatelessWidget {
                                   'Tendencia de ventas',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF0F172A),
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 10,
                                   ),
                                 ),
@@ -473,7 +442,7 @@ class _DashboardMockup extends StatelessWidget {
                                 Text(
                                   'Últimos 30 días',
                                   style: theme.textTheme.labelSmall?.copyWith(
-                                    color: const Color(0xFF94A3B8),
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                                     fontSize: 9,
                                   ),
                                 ),
@@ -507,9 +476,9 @@ class _MockBrowserBar extends StatelessWidget {
     return Container(
       height: 38,
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      decoration: const BoxDecoration(
-        color: Color(0xFFF8FAFC),
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
       ),
       child: Row(
         children: [
@@ -536,14 +505,14 @@ class _MockBrowserBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(5),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               alignment: Alignment.center,
               child: Text(
                 'app.pistoapp.com/dashboard',
                 style: TextStyle(
                   fontSize: 9,
-                  color: const Color(0xFF94A3B8),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontFamily: 'monospace',
                 ),
               ),
@@ -580,7 +549,7 @@ class _MockKpiCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -595,9 +564,9 @@ class _MockKpiCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 8,
-                    color: Color(0xFF94A3B8),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -609,7 +578,7 @@ class _MockKpiCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
-                color: const Color(0xFF0F172A),
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 2),
@@ -677,51 +646,72 @@ class _ChartPainter extends CustomPainter {
   bool shouldRepaint(covariant _ChartPainter old) => old.color != color;
 }
 
-// ── Logos bar (social proof de marcas) ───────────────────────────────────────
+// ── Metrics bar (datos concretos en lugar de logos placeholder) ──────────────
 
-class _LogosBar extends StatelessWidget {
+class _MetricsBar extends StatelessWidget {
   final bool isWide;
 
-  const _LogosBar({required this.isWide});
+  const _MetricsBar({required this.isWide});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final logos = ['TechNica', 'DistribCA', 'AgroMax', 'ComercioGT', 'FreshMart', 'LogiPro'];
+    final cs = theme.colorScheme;
+
+    final metrics = [
+      ('Inventario', 'En tiempo real'),
+      ('Facturas', 'Listas en segundos'),
+      ('Cobros', 'Sin perder de vista'),
+      ('Reportes', 'Decisiones con datos'),
+    ];
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 28),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
         border: Border.symmetric(
-          horizontal: BorderSide(color: Color(0xFFE2E8F0)),
+          horizontal: BorderSide(color: cs.outlineVariant),
         ),
       ),
-      child: Column(
-        children: [
-          Text(
-            'Con la confianza de empresas en Centroamérica',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: const Color(0xFF94A3B8),
-              letterSpacing: 0.2,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Wrap(
-            spacing: isWide ? 40 : 24,
-            runSpacing: 16,
-            alignment: WrapAlignment.center,
-            children: logos.map((name) => Text(
-              name,
-              style: theme.textTheme.titleSmall?.copyWith(
-                color: const Color(0xFFCBD5E1),
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final useRow = constraints.maxWidth > Breakpoints.gridDense;
+          final children = metrics.map((m) {
+            return Padding(
+              padding: useRow ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                crossAxisAlignment: useRow ? CrossAxisAlignment.center : CrossAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    m.$1,
+                    style: AppTheme.serif(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    m.$2,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
-            )).toList(),
-          ),
-        ],
+            );
+          }).toList();
+
+          if (useRow) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: children.map((c) => Expanded(child: c)).toList(),
+            );
+          }
+          return Column(children: children);
+        },
       ),
     );
   }
@@ -771,10 +761,12 @@ class _FeaturesSection extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             t.todoLoQueNecesitas,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
-              letterSpacing: -0.5,
+            style: AppTheme.serif(
+              fontSize: 36,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+              letterSpacing: -0.7,
+              height: 1.1,
             ),
             textAlign: TextAlign.center,
           ).animate().fadeIn(duration: 400.ms, delay: 80.ms),
@@ -784,7 +776,7 @@ class _FeaturesSection extends StatelessWidget {
             child: Text(
               t.modulosDisenados,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: const Color(0xFF64748B),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 height: 1.6,
               ),
               textAlign: TextAlign.center,
@@ -793,63 +785,61 @@ class _FeaturesSection extends StatelessWidget {
           const SizedBox(height: 48),
           LayoutBuilder(
             builder: (context, constraints) {
-              final crossCount = constraints.maxWidth > Breakpoints.gridSparse
+              final w = constraints.maxWidth;
+              final crossCount = w > Breakpoints.gridSparse
                   ? 3
-                  : constraints.maxWidth > Breakpoints.formStack + 20
+                  : w > Breakpoints.formStack + 20
                       ? 2
                       : 1;
-              return GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossCount,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  mainAxisExtent: 180,
-                ),
-                itemCount: features.length,
-                itemBuilder: (context, i) {
+              const gap = 12.0;
+              final cardWidth = (w - gap * (crossCount - 1)) / crossCount;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: List.generate(features.length, (i) {
                   final f = features[i];
-                  return Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(9),
-                          decoration: BoxDecoration(
-                            color: f.color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
+                  return SizedBox(
+                    width: cardWidth,
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(9),
+                            decoration: BoxDecoration(
+                              color: f.color.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(f.icon, size: 20, color: f.color),
                           ),
-                          child: Icon(f.icon, size: 20, color: f.color),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          f.title,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                          const SizedBox(height: 16),
+                          Text(
+                            f.title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          f.description,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF64748B),
-                            height: 1.5,
+                          const SizedBox(height: 6),
+                          Text(
+                            f.description,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              height: 1.5,
+                            ),
                           ),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ).animate().fadeIn(duration: 400.ms, delay: (i * 60).ms);
-                },
+                        ],
+                      ),
+                    ).animate().fadeIn(duration: 400.ms, delay: (i * 60).ms),
+                  );
+                }),
               );
             },
           ),
@@ -912,11 +902,13 @@ class _TestimonialsSection extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Lo que dicen nuestros clientes',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
-              letterSpacing: -0.5,
+            'Casos reales de quienes ya usan Pisto',
+            style: AppTheme.serif(
+              fontSize: 32,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+              letterSpacing: -0.6,
+              height: 1.1,
             ),
             textAlign: TextAlign.center,
           ).animate().fadeIn(duration: 400.ms),
@@ -993,9 +985,9 @@ class _TestimonialCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1014,7 +1006,7 @@ class _TestimonialCard extends StatelessWidget {
           Text(
             '"${data.quote}"',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: const Color(0xFF334155),
+              color: Theme.of(context).colorScheme.onSurface,
               height: 1.6,
             ),
           ),
@@ -1040,23 +1032,29 @@ class _TestimonialCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    data.name,
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0F172A),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.name,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Text(
-                    '${data.role} · ${data.company}',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: const Color(0xFF94A3B8),
+                    Text(
+                      '${data.role} · ${data.company}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -1086,16 +1084,18 @@ class _HowItWorksSection extends StatelessWidget {
     ];
 
     return Container(
-      color: const Color(0xFFF8FAFC),
+      color: Theme.of(context).colorScheme.surface,
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 80),
       child: Column(
         children: [
           Text(
             t.empiezaEn3Pasos,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0F172A),
-              letterSpacing: -0.5,
+            style: AppTheme.serif(
+              fontSize: 32,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+              letterSpacing: -0.6,
+              height: 1.1,
             ),
             textAlign: TextAlign.center,
           ).animate().fadeIn(duration: 400.ms),
@@ -1107,8 +1107,7 @@ class _HowItWorksSection extends StatelessWidget {
               final items = steps.asMap().entries.map((entry) {
                 final i = entry.key;
                 final (icon, title, desc) = entry.value;
-                return Expanded(
-                  child: Padding(
+                return Padding(
                     padding: EdgeInsets.symmetric(horizontal: useRow ? 12 : 0),
                     child: Column(
                       crossAxisAlignment: useRow ? CrossAxisAlignment.center : CrossAxisAlignment.start,
@@ -1160,7 +1159,7 @@ class _HowItWorksSection extends StatelessWidget {
                           title,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           textAlign: useRow ? TextAlign.center : TextAlign.start,
                         ),
@@ -1168,18 +1167,22 @@ class _HowItWorksSection extends StatelessWidget {
                         Text(
                           desc,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF64748B),
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                             height: 1.55,
                           ),
                           textAlign: useRow ? TextAlign.center : TextAlign.start,
                         ),
                       ],
                     ).animate().fadeIn(duration: 400.ms, delay: (i * 80).ms),
-                  ),
                 );
               }).toList();
 
-              if (useRow) return Row(crossAxisAlignment: CrossAxisAlignment.start, children: items);
+              if (useRow) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: items.map((w) => Expanded(child: w)).toList(),
+                );
+              }
               return Column(
                 children: items
                     .asMap()
@@ -1226,10 +1229,12 @@ class _CtaSection extends StatelessWidget {
           children: [
             Text(
               t.listoParaTomarControl,
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
+              style: AppTheme.serif(
+                fontSize: 36,
+                fontWeight: FontWeight.w600,
                 color: Colors.white,
-                letterSpacing: -0.5,
+                letterSpacing: -0.7,
+                height: 1.1,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1283,9 +1288,9 @@ class _Footer extends StatelessWidget {
 
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 40),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
       ),
       child: isWide
           ? Row(
@@ -1311,7 +1316,7 @@ class _Footer extends StatelessWidget {
                           'Pisto',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0F172A),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ],
@@ -1320,7 +1325,7 @@ class _Footer extends StatelessWidget {
                     Text(
                       t.financialManagementSystem,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: const Color(0xFF94A3B8),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -1352,7 +1357,7 @@ class _Footer extends StatelessWidget {
                       'Pisto',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -1360,7 +1365,7 @@ class _Footer extends StatelessWidget {
                 const SizedBox(height: 20),
                 Text(
                   t.allRightsReserved,
-                  style: theme.textTheme.bodySmall?.copyWith(color: const Color(0xFF94A3B8)),
+                  style: theme.textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -1385,7 +1390,7 @@ class _FooterColumn extends StatelessWidget {
           title,
           style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F172A),
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -1394,7 +1399,7 @@ class _FooterColumn extends StatelessWidget {
               child: Text(
                 link,
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: const Color(0xFF64748B),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             )),

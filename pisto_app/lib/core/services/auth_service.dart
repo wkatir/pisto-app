@@ -54,4 +54,34 @@ class AuthService {
   Future<void> forgotPassword(String email) async {
     await _apiClient.dio.post('/auth/forgot-password', data: {'email': email});
   }
+
+  Future<Map<String, dynamic>> getMe() async {
+    final res = await _apiClient.dio.get('/auth/me');
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateProfile({
+    String? firstName,
+    String? lastName,
+    String? phone,
+    String? email,
+  }) async {
+    final body = <String, dynamic>{};
+    if (firstName != null) body['firstName'] = firstName;
+    if (lastName != null) body['lastName'] = lastName;
+    if (phone != null) body['phone'] = phone;
+    if (email != null) body['email'] = email;
+    final res = await _apiClient.dio.patch('/auth/me', data: body);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    await _apiClient.dio.post('/auth/change-password', data: {
+      'currentPassword': currentPassword,
+      'newPassword': newPassword,
+    });
+  }
 }

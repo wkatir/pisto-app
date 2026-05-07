@@ -46,6 +46,7 @@ class PistoApp extends ConsumerWidget {
         theme: AppTheme.light,
         darkTheme: AppTheme.dark,
         themeMode: themeMode,
+        themeAnimationDuration: Duration.zero,
         locale: LocaleSettings.currentLocale.flutterLocale,
         supportedLocales: AppLocaleUtils.supportedLocales,
         localizationsDelegates: const [

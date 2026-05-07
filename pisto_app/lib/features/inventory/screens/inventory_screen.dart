@@ -220,14 +220,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            trailing: Flexible(
-                              child: Text(
-                                _fmt.format(salePrice),
-                                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.primary),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                textAlign: TextAlign.end,
-                              ),
+                            trailing: Text(
+                              _fmt.format(salePrice),
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.primary),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.end,
                             ),
                             onTap: () => _showProductDetail(context, p),
                           ),
@@ -845,6 +843,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
@@ -852,6 +851,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: fromWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Origen', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
@@ -859,6 +859,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: toWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega Destino', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
@@ -924,6 +925,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: selectedProduct,
                     decoration: const InputDecoration(labelText: 'Producto', border: OutlineInputBorder()),
                     items: _products.map((p) => DropdownMenuItem(value: p['id'] as String, child: Text(p['name'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
@@ -931,6 +933,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: selectedWarehouse,
                     decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
                     items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] ?? ''))).toList(),
@@ -938,6 +941,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: adjustmentType,
                     decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
                     items: const [
@@ -1146,7 +1150,7 @@ class _InventorySkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
+        color: Theme.of(context).colorScheme.outlineVariant,
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -1170,7 +1174,7 @@ class _InventoryListSkeleton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           children: [

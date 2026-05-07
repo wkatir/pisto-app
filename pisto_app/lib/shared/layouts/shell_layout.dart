@@ -20,26 +20,30 @@ class ShellLayout extends ConsumerWidget {
     final isExtended = size.width >= Breakpoints.sidebarExtended;
 
     final destinations = [
-      _NavDest(LucideIcons.layoutDashboard, t.dashboard, '/dashboard'),
-      _NavDest(LucideIcons.package, t.inventory, '/inventory'),
-      _NavDest(LucideIcons.receipt, t.sales, '/sales'),
-      _NavDest(LucideIcons.wallet, t.collections, '/collections'),
-      _NavDest(LucideIcons.shoppingCart, t.purchases, '/purchases'),
-      _NavDest(LucideIcons.walletMinimal, t.expenses, '/expenses'),
-      _NavDest(LucideIcons.chartColumn, t.reports, '/reports'),
+      _NavDest(LucideIcons.layoutDashboard, t.dashboard, '/dashboard', _NavSection.main),
+      _NavDest(LucideIcons.receipt, t.sales, '/sales', _NavSection.main),
+      _NavDest(LucideIcons.wallet, t.collections, '/collections', _NavSection.main),
+      _NavDest(LucideIcons.package, t.inventory, '/inventory', _NavSection.main),
+      _NavDest(LucideIcons.shoppingCart, t.purchases, '/purchases', _NavSection.main),
+      _NavDest(LucideIcons.walletMinimal, t.expenses, '/expenses', _NavSection.main),
+      _NavDest(LucideIcons.chartColumn, t.reports, '/reports', _NavSection.insights),
     ];
 
     final path = GoRouterState.of(context).uri.path;
     final selectedIdx = destinations.indexWhere((d) => d.path == path).clamp(0, destinations.length - 1);
 
     if (useMobileNav) {
+      // Mobile nav muestra solo los 5 más usados; el resto vive detrás del avatar.
+      final mobileDests = destinations.take(5).toList();
+      final mobileSelected = mobileDests.indexWhere((d) => d.path == path);
       return Scaffold(
+        appBar: _MobileAppBar(t: t),
         body: child,
         bottomNavigationBar: NavigationBar(
-          selectedIndex: selectedIdx,
-          onDestinationSelected: (i) => context.go(destinations[i].path),
+          selectedIndex: mobileSelected.clamp(0, mobileDests.length - 1),
+          onDestinationSelected: (i) => context.go(mobileDests[i].path),
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          destinations: destinations
+          destinations: mobileDests
               .map((d) => NavigationDestination(icon: Icon(d.icon), label: d.label))
               .toList(),
         ),
@@ -56,15 +60,13 @@ class ShellLayout extends ConsumerWidget {
             ref: ref,
             t: t,
           ),
-          Container(width: 1, color: const Color(0xFF1F1F1F)),
+          Container(width: 1, color: AppTheme.sidebarDivider(context)),
           Expanded(child: child),
         ],
       ),
     );
   }
 }
-
-// ── Sidebar completo (reemplaza NavigationRail) ───────────────────────────────
 
 class _Sidebar extends ConsumerWidget {
   final List<_NavDest> destinations;
@@ -83,31 +85,55 @@ class _Sidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final width = isExtended ? 224.0 : 72.0;
+    final width = isExtended ? 240.0 : 72.0;
+    final user = ref.watch(authProvider).value;
+
+    // Agrupa destinos por sección preservando el índice global.
+    final mainItems = <(int, _NavDest)>[];
+    final insightsItems = <(int, _NavDest)>[];
+    for (var i = 0; i < destinations.length; i++) {
+      final d = destinations[i];
+      if (d.section == _NavSection.main) {
+        mainItems.add((i, d));
+      } else {
+        insightsItems.add((i, d));
+      }
+    }
 
     return Container(
       width: width,
-      color: const Color(0xFF0D0D0D),
+      color: AppTheme.sidebarBg(context),
       child: Column(
         children: [
-          // Logo
-          _SidebarLogo(isExtended: isExtended),
-          const SizedBox(height: 8),
-          // Nav items
+          _SidebarHeader(isExtended: isExtended, user: user),
           Expanded(
             child: ListView(
               padding: EdgeInsets.symmetric(horizontal: isExtended ? 12 : 8, vertical: 4),
-              children: destinations.asMap().entries.map((e) {
-                return _NavItem(
-                  dest: e.value,
-                  selected: e.key == selectedIdx,
-                  isExtended: isExtended,
-                  onTap: () => context.go(e.value.path),
-                );
-              }).toList(),
+              children: [
+                if (isExtended) _SectionLabel(text: 'OPERACIÓN'),
+                ...mainItems.map(
+                  (e) => _NavItem(
+                    dest: e.$2,
+                    selected: e.$1 == selectedIdx,
+                    isExtended: isExtended,
+                    onTap: () => context.go(e.$2.path),
+                  ),
+                ),
+                if (insightsItems.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  if (isExtended) _SectionLabel(text: 'INSIGHTS'),
+                  ...insightsItems.map(
+                    (e) => _NavItem(
+                      dest: e.$2,
+                      selected: e.$1 == selectedIdx,
+                      isExtended: isExtended,
+                      onTap: () => context.go(e.$2.path),
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          // Footer
           _SidebarFooter(isExtended: isExtended, t: t),
         ],
       ),
@@ -115,49 +141,102 @@ class _Sidebar extends ConsumerWidget {
   }
 }
 
-class _SidebarLogo extends StatelessWidget {
+class _SidebarHeader extends StatelessWidget {
   final bool isExtended;
-  const _SidebarLogo({required this.isExtended});
+  final dynamic user;
+  const _SidebarHeader({required this.isExtended, this.user});
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final logoColor = cs.primary;
+
     return Padding(
-      padding: EdgeInsets.fromLTRB(isExtended ? 16 : 0, 20, isExtended ? 16 : 0, 4),
+      padding: EdgeInsets.fromLTRB(
+        isExtended ? 16 : 0,
+        20,
+        isExtended ? 16 : 0,
+        12,
+      ),
       child: isExtended
           ? Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
-                    color: AppTheme.turquoise,
+                    color: logoColor,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(LucideIcons.landmark, size: 16, color: Colors.black),
+                  child: Icon(LucideIcons.landmark, size: 16, color: cs.onPrimary),
                 ),
                 const SizedBox(width: 10),
-                const Text(
-                  'Pisto',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Pisto',
+                        style: TextStyle(
+                          color: AppTheme.sidebarLogoText(context),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.3,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (user != null && (user.firstName as String?)?.isNotEmpty == true)
+                        Text(
+                          'Hola, ${user.firstName}',
+                          style: TextStyle(
+                            color: AppTheme.sidebarMutedFg(context),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            height: 1.2,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
                   ),
                 ),
               ],
             )
           : Center(
               child: Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: AppTheme.turquoise,
+                  color: logoColor,
                   borderRadius: BorderRadius.circular(9),
                 ),
-                child: const Icon(LucideIcons.landmark, size: 18, color: Colors.black),
+                child: Icon(LucideIcons.landmark, size: 17, color: cs.onPrimary),
               ),
             ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final String text;
+  const _SectionLabel({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 6),
+      child: Text(
+        text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.sidebarMutedFg(context),
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }
@@ -177,10 +256,11 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconColor = selected ? Colors.black : AppTheme.sidebarMuted;
-    final labelColor = selected ? AppTheme.turquoise : AppTheme.sidebarMuted;
-    final bg = selected ? AppTheme.turquoise : Colors.transparent;
-    final hoverBg = selected ? AppTheme.turquoise : AppTheme.sidebarHover;
+    final cs = Theme.of(context).colorScheme;
+    final mutedFg = AppTheme.sidebarMutedFg(context);
+    final iconColor = selected ? cs.primary : mutedFg;
+    final labelColor = selected ? AppTheme.sidebarLogoText(context) : mutedFg;
+    final bg = selected ? AppTheme.tintBgStrong(context, cs.primary) : Colors.transparent;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
@@ -190,28 +270,51 @@ class _NavItem extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(8),
-          hoverColor: hoverBg,
-          splashColor: AppTheme.turquoise.withValues(alpha: 0.2),
-          child: Container(
-            height: 40,
-            padding: EdgeInsets.symmetric(horizontal: isExtended ? 12 : 0),
+          hoverColor: AppTheme.sidebarHoverBg(context),
+          child: SizedBox(
+            height: 36,
             child: isExtended
                 ? Row(
                     children: [
-                      Icon(dest.icon, size: 18, color: iconColor),
-                      const SizedBox(width: 10),
-                      Text(
-                        dest.label,
-                        style: TextStyle(
-                          color: labelColor,
-                          fontSize: 13,
-                          fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                      // Indicador lateral cuando está seleccionado
+                      Container(
+                        width: 3,
+                        height: 18,
+                        margin: const EdgeInsets.only(left: 0),
+                        decoration: BoxDecoration(
+                          color: selected ? cs.primary : Colors.transparent,
+                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(2)),
                         ),
                       ),
+                      const SizedBox(width: 9),
+                      Icon(dest.icon, size: 17, color: iconColor),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Text(
+                          dest.label,
+                          style: TextStyle(
+                            color: labelColor,
+                            fontSize: 13,
+                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                            letterSpacing: -0.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                     ],
                   )
                 : Center(
-                    child: Icon(dest.icon, size: 20, color: selected ? Colors.black : AppTheme.sidebarMuted),
+                    child: Container(
+                      width: 36,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: bg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(dest.icon, size: 19, color: iconColor),
+                    ),
                   ),
           ),
         ),
@@ -245,7 +348,7 @@ class _SidebarFooter extends ConsumerWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(height: 1, color: const Color(0xFF1F1F1F)),
+        Container(height: 1, color: AppTheme.sidebarDivider(context)),
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: isExtended ? 12 : 8,
@@ -255,14 +358,9 @@ class _SidebarFooter extends ConsumerWidget {
               ? Column(
                   children: [
                     _FooterTile(
-                      icon: themeIcon,
-                      label: '${t.theme}: $themeLabel',
-                      onTap: () => ref.read(themeModeProvider.notifier).cycle(),
-                    ),
-                    _FooterTile(
-                      icon: LucideIcons.globe,
-                      label: '${t.language}: $langLabel',
-                      onTap: () => ref.read(localeProvider.notifier).toggleLocale(),
+                      icon: LucideIcons.userRound,
+                      label: 'Mi perfil',
+                      onTap: () => context.go('/profile'),
                     ),
                     _FooterTile(
                       icon: LucideIcons.settings,
@@ -270,9 +368,19 @@ class _SidebarFooter extends ConsumerWidget {
                       onTap: () => context.go('/settings'),
                     ),
                     _FooterTile(
+                      icon: themeIcon,
+                      label: themeLabel,
+                      onTap: () => ref.read(themeModeProvider.notifier).cycle(),
+                    ),
+                    _FooterTile(
+                      icon: LucideIcons.globe,
+                      label: 'Idioma · $langLabel',
+                      onTap: () => ref.read(localeProvider.notifier).toggleLocale(),
+                    ),
+                    _FooterTile(
                       icon: LucideIcons.logOut,
                       label: t.logout,
-                      color: const Color(0xFFEF4444),
+                      color: AppTheme.danger,
                       onTap: () {
                         ref.read(authProvider.notifier).logout();
                         context.go('/login');
@@ -282,10 +390,11 @@ class _SidebarFooter extends ConsumerWidget {
                 )
               : Column(
                   children: [
-                    _IconBtn(icon: themeIcon, tooltip: '${t.theme}: $themeLabel', onTap: () => ref.read(themeModeProvider.notifier).cycle()),
-                    _IconBtn(icon: LucideIcons.globe, tooltip: '${t.language}: $langLabel', onTap: () => ref.read(localeProvider.notifier).toggleLocale()),
+                    _IconBtn(icon: LucideIcons.userRound, tooltip: 'Mi perfil', onTap: () => context.go('/profile')),
                     _IconBtn(icon: LucideIcons.settings, tooltip: t.settings, onTap: () => context.go('/settings')),
-                    _IconBtn(icon: LucideIcons.logOut, tooltip: t.logout, color: const Color(0xFFEF4444), onTap: () {
+                    _IconBtn(icon: themeIcon, tooltip: themeLabel, onTap: () => ref.read(themeModeProvider.notifier).cycle()),
+                    _IconBtn(icon: LucideIcons.globe, tooltip: '${t.language}: $langLabel', onTap: () => ref.read(localeProvider.notifier).toggleLocale()),
+                    _IconBtn(icon: LucideIcons.logOut, tooltip: t.logout, color: AppTheme.danger, onTap: () {
                       ref.read(authProvider.notifier).logout();
                       context.go('/login');
                     }),
@@ -308,22 +417,31 @@ class _FooterTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = color ?? const Color(0xFFAAAAAA);
+    final c = color ?? AppTheme.sidebarMutedFg(context);
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(6),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(6),
-        hoverColor: const Color(0xFF1A1A1A),
+        hoverColor: AppTheme.sidebarHoverBg(context),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           child: Row(
             children: [
               Icon(icon, size: 14, color: c),
-              const SizedBox(width: 8),
+              const SizedBox(width: 9),
               Expanded(
-                child: Text(label, style: TextStyle(fontSize: 12, color: c, fontWeight: FontWeight.w400), maxLines: 1, overflow: TextOverflow.ellipsis),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: c,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -351,11 +469,11 @@ class _IconBtn extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(6),
-          hoverColor: const Color(0xFF1A1A1A),
+          hoverColor: AppTheme.sidebarHoverBg(context),
           child: SizedBox(
             width: 40,
             height: 36,
-            child: Icon(icon, size: 17, color: color ?? const Color(0xFFAAAAAA)),
+            child: Icon(icon, size: 17, color: color ?? AppTheme.sidebarMutedFg(context)),
           ),
         ),
       ),
@@ -363,9 +481,321 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
+enum _NavSection { main, insights }
+
 class _NavDest {
   final IconData icon;
   final String label;
   final String path;
-  const _NavDest(this.icon, this.label, this.path);
+  final _NavSection section;
+  const _NavDest(this.icon, this.label, this.path, this.section);
+}
+
+// ── Mobile app bar + account sheet ────────────────────────────────────────────
+
+class _MobileAppBar extends ConsumerWidget implements PreferredSizeWidget {
+  final Translations t;
+  const _MobileAppBar({required this.t});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(56);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final user = ref.watch(authProvider).value;
+    final initials = _initialsFor(user?.firstName, user?.lastName);
+
+    return AppBar(
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      backgroundColor: cs.surface,
+      surfaceTintColor: Colors.transparent,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: cs.primary,
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(LucideIcons.landmark, size: 14, color: cs.onPrimary),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            'Pisto',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Padding(
+          padding: const EdgeInsets.only(right: 12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => _showAccountSheet(context, ref, t),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: AppTheme.tintBg(context, cs.primary),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.borderSubtle(context)),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                initials,
+                style: TextStyle(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(height: 1, color: AppTheme.sidebarDivider(context)),
+      ),
+    );
+  }
+
+  static String _initialsFor(String? first, String? last) {
+    final f = (first ?? '').trim();
+    final l = (last ?? '').trim();
+    final fi = f.isEmpty ? '' : f[0].toUpperCase();
+    final li = l.isEmpty ? '' : l[0].toUpperCase();
+    final out = '$fi$li';
+    return out.isEmpty ? '?' : out;
+  }
+}
+
+void _showAccountSheet(BuildContext context, WidgetRef ref, Translations t) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    showDragHandle: true,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (sheetCtx) => _AccountSheetContent(t: t),
+  );
+}
+
+class _AccountSheetContent extends ConsumerWidget {
+  final Translations t;
+  const _AccountSheetContent({required this.t});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final user = ref.watch(authProvider).value;
+    final mode = ref.watch(themeModeProvider);
+    final locale = ref.watch(localeProvider);
+    final fullName = user == null ? '' : '${user.firstName} ${user.lastName}'.trim();
+
+    final themeIcon = switch (mode) {
+      ThemeMode.system => LucideIcons.monitor,
+      ThemeMode.light => LucideIcons.sun,
+      ThemeMode.dark => LucideIcons.moon,
+    };
+    final themeLabel = switch (mode) {
+      ThemeMode.system => t.systemTheme,
+      ThemeMode.light => t.lightTheme,
+      ThemeMode.dark => t.darkTheme,
+    };
+    final langLabel = locale.languageCode == 'es' ? 'Español' : 'English';
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header con nombre + email
+            if (user != null) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainer,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.borderSubtle(context)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: AppTheme.tintBg(context, cs.primary),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        _MobileAppBar._initialsFor(user.firstName, user.lastName),
+                        style: TextStyle(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            fullName.isEmpty ? user.email : fullName,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            user.email,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurface.withValues(alpha: 0.7),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+            _SheetTile(
+              icon: LucideIcons.userRound,
+              label: 'Mi perfil',
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/profile');
+              },
+            ),
+            _SheetTile(
+              icon: LucideIcons.settings,
+              label: t.settings,
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/settings');
+              },
+            ),
+            const SizedBox(height: 8),
+            _SheetTile(
+              icon: themeIcon,
+              label: '${t.theme} · $themeLabel',
+              onTap: () => ref.read(themeModeProvider.notifier).cycle(),
+              dismissOnTap: false,
+            ),
+            _SheetTile(
+              icon: LucideIcons.globe,
+              label: '${t.language} · $langLabel',
+              onTap: () => ref.read(localeProvider.notifier).toggleLocale(),
+              dismissOnTap: false,
+            ),
+            const SizedBox(height: 12),
+            Container(height: 1, color: AppTheme.borderSubtle(context)),
+            const SizedBox(height: 12),
+            _SheetTile(
+              icon: LucideIcons.logOut,
+              label: t.logout,
+              destructive: true,
+              onTap: () async {
+                Navigator.pop(context);
+                await ref.read(authProvider.notifier).logout();
+                if (context.mounted) context.go('/login');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SheetTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+  final bool dismissOnTap;
+
+  const _SheetTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+    this.dismissOnTap = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = destructive ? AppTheme.danger : cs.onSurface;
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        onTap: () {
+          if (dismissOnTap) {
+            // El onTap ya hace pop si corresponde.
+          }
+          onTap();
+        },
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: destructive
+                      ? AppTheme.tintBg(context, AppTheme.danger)
+                      : cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 17, color: color),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ),
+              Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

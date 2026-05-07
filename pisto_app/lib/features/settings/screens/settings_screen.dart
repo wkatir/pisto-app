@@ -95,11 +95,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final cs = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
         children: [
           Container(
-            color: Colors.white,
+            color: Theme.of(context).colorScheme.surfaceContainer,
             padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -146,9 +146,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -171,6 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
+                isExpanded: true,
               initialValue: _currencyCode,
               decoration: const InputDecoration(labelText: 'Moneda'),
               items: const [
@@ -213,9 +214,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: Row(
                 children: [
@@ -266,9 +267,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
               child: Row(
                 children: [

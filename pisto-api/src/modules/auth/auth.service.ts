@@ -128,6 +128,70 @@ export async function logout(refreshTokenStr: string) {
   await revokeRefreshToken(refreshTokenStr)
 }
 
+export async function getMe(userId: string) {
+  const rows = await db.select({
+    id: appUser.id,
+    email: appUser.email,
+    firstName: appUser.firstName,
+    lastName: appUser.lastName,
+    phone: appUser.phone,
+    isActive: appUser.isActive,
+    createdAt: appUser.createdAt,
+    businessId: appUser.businessId,
+    businessName: business.name,
+  })
+    .from(appUser)
+    .leftJoin(business, eq(business.id, appUser.businessId))
+    .where(eq(appUser.id, userId))
+
+  const user = rows[0]
+  if (!user) throw new AppError(404, 'Usuario no encontrado')
+  const roles = await getUserRoles(user.id)
+  return { ...user, roles }
+}
+
+export async function updateProfile(userId: string, data: {
+  firstName?: string
+  lastName?: string
+  phone?: string
+  email?: string
+}) {
+  if (data.email) {
+    const existing = await db.select({ id: appUser.id }).from(appUser)
+      .where(eq(appUser.email, data.email))
+    if (existing.length > 0 && existing[0]!.id !== userId) {
+      throw new AppError(409, 'Email ya registrado por otro usuario')
+    }
+  }
+
+  const updates: Record<string, unknown> = {}
+  if (data.firstName !== undefined) updates.firstName = data.firstName
+  if (data.lastName !== undefined) updates.lastName = data.lastName
+  if (data.phone !== undefined) updates.phone = data.phone
+  if (data.email !== undefined) updates.email = data.email
+
+  if (Object.keys(updates).length === 0) {
+    return getMe(userId)
+  }
+
+  await db.update(appUser).set(updates).where(eq(appUser.id, userId))
+  return getMe(userId)
+}
+
+export async function changePassword(userId: string, currentPassword: string, newPassword: string) {
+  const rows = await db.select({ passwordHash: appUser.passwordHash })
+    .from(appUser).where(eq(appUser.id, userId))
+  const user = rows[0]
+  if (!user) throw new AppError(404, 'Usuario no encontrado')
+
+  const ok = await Bun.password.verify(currentPassword, user.passwordHash)
+  if (!ok) throw new AppError(401, 'Contraseña actual incorrecta')
+
+  const passwordHash = await Bun.password.hash(newPassword)
+  await db.update(appUser).set({ passwordHash }).where(eq(appUser.id, userId))
+  return { success: true }
+}
+
 async function getUserRoles(userId: string): Promise<string[]> {
   const rows = await db.select({ roleName: role.name }).from(userRole)
     .innerJoin(role, eq(userRole.roleId, role.id))

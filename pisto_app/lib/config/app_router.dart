@@ -12,6 +12,7 @@ import '../features/collections/screens/collections_screen.dart';
 import '../features/purchases/screens/purchases_screen.dart';
 import '../features/reports/screens/reports_screen.dart';
 import '../features/expenses/screens/expenses_screen.dart';
+import '../features/profile/screens/profile_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../shared/layouts/shell_layout.dart';
 
@@ -94,6 +95,10 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/expenses',
           pageBuilder: (context, state) => const NoTransitionPage(child: ExpensesScreen()),
+        ),
+        GoRoute(
+          path: '/profile',
+          pageBuilder: (context, state) => const NoTransitionPage(child: ProfileScreen()),
         ),
         GoRoute(
           path: '/settings',

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:auto_size_text/auto_size_text.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
@@ -11,6 +11,7 @@ import '../../auth/providers/auth_provider.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../i18n/translations.g.dart';
+import '../../../shared/widgets/widgets.dart';
 
 enum _Period { week, month, quarter, year }
 
@@ -40,6 +41,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       _Period.year => (DateTime(now.year, 1, 1), now),
     };
   }
+
+  String _periodLabel() => switch (_period) {
+        _Period.week => 'últimos 7 días',
+        _Period.month => 'este mes',
+        _Period.quarter => 'este trimestre',
+        _Period.year => 'este año',
+      };
 
   @override
   void initState() {
@@ -90,96 +98,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ? _DashboardSkeleton(isWide: isWide)
             : SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+                padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 32, isWide ? 32 : 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user != null ? 'Hola, ${user.firstName}' : t.dashboard,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Panel de control',
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.5,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Resumen en tiempo real de tu negocio',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: _loadData,
-                          icon: const Icon(LucideIcons.refreshCw, size: 16),
-                          tooltip: t.refresh,
-                          style: IconButton.styleFrom(
-                            foregroundColor: theme.colorScheme.onSurfaceVariant,
-                            backgroundColor: theme.colorScheme.surfaceContainerHigh,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          for (final p in _Period.values)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6),
-                              child: _PeriodChip(
-                                label: switch (p) {
-                                  _Period.week => '7 días',
-                                  _Period.month => 'Este mes',
-                                  _Period.quarter => 'Trimestre',
-                                  _Period.year => 'Este año',
-                                },
-                                selected: _period == p,
-                                onTap: () => setState(() { _period = p; _loadData(); }),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    _buildKpiCards(theme, t),
+                    _buildGreeting(theme, user?.firstName, t),
                     const SizedBox(height: 24),
+                    _buildPeriodChips(theme),
+                    const SizedBox(height: 28),
+                    _buildHeroNumber(theme),
+                    const SizedBox(height: 36),
+                    _buildStatStrip(theme),
+                    const SizedBox(height: 36),
+                    _buildSmartActions(theme, t),
+                    const SizedBox(height: 36),
                     if (isWide)
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(flex: 3, child: _buildSalesTrendChart(theme, t)),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(flex: 2, child: _buildCategoryChart(theme, t)),
                         ],
                       )
                     else ...[
                       _buildSalesTrendChart(theme, t),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       _buildCategoryChart(theme, t),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _buildTopProductsChart(theme, t),
                   ],
                 ),
@@ -188,50 +135,310 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  Widget _buildKpiCards(ThemeData theme, Translations t) {
+  // ── Header ─────────────────────────────────────────────────────────────────
+
+  Widget _buildGreeting(ThemeData theme, String? firstName, Translations t) {
+    final cs = theme.colorScheme;
+    final greeting = greetingForHour();
+    final dateLine = formatLongDateEs(DateTime.now()).toUpperCase();
+    final name = firstName?.trim().isNotEmpty == true ? ', ${firstName!.trim()}' : '';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                dateLine,
+                style: AppTheme.eyebrow(context, color: cs.primary),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '$greeting$name',
+                style: AppTheme.serif(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurface,
+                  letterSpacing: -0.8,
+                  height: 1.05,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Esto es lo que pasa con tu negocio hoy.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+        IconButton(
+          onPressed: _loadData,
+          icon: const Icon(LucideIcons.refreshCw, size: 16),
+          tooltip: t.refresh,
+          style: IconButton.styleFrom(
+            foregroundColor: cs.onSurfaceVariant,
+            backgroundColor: cs.surfaceContainerHigh,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodChips(ThemeData theme) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final p in _Period.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _PeriodChip(
+                label: switch (p) {
+                  _Period.week => '7 días',
+                  _Period.month => 'Este mes',
+                  _Period.quarter => 'Trimestre',
+                  _Period.year => 'Este año',
+                },
+                selected: _period == p,
+                onTap: () => setState(() {
+                  _period = p;
+                  _loadData();
+                }),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Hero number ────────────────────────────────────────────────────────────
+
+  Widget _buildHeroNumber(ThemeData theme) {
     final cs = theme.colorScheme;
     final monthlySales = _kpis?['monthlySales'] as Map<String, dynamic>? ?? {};
+    final revenue = double.tryParse(monthlySales['revenue']?.toString() ?? '0') ?? 0;
+    final salesCount = int.tryParse(monthlySales['sales_count']?.toString() ?? '0') ?? 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'VENTAS · ${_periodLabel().toUpperCase()}',
+            style: AppTheme.eyebrow(context, color: cs.onSurfaceVariant),
+          ),
+          const SizedBox(height: 14),
+          // AutoSizeText escala la cifra hacia abajo si overflowa el ancho del card,
+          // evitando layout shift entre estado loading y datos cargados.
+          SizedBox(
+            width: double.infinity,
+            child: AutoSizeText(
+              _fmt.format(revenue),
+              style: AppTheme.mono(
+                fontSize: 56,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurface,
+                letterSpacing: -1.5,
+                height: 1.0,
+              ),
+              maxLines: 1,
+              minFontSize: 28,
+              stepGranularity: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.tintBg(context, AppTheme.success),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(LucideIcons.trendingUp, size: 12, color: AppTheme.success),
+                    const SizedBox(width: 4),
+                    Text(
+                      '$salesCount facturas',
+                      style: AppTheme.mono(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.success,
+                        letterSpacing: 0,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  'emitidas en el período',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(duration: 300.ms);
+  }
+
+  // ── Stat strip ─────────────────────────────────────────────────────────────
+
+  Widget _buildStatStrip(ThemeData theme) {
+    final monthlySales = _kpis?['monthlySales'] as Map<String, dynamic>? ?? {};
     final receivables = _kpis?['receivables'] as Map<String, dynamic>? ?? {};
-    final lowStock = _kpis?['lowStock'] as Map<String, dynamic>? ?? {};
 
     final revenue = double.tryParse(monthlySales['revenue']?.toString() ?? '0') ?? 0;
     final salesCount = int.tryParse(monthlySales['sales_count']?.toString() ?? '0') ?? 0;
     final avgSale = salesCount > 0 ? revenue / salesCount : 0.0;
+    final pendingAmount = double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0;
+    final pendingCount = int.tryParse(receivables['pending_count']?.toString() ?? '0') ?? 0;
 
-    final kpis = [
-      _KpiData(t.monthlySales, _fmt.format(revenue), t.invoicesCount(count: salesCount), LucideIcons.trendingUp, cs.primary, cs.primary.withValues(alpha: 0.1)),
-      _KpiData(t.accountsReceivable, _fmt.format(double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0), t.accounts(count: int.tryParse(receivables['pending_count']?.toString() ?? '0') ?? 0), LucideIcons.wallet, cs.tertiary, cs.tertiary.withValues(alpha: 0.1)),
-      _KpiData(t.lowStock, '${int.tryParse(lowStock['low_stock_count']?.toString() ?? '0') ?? 0}', t.products_low, LucideIcons.triangleAlert, cs.error, cs.error.withValues(alpha: 0.1), route: '/inventory?tab=alerts'),
-      _KpiData(t.averagePerSale, _fmt.format(avgSale), t.thisMonth, LucideIcons.chartColumn, cs.secondary, cs.secondary.withValues(alpha: 0.1)),
+    final stats = [
+      _MicroStat(
+        eyebrow: 'TICKET PROMEDIO',
+        value: _fmt.format(avgSale),
+        meta: 'por venta',
+        icon: LucideIcons.receipt,
+      ),
+      _MicroStat(
+        eyebrow: 'POR COBRAR',
+        value: _fmt.format(pendingAmount),
+        meta: '$pendingCount cuenta${pendingCount == 1 ? '' : 's'}',
+        icon: LucideIcons.wallet,
+        valueColor: pendingAmount > 0 ? AppTheme.warning : null,
+      ),
+      _MicroStat(
+        eyebrow: 'FACTURAS',
+        value: '$salesCount',
+        meta: 'emitidas',
+        icon: LucideIcons.fileText,
+      ),
     ];
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossCount = constraints.maxWidth > Breakpoints.gridDense + 100 ? 4 : 2;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossCount,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.7,
-          ),
-          itemCount: kpis.length,
-          itemBuilder: (context, i) => _KpiCard(data: kpis[i]),
+        final crossCount = constraints.maxWidth > Breakpoints.gridDense ? 3 : 1;
+        const gap = 12.0;
+        final cardWidth = (constraints.maxWidth - gap * (crossCount - 1)) / crossCount;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: stats
+              .map((s) => SizedBox(
+                    width: cardWidth,
+                    child: _MicroStatCard(stat: s),
+                  ))
+              .toList(),
         );
       },
     );
   }
+
+  // ── Smart actions ──────────────────────────────────────────────────────────
+
+  Widget _buildSmartActions(ThemeData theme, Translations t) {
+    final cs = theme.colorScheme;
+    final receivables = _kpis?['receivables'] as Map<String, dynamic>? ?? {};
+    final lowStock = _kpis?['lowStock'] as Map<String, dynamic>? ?? {};
+
+    final pendingAmount = double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0;
+    final pendingCount = int.tryParse(receivables['pending_count']?.toString() ?? '0') ?? 0;
+    final lowStockCount = int.tryParse(lowStock['low_stock_count']?.toString() ?? '0') ?? 0;
+
+    final actions = <_SmartAction>[];
+
+    if (pendingAmount > 0) {
+      actions.add(_SmartAction(
+        intent: ChipIntent.warning,
+        icon: LucideIcons.wallet,
+        title: 'Te deben ${_fmt.format(pendingAmount)}',
+        body: '$pendingCount cliente${pendingCount == 1 ? '' : 's'} con cuentas pendientes. Hacé seguimiento o registrá los pagos.',
+        actionLabel: 'Ver cobros',
+        route: '/collections',
+      ));
+    }
+
+    if (lowStockCount > 0) {
+      actions.add(_SmartAction(
+        intent: ChipIntent.danger,
+        icon: LucideIcons.packageOpen,
+        title: '$lowStockCount producto${lowStockCount == 1 ? ' está' : 's están'} a punto de agotarse',
+        body: 'Reponé inventario antes que se acaben para no perder ventas.',
+        actionLabel: 'Ver alertas',
+        route: '/inventory',
+      ));
+    }
+
+    actions.add(_SmartAction(
+      intent: ChipIntent.brand,
+      icon: LucideIcons.plus,
+      title: '¿Listo para una nueva venta?',
+      body: 'Crea una factura en segundos y cobrá al instante o a crédito.',
+      actionLabel: 'Nueva venta',
+      route: '/sales',
+    ));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Lo que necesita tu atención',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: cs.onSurface,
+              letterSpacing: -0.2,
+            ),
+          ),
+        ),
+        ...actions.asMap().entries.map(
+              (e) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _SmartActionCard(action: e.value),
+              ),
+            ),
+      ],
+    );
+  }
+
+  // ── Charts ─────────────────────────────────────────────────────────────────
 
   Widget _buildSalesTrendChart(ThemeData theme, Translations t) {
     final cs = theme.colorScheme;
 
     if (_salesTrend.isEmpty) {
       return _ChartCard(
-        title: t.salesTrend,
+        title: 'Tendencia de ventas',
         icon: LucideIcons.chartLine,
-        child: const Center(child: Text('Sin datos de ventas')),
+        child: const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('Sin datos en el período'))),
       );
     }
 
@@ -254,7 +461,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final maxY = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
 
     return _ChartCard(
-      title: t.salesTrend,
+      title: 'Tendencia de ventas',
       icon: LucideIcons.chartLine,
       child: SizedBox(
         height: 250,
@@ -325,7 +532,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      cs.primary.withValues(alpha: 0.2),
+                      cs.primary.withValues(alpha: 0.06),
                       cs.primary.withValues(alpha: 0.0),
                     ],
                   ),
@@ -356,19 +563,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     if (_salesByCategory.isEmpty) {
       return _ChartCard(
-        title: t.salesByCategory,
+        title: 'Ventas por categoría',
         icon: LucideIcons.chartPie,
-        child: const Center(child: Text('Sin datos')),
+        child: const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('Sin datos'))),
       );
     }
 
     final colors = [
       cs.primary,
-      cs.tertiary,
-      cs.secondary,
-      AppTheme.chartAmber,
+      AppTheme.chartTeal,
       AppTheme.chartViolet,
-      cs.error,
+      AppTheme.chartAmber,
+      AppTheme.chartCoral,
+      AppTheme.info,
     ];
 
     double totalRevenue = 0;
@@ -388,7 +595,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       sections.add(PieChartSectionData(
         value: revenue,
         color: color,
-        radius: 40,
+        radius: 38,
         title: '${pct.toStringAsFixed(0)}%',
         titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
         titlePositionPercentageOffset: 0.6,
@@ -398,7 +605,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     }
 
     return _ChartCard(
-      title: t.salesByCategory,
+      title: 'Ventas por categoría',
       icon: LucideIcons.chartPie,
       child: Column(
         children: [
@@ -414,16 +621,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
           const SizedBox(height: 16),
           ...legends.map((l) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: l.color, borderRadius: BorderRadius.circular(2))),
-                const SizedBox(width: 8),
-                Expanded(child: Text(l.label, style: theme.textTheme.bodySmall)),
-                Text(l.value, style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-          )),
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: l.color, borderRadius: BorderRadius.circular(2))),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(l.label, style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    Text(l.value, style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  ],
+                ),
+              )),
         ],
       ),
     );
@@ -434,9 +641,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     if (_topProducts.isEmpty) {
       return _ChartCard(
-        title: t.topProducts,
+        title: 'Productos más vendidos',
         icon: LucideIcons.trophy,
-        child: const Center(child: Text('Sin datos')),
+        child: const Center(child: Padding(padding: EdgeInsets.all(32), child: Text('Sin datos'))),
       );
     }
 
@@ -459,20 +666,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           BarChartRodData(
             toY: revenue,
             width: 28,
-            color: cs.primary.withValues(alpha: 0.8),
+            color: cs.primary.withValues(alpha: 0.85),
             borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-            backDrawRodData: BackgroundBarChartRodData(
-              show: true,
-              toY: maxRevenue * 1.1,
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
-            ),
           ),
         ],
       ));
     }
 
     return _ChartCard(
-      title: t.topProducts,
+      title: 'Productos más vendidos',
       icon: LucideIcons.trophy,
       child: SizedBox(
         height: 280,
@@ -541,89 +743,233 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 }
 
-class _KpiData {
-  final String title;
-  final String value;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final Color bgColor;
-  final String? route;
+// ── Period chip ───────────────────────────────────────────────────────────────
 
-  const _KpiData(this.title, this.value, this.subtitle, this.icon, this.color, this.bgColor, {this.route});
+class _PeriodChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _PeriodChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? cs.primary : cs.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? cs.primary : cs.outlineVariant,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12.5,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class _KpiCard extends StatelessWidget {
-  final _KpiData data;
+// ── Micro stat card ───────────────────────────────────────────────────────────
 
-  const _KpiCard({required this.data});
+class _MicroStat {
+  final String eyebrow;
+  final String value;
+  final String meta;
+  final IconData icon;
+  final Color? valueColor;
+
+  const _MicroStat({
+    required this.eyebrow,
+    required this.value,
+    required this.meta,
+    required this.icon,
+    this.valueColor,
+  });
+}
+
+class _MicroStatCard extends StatelessWidget {
+  final _MicroStat stat;
+  const _MicroStatCard({required this.stat});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(stat.icon, size: 14, color: cs.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  stat.eyebrow,
+                  style: AppTheme.eyebrow(context, color: cs.onSurfaceVariant),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            stat.value,
+            style: AppTheme.mono(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: stat.valueColor ?? cs.onSurface,
+              letterSpacing: -0.6,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            stat.meta,
+            style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Smart action card ─────────────────────────────────────────────────────────
+
+class _SmartAction {
+  final ChipIntent intent;
+  final IconData icon;
+  final String title;
+  final String body;
+  final String actionLabel;
+  final String route;
+
+  const _SmartAction({
+    required this.intent,
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.route,
+  });
+}
+
+class _SmartActionCard extends StatelessWidget {
+  final _SmartAction action;
+  const _SmartActionCard({required this.action});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final color = switch (action.intent) {
+      ChipIntent.success => AppTheme.success,
+      ChipIntent.warning => AppTheme.warning,
+      ChipIntent.danger => AppTheme.danger,
+      ChipIntent.info => AppTheme.info,
+      ChipIntent.brand => cs.primary,
+      ChipIntent.neutral => cs.onSurfaceVariant,
+    };
+
     return Material(
       color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        onTap: data.route != null ? () => context.go(data.route!) : null,
-        borderRadius: BorderRadius.circular(12),
+        onTap: () => context.go(action.route),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
             color: cs.surfaceContainer,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: cs.outlineVariant),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppTheme.borderSubtle(context)),
           ),
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      data.title,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: cs.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppTheme.tintBg(context, color),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(action.icon, size: 18, color: color),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      action.title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.2,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: data.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 2),
+                    Text(
+                      action.body,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    child: Icon(data.icon, size: 15, color: data.color),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    data.value,
-                    style: AppTheme.mono(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.tintBg(context, color),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      action.actionLabel,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: color,
+                        letterSpacing: -0.1,
+                      ),
                     ),
-                    maxLines: 1,
-                    minFontSize: 14,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    data.subtitle,
-                    style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(LucideIcons.arrowRight, size: 13, color: color),
+                  ],
+                ),
               ),
             ],
           ),
@@ -632,6 +978,8 @@ class _KpiCard extends StatelessWidget {
     );
   }
 }
+
+// ── Chart card ────────────────────────────────────────────────────────────────
 
 class _ChartCard extends StatelessWidget {
   final String title;
@@ -645,35 +993,37 @@ class _ChartCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 18, color: cs.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: cs.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                    letterSpacing: -0.2,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            child,
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          child,
+        ],
       ),
     );
   }
@@ -685,41 +1035,6 @@ class _LegendItem {
   final String value;
 
   const _LegendItem(this.color, this.label, this.value);
-}
-
-// ── Period chip ───────────────────────────────────────────────────────────────
-
-class _PeriodChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _PeriodChip({required this.label, required this.selected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.turquoise : const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? AppTheme.turquoise : const Color(0xFF2A2A2A),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? Colors.black : const Color(0xFFAAAAAA),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -741,7 +1056,7 @@ class _SkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFFE2E8F0),
+        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -758,88 +1073,138 @@ class _DashboardSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 32, isWide ? 32 : 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          const _SkeletonBox(width: 200, height: 28),
+          const _SkeletonBox(width: 140, height: 12),
+          const SizedBox(height: 12),
+          const _SkeletonBox(width: 280, height: 36, radius: 10),
           const SizedBox(height: 8),
-          const _SkeletonBox(width: 260, height: 16),
-          const SizedBox(height: 16),
-          // Period chips
+          const _SkeletonBox(width: 220, height: 14),
+          const SizedBox(height: 24),
           Row(
             children: List.generate(4, (i) => Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: _SkeletonBox(width: 60 + i * 12.0, height: 32, radius: 20),
-            )),
+                  padding: const EdgeInsets.only(right: 6),
+                  child: _SkeletonBox(width: 70 + i * 8.0, height: 32, radius: 20),
+                )),
           ),
-          const SizedBox(height: 16),
-          // KPI grid
+          const SizedBox(height: 28),
+          // Hero — altura intrínseca (mismo cálculo que la card real cargada)
+          Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainer,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.borderSubtle(context)),
+            ),
+            padding: const EdgeInsets.all(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                _SkeletonBox(width: 160, height: 12),
+                SizedBox(height: 14),
+                _SkeletonBox(width: 240, height: 48, radius: 10),
+                SizedBox(height: 14),
+                _SkeletonBox(width: 180, height: 22, radius: 6),
+              ],
+            ),
+          ),
+          const SizedBox(height: 36),
           LayoutBuilder(
             builder: (ctx, constraints) {
-              final crossCount = constraints.maxWidth > Breakpoints.gridDense + 100 ? 4 : 2;
-              final cardWidth = (constraints.maxWidth - (crossCount - 1) * 16) / crossCount;
+              final crossCount = constraints.maxWidth > Breakpoints.gridDense ? 3 : 1;
+              final cardWidth = (constraints.maxWidth - (crossCount - 1) * 12) / crossCount;
               return Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: List.generate(4, (_) => _KpiSkeleton(width: cardWidth)),
+                spacing: 12,
+                runSpacing: 12,
+                children: List.generate(3, (_) => _MicroStatSkeleton(width: cardWidth)),
               );
             },
           ),
-          const SizedBox(height: 24),
-          // Charts row
+          const SizedBox(height: 36),
+          ...List.generate(2, (_) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _SmartActionSkeleton(),
+              )),
+          const SizedBox(height: 26),
           if (isWide)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: _ChartSkeleton(height: 310)),
-                const SizedBox(width: 24),
-                Expanded(flex: 2, child: _ChartSkeleton(height: 310)),
+              children: const [
+                Expanded(flex: 3, child: _ChartSkeleton(height: 320)),
+                SizedBox(width: 20),
+                Expanded(flex: 2, child: _ChartSkeleton(height: 320)),
               ],
             )
           else ...[
-            _ChartSkeleton(height: 310),
-            const SizedBox(height: 24),
-            _ChartSkeleton(height: 310),
+            const _ChartSkeleton(height: 320),
+            const SizedBox(height: 20),
+            const _ChartSkeleton(height: 320),
           ],
-          const SizedBox(height: 24),
-          _ChartSkeleton(height: 340),
+          const SizedBox(height: 20),
+          const _ChartSkeleton(height: 340),
         ],
       ),
     );
   }
 }
 
-class _KpiSkeleton extends StatelessWidget {
+class _MicroStatSkeleton extends StatelessWidget {
   final double width;
-  const _KpiSkeleton({required this.width});
+  const _MicroStatSkeleton({required this.width});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: width,
-      height: width / 1.5,
+      height: 120,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          _SkeletonBox(width: 100, height: 11),
+          SizedBox(height: 16),
+          _SkeletonBox(width: 130, height: 22, radius: 6),
+          SizedBox(height: 6),
+          _SkeletonBox(width: 70, height: 11),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmartActionSkeleton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const _SkeletonBox(width: 90, height: 12),
-              _SkeletonBox(width: 28, height: 28, radius: 7),
-            ],
+          const _SkeletonBox(width: 42, height: 42, radius: 11),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                _SkeletonBox(width: 220, height: 14),
+                SizedBox(height: 6),
+                _SkeletonBox(width: 280, height: 11),
+              ],
+            ),
           ),
-          const Spacer(),
-          const _SkeletonBox(width: 110, height: 22),
-          const SizedBox(height: 6),
-          const _SkeletonBox(width: 70, height: 12),
+          const SizedBox(width: 12),
+          const _SkeletonBox(width: 90, height: 32, radius: 8),
         ],
       ),
     );
@@ -855,9 +1220,9 @@ class _ChartSkeleton extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: Theme.of(context).colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -865,13 +1230,13 @@ class _ChartSkeleton extends StatelessWidget {
         children: [
           Row(
             children: const [
-              _SkeletonBox(width: 18, height: 18),
+              _SkeletonBox(width: 16, height: 16),
               SizedBox(width: 8),
-              _SkeletonBox(width: 140, height: 16),
+              _SkeletonBox(width: 160, height: 16),
             ],
           ),
           const SizedBox(height: 20),
-          Expanded(
+          const Expanded(
             child: _SkeletonBox(
               width: double.infinity,
               height: double.infinity,

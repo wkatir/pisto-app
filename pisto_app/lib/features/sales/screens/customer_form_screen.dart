@@ -82,6 +82,7 @@ class _CustomerFormScreenState extends ConsumerState<CustomerFormScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
+                isExpanded: true,
                     initialValue: _customerType,
                     decoration: const InputDecoration(labelText: 'Tipo', border: OutlineInputBorder()),
                     items: const [
