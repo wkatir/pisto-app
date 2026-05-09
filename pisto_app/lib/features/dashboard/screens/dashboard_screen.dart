@@ -13,6 +13,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../i18n/translations.g.dart';
 import '../../../shared/widgets/widgets.dart';
 
+
 enum _Period { week, month, quarter, year }
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -74,9 +75,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.parseError(e))),
-        );
+        AppToast.error(context, ApiClient.parseError(e));
       }
       setState(() => _loading = false);
     }
@@ -148,11 +147,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final cs = theme.colorScheme;
     final greeting = greetingForHour();
     final dateLine = formatLongDateEs(DateTime.now()).toUpperCase();
-    final name = firstName?.trim().isNotEmpty == true ? ', ${firstName!.trim()}' : '';
+    final trimmedName = firstName?.trim() ?? '';
+    final name = trimmedName.isNotEmpty ? ', $trimmedName' : '';
+    final initial = trimmedName.isNotEmpty ? trimmedName[0].toUpperCase() : '?';
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: cs.primaryContainer,
+          child: Text(
+            initial,
+            style: TextStyle(
+              fontFamily: 'Nunito',
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: cs.primary,
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,7 +191,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Esto es lo que pasa con tu negocio hoy.',
+                'Veamos como va tu negocio',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.4,
@@ -231,6 +246,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Widget _buildHeroNumber(ThemeData theme) {
     final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final monthlySales = _kpis?['monthlySales'] as Map<String, dynamic>? ?? {};
     final revenue = double.tryParse(monthlySales['revenue']?.toString() ?? '0') ?? 0;
     final salesCount = int.tryParse(monthlySales['sales_count']?.toString() ?? '0') ?? 0;
@@ -239,9 +255,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(28, 28, 28, 28),
       decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderSubtle(context)),
+        color: isDark ? cs.surfaceContainer : const Color(0xFFE8F5ED),
+        borderRadius: BorderRadius.circular(22),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,6 +401,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Widget _buildStatStrip(ThemeData theme) {
+    final cs = theme.colorScheme;
     final monthlySales = _kpis?['monthlySales'] as Map<String, dynamic>? ?? {};
     final receivables = _kpis?['receivables'] as Map<String, dynamic>? ?? {};
 
@@ -395,25 +411,36 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final pendingAmount = double.tryParse(receivables['total_pending']?.toString() ?? '0') ?? 0;
     final pendingCount = int.tryParse(receivables['pending_count']?.toString() ?? '0') ?? 0;
 
+    final isDark = theme.brightness == Brightness.dark;
+
     final stats = [
-      _MicroStat(
-        eyebrow: 'TICKET PROMEDIO',
-        value: _fmt.format(avgSale),
-        meta: 'por venta',
-        icon: LucideIcons.receipt,
+      (
+        _MicroStat(
+          eyebrow: 'TICKET PROMEDIO',
+          value: _fmt.format(avgSale),
+          meta: 'por venta',
+          icon: LucideIcons.receipt,
+        ),
+        isDark ? cs.surfaceContainer : const Color(0xFFE8F5ED),
       ),
-      _MicroStat(
-        eyebrow: 'POR COBRAR',
-        value: _fmt.format(pendingAmount),
-        meta: '$pendingCount cuenta${pendingCount == 1 ? '' : 's'}',
-        icon: LucideIcons.wallet,
-        valueColor: pendingAmount > 0 ? AppTheme.warning : null,
+      (
+        _MicroStat(
+          eyebrow: 'POR COBRAR',
+          value: _fmt.format(pendingAmount),
+          meta: '$pendingCount cuenta${pendingCount == 1 ? '' : 's'}',
+          icon: LucideIcons.wallet,
+          valueColor: pendingAmount > 0 ? AppTheme.warning : null,
+        ),
+        isDark ? cs.surfaceContainer : const Color(0xFFFFF0E6),
       ),
-      _MicroStat(
-        eyebrow: 'FACTURAS',
-        value: '$salesCount',
-        meta: 'emitidas',
-        icon: LucideIcons.fileText,
+      (
+        _MicroStat(
+          eyebrow: 'FACTURAS',
+          value: '$salesCount',
+          meta: 'emitidas',
+          icon: LucideIcons.fileText,
+        ),
+        isDark ? cs.surfaceContainer : const Color(0xFFF0EDFB),
       ),
     ];
 
@@ -428,7 +455,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           children: stats
               .map((s) => SizedBox(
                     width: cardWidth,
-                    child: _MicroStatCard(stat: s),
+                    child: _MicroStatCard(stat: s.$1, backgroundColor: s.$2),
                   ))
               .toList(),
         );
@@ -588,7 +615,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               LineChartBarData(
                 spots: spots,
                 isCurved: true,
-                curveSmoothness: 0.25,
+                curveSmoothness: 0.35,
                 color: cs.primary,
                 barWidth: 2.5,
                 isStrokeCapRound: true,
@@ -607,7 +634,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      cs.primary.withValues(alpha: 0.06),
+                      cs.primary.withValues(alpha: 0.12),
                       cs.primary.withValues(alpha: 0.0),
                     ],
                   ),
@@ -672,7 +699,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: color,
         radius: 38,
         title: '${pct.toStringAsFixed(0)}%',
-        titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white),
+        titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onPrimary),
         titlePositionPercentageOffset: 0.6,
       ));
 
@@ -742,7 +769,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             toY: revenue,
             width: 28,
             color: cs.primary.withValues(alpha: 0.85),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
           ),
         ],
       ));
@@ -839,9 +866,6 @@ class _PeriodChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? cs.primary : cs.surfaceContainerHigh,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? cs.primary : cs.outlineVariant,
-            ),
           ),
           child: Text(
             label,
@@ -878,7 +902,8 @@ class _MicroStat {
 
 class _MicroStatCard extends StatelessWidget {
   final _MicroStat stat;
-  const _MicroStatCard({required this.stat});
+  final Color? backgroundColor;
+  const _MicroStatCard({required this.stat, this.backgroundColor});
 
   @override
   Widget build(BuildContext context) {
@@ -887,9 +912,8 @@ class _MicroStatCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderSubtle(context)),
+        color: backgroundColor ?? cs.surfaceContainer,
+        borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -977,9 +1001,8 @@ class _SmartActionCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: Container(
           decoration: BoxDecoration(
-            color: cs.surfaceContainer,
+            color: cs.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.borderSubtle(context)),
           ),
           padding: const EdgeInsets.all(16),
           child: Row(
@@ -990,7 +1013,7 @@ class _SmartActionCard extends StatelessWidget {
                 height: 42,
                 decoration: BoxDecoration(
                   color: AppTheme.tintBg(context, color),
-                  borderRadius: BorderRadius.circular(11),
+                  borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(action.icon, size: 18, color: color),
               ),
@@ -1027,7 +1050,7 @@ class _SmartActionCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppTheme.tintBg(context, color),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -1070,8 +1093,8 @@ class _ChartCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
+        color: cs.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.borderSubtle(context)),
       ),
       padding: const EdgeInsets.all(20),
@@ -1131,7 +1154,7 @@ class _SkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.5),
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -1169,8 +1192,7 @@ class _DashboardSkeleton extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.borderSubtle(context)),
+              borderRadius: BorderRadius.circular(22),
             ),
             padding: const EdgeInsets.all(28),
             child: Column(
@@ -1236,8 +1258,7 @@ class _MicroStatSkeleton extends StatelessWidget {
       height: 120,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderSubtle(context)),
+        borderRadius: BorderRadius.circular(18),
       ),
       padding: const EdgeInsets.all(18),
       child: Column(
@@ -1261,12 +1282,11 @@ class _SmartActionSkeleton extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderSubtle(context)),
       ),
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          const _SkeletonBox(width: 42, height: 42, radius: 11),
+          const _SkeletonBox(width: 42, height: 42, radius: 14),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
@@ -1296,8 +1316,7 @@ class _ChartSkeleton extends StatelessWidget {
       height: height,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainer,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderSubtle(context)),
+        borderRadius: BorderRadius.circular(16),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(

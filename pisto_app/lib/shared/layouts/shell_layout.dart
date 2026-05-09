@@ -36,17 +36,14 @@ class ShellLayout extends ConsumerWidget {
     if (useMobileNav) {
       // Mobile nav muestra solo los 5 más usados; el resto vive detrás del avatar.
       final mobileDests = destinations.take(5).toList();
-      final mobileSelected = mobileDests.indexWhere((d) => d.path == path);
+      final mobileSelected = mobileDests.indexWhere((d) => d.path == path).clamp(0, mobileDests.length - 1);
       return Scaffold(
         appBar: _MobileAppBar(t: t),
         body: child,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: mobileSelected.clamp(0, mobileDests.length - 1),
-          onDestinationSelected: (i) => context.go(mobileDests[i].path),
-          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          destinations: mobileDests
-              .map((d) => NavigationDestination(icon: Icon(d.icon), label: d.label))
-              .toList(),
+        bottomNavigationBar: _BottomTabBar(
+          destinations: mobileDests,
+          selectedIndex: mobileSelected,
+          onTap: (i) => context.go(mobileDests[i].path),
         ),
       );
     }
@@ -151,6 +148,8 @@ class _SidebarHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final logoColor = cs.primary;
+    final userName = (user?.firstName as String?) ?? '';
+    final userInitial = userName.isEmpty ? '?' : userName[0].toUpperCase();
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -189,17 +188,36 @@ class _SidebarHeader extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (user != null && (user.firstName as String?)?.isNotEmpty == true)
-                        Text(
-                          'Hola, ${user.firstName}',
-                          style: TextStyle(
-                            color: AppTheme.sidebarMutedFg(context),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            height: 1.2,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      if (userName.isNotEmpty)
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 9,
+                              backgroundColor: cs.primaryContainer,
+                              child: Text(
+                                userInitial,
+                                style: TextStyle(
+                                  color: cs.primary,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Hola, $userName',
+                                style: TextStyle(
+                                  color: AppTheme.sidebarMutedFg(context),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.2,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),
@@ -264,30 +282,20 @@ class _NavItem extends StatelessWidget {
     final bg = selected ? AppTheme.tintBgStrong(context, cs.primary) : Colors.transparent;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Material(
         color: bg,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           hoverColor: AppTheme.sidebarHoverBg(context),
           child: SizedBox(
-            height: 36,
+            height: 38,
             child: isExtended
                 ? Row(
                     children: [
-                      // Indicador lateral cuando está seleccionado
-                      Container(
-                        width: 3,
-                        height: 18,
-                        margin: const EdgeInsets.only(left: 0),
-                        decoration: BoxDecoration(
-                          color: selected ? cs.primary : Colors.transparent,
-                          borderRadius: const BorderRadius.horizontal(right: Radius.circular(2)),
-                        ),
-                      ),
-                      const SizedBox(width: 9),
+                      const SizedBox(width: 12),
                       Icon(dest.icon, size: 17, color: iconColor),
                       const SizedBox(width: 11),
                       Expanded(
@@ -296,23 +304,23 @@ class _NavItem extends StatelessWidget {
                           style: TextStyle(
                             color: labelColor,
                             fontSize: 13,
-                            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                             letterSpacing: -0.1,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                     ],
                   )
                 : Center(
                     child: Container(
-                      width: 36,
-                      height: 30,
+                      width: 38,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: bg,
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(dest.icon, size: 19, color: iconColor),
                     ),
@@ -531,7 +539,7 @@ class _MobileAppBar extends ConsumerWidget implements PreferredSizeWidget {
       elevation: 0,
       scrolledUnderElevation: 0,
       backgroundColor: cs.surface,
-      surfaceTintColor: Colors.transparent,
+      surfaceTintColor: cs.surface,
       titleSpacing: 16,
       title: Row(
         children: [
@@ -788,7 +796,7 @@ class _SheetTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: destructive
                       ? AppTheme.tintBg(context, AppTheme.danger)
-                      : cs.surfaceContainerHigh,
+                      : AppTheme.tintBg(context, cs.primary),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, size: 17, color: color),
@@ -808,6 +816,110 @@ class _SheetTile extends StatelessWidget {
               Icon(LucideIcons.chevronRight, size: 16, color: cs.onSurfaceVariant),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Custom bottom tab bar (reemplaza NavigationBar genérico) ─────────────────
+
+/// Bottom tab bar minimalista estilo Notion/Linear.
+///
+/// No usa labels visibles — solo íconos con un indicador pill debajo del
+/// activo. Más limpio que NavigationBar de Material que grita "Flutter app".
+class _BottomTabBar extends StatelessWidget {
+  final List<_NavDest> destinations;
+  final int selectedIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomTabBar({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(color: AppTheme.borderSubtle(context)),
+        ),
+      ),
+      padding: EdgeInsets.only(bottom: bottomPadding),
+      child: SizedBox(
+        height: 64,
+        child: Row(
+          children: List.generate(destinations.length, (i) {
+            final dest = destinations[i];
+            final isSelected = i == selectedIndex;
+            return Expanded(
+              child: _BottomTabItem(
+                icon: dest.icon,
+                label: dest.label,
+                selected: isSelected,
+                onTap: () => onTap(i),
+              ),
+            );
+          }),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomTabItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _BottomTabItem({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final color = selected ? cs.primary : cs.onSurfaceVariant;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: selected ? AppTheme.tintBg(context, cs.primary) : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 22, color: color),
+            ),
+            if (selected) ...[
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
         ),
       ),
     );

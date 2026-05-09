@@ -35,10 +35,7 @@ class _LandingScreenState extends State<LandingScreen> {
     final width = MediaQuery.of(context).size.width;
     final isWide = width > 800;
 
-    return Theme(
-      data: AppTheme.light,
-      child: Scaffold(
-        backgroundColor: AppTheme.light.colorScheme.surface,
+    return Scaffold(
         body: Stack(
           children: [
             CustomScrollView(
@@ -57,7 +54,6 @@ class _LandingScreenState extends State<LandingScreen> {
             _TopBar(isWide: isWide, isScrolled: _scrollOffset > 20),
           ],
         ),
-      ),
     );
   }
 }
@@ -81,7 +77,7 @@ class _TopBar extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 20, vertical: 14),
       decoration: BoxDecoration(
         color: isScrolled
-            ? Colors.white.withValues(alpha: 0.92)
+            ? cs.surface.withValues(alpha: 0.92)
             : Colors.transparent,
         border: Border(
           bottom: BorderSide(
@@ -342,7 +338,7 @@ class _DashboardMockup extends StatelessWidget {
     return Container(
       constraints: const BoxConstraints(maxWidth: 560, maxHeight: 400),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
@@ -379,7 +375,7 @@ class _DashboardMockup extends StatelessWidget {
                           child: Text(
                             'Este mes',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.white,
+                              color: cs.onPrimary,
                               fontSize: 9,
                             ),
                           ),
@@ -491,9 +487,9 @@ class _MockBrowserBar extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: [
-                  const Color(0xFFFC5E57),
-                  const Color(0xFFFEBC2E),
-                  const Color(0xFF29C840),
+                  AppTheme.danger,
+                  AppTheme.warning,
+                  AppTheme.success,
                 ][i],
               ),
             ),
@@ -503,7 +499,7 @@ class _MockBrowserBar extends StatelessWidget {
             child: Container(
               height: 22,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(5),
                 border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
               ),
@@ -547,7 +543,7 @@ class _MockKpiCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
@@ -668,7 +664,7 @@ class _MetricsBar extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 28),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surfaceContainer,
         border: Border.symmetric(
           horizontal: BorderSide(color: cs.outlineVariant),
         ),
@@ -803,9 +799,9 @@ class _FeaturesSection extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: cs.surfaceContainer,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                        border: Border.all(color: cs.outlineVariant),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -897,7 +893,7 @@ class _TestimonialsSection extends StatelessWidget {
     ];
 
     return Container(
-      color: Colors.white,
+      color: cs.surfaceContainer,
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 80),
       child: Column(
         children: [
@@ -998,7 +994,7 @@ class _TestimonialCard extends StatelessWidget {
               5,
               (_) => const Padding(
                 padding: EdgeInsets.only(right: 2),
-                child: Icon(LucideIcons.star, size: 12, color: Color(0xFFF59E0B)),
+                child: Icon(LucideIcons.star, size: 12, color: AppTheme.warning),
               ),
             ),
           ),
@@ -1023,8 +1019,8 @@ class _TestimonialCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     data.initial,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1232,7 +1228,7 @@ class _CtaSection extends StatelessWidget {
               style: AppTheme.serif(
                 fontSize: 36,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
+                color: cs.onPrimary,
                 letterSpacing: -0.7,
                 height: 1.1,
               ),
@@ -1244,7 +1240,7 @@ class _CtaSection extends StatelessWidget {
               child: Text(
                 t.uneteEmpresas,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.75),
+                  color: cs.onPrimary.withValues(alpha: 0.75),
                   height: 1.6,
                 ),
                 textAlign: TextAlign.center,
@@ -1259,7 +1255,7 @@ class _CtaSection extends StatelessWidget {
                   icon: const Icon(LucideIcons.arrowRight, size: 16),
                   label: Text(t.crearCuentaGratis),
                   style: FilledButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: cs.onPrimary,
                     foregroundColor: cs.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
                   ),
@@ -1289,8 +1285,8 @@ class _Footer extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: isWide ? 64 : 24, vertical: 40),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
+        color: cs.surfaceContainer,
+        border: Border(top: BorderSide(color: cs.outlineVariant)),
       ),
       child: isWide
           ? Row(

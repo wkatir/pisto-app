@@ -127,8 +127,8 @@ class _ChipBase extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final color = _intentColor(intent, cs);
 
-    final hPad = size == _ChipSize.small ? 6.0 : 8.0;
-    final vPad = size == _ChipSize.small ? 2.0 : 3.0;
+    final hPad = size == _ChipSize.small ? 10.0 : 14.0;
+    final vPad = size == _ChipSize.small ? 4.0 : 6.0;
     final fontSize = size == _ChipSize.small ? 10.0 : 11.0;
     final iconSize = size == _ChipSize.small ? 10.0 : 12.0;
 
@@ -136,7 +136,8 @@ class _ChipBase extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
         color: AppTheme.tintBg(context, color),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -150,7 +151,7 @@ class _ChipBase extends StatelessWidget {
             style: TextStyle(
               fontSize: fontSize,
               color: color,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               height: 1.2,
             ),
           ),

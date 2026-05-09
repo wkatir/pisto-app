@@ -11,56 +11,54 @@ class AuthSplitLayout extends StatelessWidget {
   Widget build(BuildContext context) {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width >= 720;
+    final cs = Theme.of(context).colorScheme;
 
-    return Theme(
-      data: AppTheme.light,
-      child: !isWide
-          ? Scaffold(
-              backgroundColor: Colors.white,
-              body: SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 400),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _MobileLogo(),
-                          const SizedBox(height: 32),
-                          form,
-                        ],
-                      ),
+    return !isWide
+        ? Scaffold(
+            backgroundColor: cs.surface,
+            body: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _MobileLogo(),
+                        const SizedBox(height: 32),
+                        form,
+                      ],
                     ),
                   ),
                 ),
               ),
-            )
-          : Scaffold(
-              backgroundColor: Colors.white,
-              body: Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: _BrandPanel(),
-                  ),
-                  Expanded(
-                    flex: 6,
-                    child: Center(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 400),
-                          child: form,
-                        ),
+            ),
+          )
+        : Scaffold(
+            backgroundColor: cs.surface,
+            body: Row(
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _BrandPanel(),
+                ),
+                Expanded(
+                  flex: 6,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 400),
+                        child: form,
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-    );
+          );
   }
 }
 
@@ -85,7 +83,7 @@ class _MobileLogo extends StatelessWidget {
           'Pisto',
           style: theme.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: cs.onSurface,
             letterSpacing: -0.3,
           ),
         ),
@@ -102,9 +100,9 @@ class _BrandPanel extends StatelessWidget {
 
     final features = [
       (LucideIcons.package, 'Inventario en tiempo real', 'Control de stock, alertas y movimientos'),
-      (LucideIcons.receipt, 'Facturación rápida', 'Emite facturas y cobra en segundos'),
-      (LucideIcons.chartColumn, 'Reportes financieros', 'KPIs, tendencias y márgenes de utilidad'),
-      (LucideIcons.wallet, 'Cobranza inteligente', 'Antigüedad de cartera y seguimiento de pagos'),
+      (LucideIcons.receipt, 'Facturacion rapida', 'Emite facturas y cobra en segundos'),
+      (LucideIcons.chartColumn, 'Reportes financieros', 'KPIs, tendencias y margenes de utilidad'),
+      (LucideIcons.wallet, 'Cobranza inteligente', 'Antiguedad de cartera y seguimiento de pagos'),
     ];
 
     return Container(
@@ -127,17 +125,17 @@ class _BrandPanel extends StatelessWidget {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.15),
+                            color: cs.onPrimary.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: const Icon(LucideIcons.landmark, size: 18, color: Colors.white),
+                          child: Icon(LucideIcons.landmark, size: 18, color: cs.onPrimary),
                         ),
                         const SizedBox(width: 10),
                         Text(
                           'Pisto',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: cs.onPrimary,
                             letterSpacing: -0.3,
                           ),
                         ),
@@ -149,16 +147,16 @@ class _BrandPanel extends StatelessWidget {
                       style: AppTheme.serif(
                         fontSize: 44,
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: cs.onPrimary,
                         letterSpacing: -1.0,
                         height: 1.05,
                       ),
                     ),
                     const SizedBox(height: 14),
                     Text(
-                      'Facturá, cobrá y controlá tu inventario\ndesde un solo lugar — sin Excel ni desorden.',
+                      'Factura, cobra y controla tu inventario\ndesde un solo lugar — sin Excel ni desorden.',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.92),
+                        color: cs.onPrimary.withValues(alpha: 0.92),
                         height: 1.6,
                       ),
                     ),
@@ -172,10 +170,10 @@ class _BrandPanel extends StatelessWidget {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.12),
+                                  color: cs.onPrimary.withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(f.$1, size: 17, color: Colors.white),
+                                child: Icon(f.$1, size: 17, color: cs.onPrimary),
                               ),
                               const SizedBox(width: 14),
                               Expanded(
@@ -185,7 +183,7 @@ class _BrandPanel extends StatelessWidget {
                                     Text(
                                       f.$2,
                                       style: theme.textTheme.labelLarge?.copyWith(
-                                        color: Colors.white,
+                                        color: cs.onPrimary.withValues(alpha: 0.92),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
@@ -193,7 +191,7 @@ class _BrandPanel extends StatelessWidget {
                                     Text(
                                       f.$3,
                                       style: theme.textTheme.bodySmall?.copyWith(
-                                        color: Colors.white.withValues(alpha: 0.85),
+                                        color: cs.onPrimary.withValues(alpha: 0.82),
                                         height: 1.4,
                                       ),
                                     ),
@@ -207,7 +205,7 @@ class _BrandPanel extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: cs.onPrimary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Column(
@@ -216,16 +214,16 @@ class _BrandPanel extends StatelessWidget {
                           Text(
                             '"Reducimos la cartera vencida en 40% el primer mes."',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white,
+                              color: cs.onPrimary,
                               fontStyle: FontStyle.italic,
                               height: 1.5,
                             ),
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'María Alvarado · Directora Financiera, AgroMax',
+                            'Maria Alvarado - Directora Financiera, AgroMax',
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.82),
+                              color: cs.onPrimary.withValues(alpha: 0.82),
                             ),
                           ),
                         ],

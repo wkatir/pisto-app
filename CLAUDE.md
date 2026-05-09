@@ -73,8 +73,8 @@ docker run -d --name pisto-mssql \
 - **State:** Riverpod 3 con code generation (@riverpod)
 - **Router:** GoRouter con auth redirect
 - **HTTP:** Dio con interceptor JWT (auto-refresh con anti-race condition)
-- **Theme:** FlexColorScheme (light + dark + toggle), colores chart en AppTheme
-- **Fonts:** Google Fonts (Inter)
+- **Theme:** FlexColorScheme (light + dark + toggle), paleta calida (cream/pastel), colores chart en AppTheme
+- **Fonts:** Google Fonts (Nunito body, DM Mono numeros)
 - **Icons:** Lucide Icons
 - **Storage:** flutter_secure_storage (tokens + theme preference)
 - **Models:** Freezed + json_serializable (sealed class, Dart 3)
@@ -127,6 +127,10 @@ flutter analyze          # Lint
 - Errores de API se parsean con `ApiClient.parseError()` para mostrar mensajes amigables
 - Idioma de UI: Espanol
 - Providers generados: archivos `.g.dart` (no editar manualmente)
-- NO AI slop: sin stagger animations, gradient cards, glassmorphism, over-engineering
-- Estilo: Linear/Notion/Stripe Dashboard. Limpio, profesional, minimalista
+- NO AI slop: sin stagger animations, glassmorphism, over-engineering, shadows decorativos, emoji en UI
+- Estilo: Calido, amigable, profesional. Paleta cream/pastel (mint, peach, lavender). Inspirado en Shopify admin + Notion
+- Colores: NUNCA hardcodear Colors.white/black/grey ni hex. SIEMPRE usar cs.* tokens (onSurface, surface, etc.)
+- Cards: fondos pastel solidos (sin gradientes), bordes sutiles calidos, sin elevation/shadow
+- Radii: redondeados y amigables (cards 18, chips pill 20, buttons 14)
+- Dark mode: calido (brown-charcoal #1C1916, no blue-black), DEBE funcionar en todas las pantallas
 - Instalar paquetes via CLI, no editar pubspec.yaml manualmente

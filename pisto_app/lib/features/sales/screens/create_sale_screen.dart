@@ -279,7 +279,7 @@ class _CreateSaleScreenState extends ConsumerState<CreateSaleScreen> {
                 final product = _products.firstWhere((p) => p['id'] == line.productId, orElse: () => <String, dynamic>{});
                 return Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: theme.colorScheme.outlineVariant)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: AppTheme.borderSubtle(context))),
                   child: Padding(
                     padding: const EdgeInsets.all(12),
                     child: Row(

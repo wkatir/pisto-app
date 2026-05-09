@@ -99,7 +99,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
               onPressed: _loading ? null : _submit,
               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 15)),
               child: _loading
-                  ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary))
                   : const Text('Enviar instrucciones', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
             ),
             const SizedBox(height: 16),

@@ -19,19 +19,19 @@ class AppTheme {
   AppTheme._();
 
   // ── Brand ──────────────────────────────────────────────────────────────────
-  static const turquoise = Color(0xFF1DE9B6);
-  static const _lightPrimary = Color(0xFF00897B);
+  static const turquoise = Color(0xFF6FCF9A); // soft mint (dark primary)
+  static const _lightPrimary = Color(0xFF2D8F6F); // warm forest green
 
   // ── Sidebar ────────────────────────────────────────────────────────────────
-  static const sidebarMuted = Color(0xFFA0A0A8);
-  static const sidebarHover = Color(0xFF1A1A1F);
-  static const sidebarBgDark = Color(0xFF0F0F12);
-  static const sidebarDividerDark = Color(0xFF1F1F25);
+  static const sidebarMuted = Color(0xFF8B7E6B);
+  static const sidebarHover = Color(0xFF2A2420);
+  static const sidebarBgDark = Color(0xFF1C1916);
+  static const sidebarDividerDark = Color(0xFF3A3228);
 
-  static const sidebarBgLight = Color(0xFFFAFAF9);
-  static const sidebarMutedLight = Color(0xFF64748B);
-  static const sidebarHoverLight = Color(0xFFF1F1EE);
-  static const sidebarDividerLight = Color(0xFFE7E5E4);
+  static const sidebarBgLight = Color(0xFFFDF6EE);
+  static const sidebarMutedLight = Color(0xFF8B7E6B);
+  static const sidebarHoverLight = Color(0xFFF5EDE3);
+  static const sidebarDividerLight = Color(0xFFF0E6D9);
   static const sidebarTextLight = Color(0xFF0F172A);
 
   static Color sidebarBg(BuildContext c) =>
@@ -46,36 +46,20 @@ class AppTheme {
       Theme.of(c).brightness == Brightness.dark ? Colors.white : sidebarTextLight;
 
   // ── Borders contextuales (light/dark) ──────────────────────────────────────
-  // Reemplazo del patrón `cs.outlineVariant.withValues(alpha: 0.5)` que en light
-  // sale casi invisible y en dark inconsistente. Estos están calibrados para
-  // dar el mismo nivel de "presencia" sutil en ambos modos.
-  static const _borderLight = Color(0xFFE7E5E4); // stone-200
-  static const _borderDark = Color(0xFF26262B);  // entre scaffold y surface dark
+  static const _borderLight = Color(0xFFF0E6D9); // warm sand
+  static const _borderDark = Color(0xFF3A3228);   // warm charcoal
 
-  /// Border sutil para cards/contenedores. Más fuerte que outlineVariant default
-  /// en light (donde es casi imperceptible) y consistente en dark.
+  /// Border sutil para cards/contenedores.
   static Color borderSubtle(BuildContext c) =>
       Theme.of(c).brightness == Brightness.dark ? _borderDark : _borderLight;
 
-  /// Border más prominente (separadores fuertes, divisores entre secciones).
+  /// Border mas prominente (separadores fuertes, divisores entre secciones).
   static Color borderStrong(BuildContext c) =>
       Theme.of(c).brightness == Brightness.dark
-          ? const Color(0xFF35353C)
-          : const Color(0xFFD4D4D8);
+          ? const Color(0xFF4A3F35)
+          : const Color(0xFFD4C8B8);
 
-  /// Background sutil tinted con [color] para containers de íconos/avatares/chips.
-  ///
-  /// **Por qué existe**: usar `color.withValues(alpha: 0.10)` directo causa
-  /// "glow" en dark mode cuando [color] es saturado (ej. primary turquoise
-  /// `#1DE9B6` brillante). El alpha sobre fondo oscuro deja pasar mucha
-  /// luminosidad del color puro y se ve como un brillo decorativo de IA-slop.
-  ///
-  /// Solución: en dark hacemos `alphaBlend` del color con surfaceContainer.
-  /// El resultado es un tono mate apagado del color sobre el fondo del card
-  /// — no glow, pero conserva la conexión visual de intent.
-  ///
-  /// En light, `color.withValues(alpha: 0.10)` ya da el resultado correcto
-  /// (pálido natural sobre fondo claro), así que usamos eso.
+  /// Background sutil tinted con [color] para containers de iconos/avatares/chips.
   static Color tintBg(BuildContext c, Color color) {
     if (Theme.of(c).brightness == Brightness.dark) {
       final cs = Theme.of(c).colorScheme;
@@ -84,8 +68,7 @@ class AppTheme {
     return color.withValues(alpha: 0.10);
   }
 
-  /// Background tinted más fuerte — para selection states (sidebar item activo,
-  /// list row selected). Mismo principio anti-glow que [tintBg].
+  /// Background tinted mas fuerte — para selection states.
   static Color tintBgStrong(BuildContext c, Color color) {
     if (Theme.of(c).brightness == Brightness.dark) {
       final cs = Theme.of(c).colorScheme;
@@ -97,153 +80,157 @@ class AppTheme {
   // ── Channel brands ─────────────────────────────────────────────────────────
   static const whatsappBrand = Color(0xFF25D366);
 
-  // ── Chart palette (decorativo, no semántico) ───────────────────────────────
-  static const chartAmber = Color(0xFFF59E0B);
-  static const chartViolet = Color(0xFF8B5CF6);
-  static const chartCoral = Color(0xFFFB923C);
-  static const chartTeal = Color(0xFF14B8A6);
+  // ── Chart palette (decorativo, no semantico) ───────────────────────────────
+  static const chartAmber = Color(0xFFF5C563);
+  static const chartViolet = Color(0xFFA78BDB);
+  static const chartCoral = Color(0xFFF0A07C);
+  static const chartTeal = Color(0xFF6FCF9A);
 
   // ── Semantic intent (uso en chips, deltas, status) ─────────────────────────
-  // Reemplaza positive/negative/warning con tokens claros y consistentes.
-  static const success = Color(0xFF22C55E);
-  static const warning = Color(0xFFF59E0B);
-  static const danger = Color(0xFFEF4444);
-  static const info = Color(0xFF3B82F6);
+  static const success = Color(0xFF34A853);
+  static const warning = Color(0xFFF5A623);
+  static const danger = Color(0xFFE35D5D);
+  static const info = Color(0xFF5B8DEF);
 
   // Aliases legacy — deprecated, usa success/warning/danger.
   static const positive = success;
   static const negative = danger;
 
-  // ── Tinte cálido para datos no financieros (clientes, novedades) ───────────
-  static const accent = Color(0xFFFB923C);
+  // ── Tinte calido para datos no financieros (clientes, novedades) ───────────
+  static const accent = Color(0xFFE8835A);
 
   // ── Color schemes ──────────────────────────────────────────────────────────
   static const FlexSchemeColor _lightColors = FlexSchemeColor(
     primary: _lightPrimary,
-    primaryContainer: Color(0xFFB2DFDB),
-    secondary: Color(0xFF00897B),
-    secondaryContainer: Color(0xFFE0F2F1),
-    tertiary: Color(0xFF475569),
-    tertiaryContainer: Color(0xFFF1F5F9),
+    primaryContainer: Color(0xFFD4F0E5),
+    secondary: Color(0xFFE8835A),
+    secondaryContainer: Color(0xFFFFF0E6),
+    tertiary: Color(0xFF8B7EC8),
+    tertiaryContainer: Color(0xFFF0EDFB),
     appBarColor: Colors.white,
-    error: Color(0xFFEF4444),
+    error: Color(0xFFE35D5D),
     errorContainer: Color(0xFFFEE2E2),
   );
 
   static const FlexSchemeColor _darkColors = FlexSchemeColor(
     primary: turquoise,
-    primaryContainer: Color(0xFF003D30),
-    secondary: Color(0xFF00BFA5),
-    secondaryContainer: Color(0xFF002E26),
-    tertiary: Color(0xFF94A3B8),
-    tertiaryContainer: Color(0xFF1E293B),
-    appBarColor: Color(0xFF0F0F12),
+    primaryContainer: Color(0xFF1A3D2A),
+    secondary: Color(0xFFF5A623),
+    secondaryContainer: Color(0xFF3A2E1A),
+    tertiary: Color(0xFFA78BDB),
+    tertiaryContainer: Color(0xFF2A2440),
+    appBarColor: Color(0xFF1C1916),
     error: Color(0xFFF87171),
     errorContainer: Color(0xFF3B0A0A),
   );
 
-  static ThemeData get light => FlexThemeData.light(
-        colors: _lightColors,
-        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-        blendLevel: 4,
-        appBarStyle: FlexAppBarStyle.surface,
-        appBarElevation: 0,
-        scaffoldBackground: const Color(0xFFFAFAF9),
-        useMaterial3: true,
-        visualDensity: VisualDensity.comfortable,
-        subThemesData: const FlexSubThemesData(
-          interactionEffects: true,
-          tintedDisabledControls: true,
-          blendOnLevel: 6,
-          blendOnColors: false,
-          useMaterial3Typography: true,
-          useM2StyleDividerInM3: false,
-          defaultRadius: 10,
-          inputDecoratorRadius: 10,
-          inputDecoratorBorderType: FlexInputBorderType.outline,
-          inputDecoratorIsFilled: true,
-          cardRadius: 14,
-          cardElevation: 0,
-          dialogRadius: 16,
-          dialogElevation: 0,
-          chipRadius: 8,
-          popupMenuElevation: 0,
-          menuElevation: 0,
-          drawerElevation: 0,
-          bottomSheetElevation: 0,
-          bottomSheetModalElevation: 0,
-          tabBarItemSchemeColor: SchemeColor.primary,
-          tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
-          tabBarIndicatorSize: TabBarIndicatorSize.label,
-          tabBarDividerColor: Color(0xFFE7E5E4),
-          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
-          snackBarElevation: 0,
-          fabUseShape: true,
-          fabAlwaysCircular: false,
-          elevatedButtonElevation: 0,
-        ),
-        keyColors: const FlexKeyColors(
-          useKeyColors: true,
-          useSecondary: true,
-          useTertiary: true,
-        ),
-        textTheme: _buildTextTheme(Brightness.light),
-        primaryTextTheme: _buildTextTheme(Brightness.light),
-      );
+  static ThemeData get light {
+    final base = FlexThemeData.light(
+      colors: _lightColors,
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 4,
+      appBarStyle: FlexAppBarStyle.surface,
+      appBarElevation: 0,
+      scaffoldBackground: const Color(0xFFFFF8F0),
+      useMaterial3: true,
+      visualDensity: VisualDensity.comfortable,
+      subThemesData: const FlexSubThemesData(
+        interactionEffects: true,
+        tintedDisabledControls: true,
+        blendOnLevel: 6,
+        blendOnColors: false,
+        useMaterial3Typography: true,
+        useM2StyleDividerInM3: false,
+        defaultRadius: 14,
+        inputDecoratorRadius: 14,
+        inputDecoratorBorderType: FlexInputBorderType.outline,
+        inputDecoratorIsFilled: true,
+        cardRadius: 18,
+        cardElevation: 0,
+        dialogRadius: 20,
+        dialogElevation: 0,
+        chipRadius: 12,
+        popupMenuElevation: 0,
+        menuElevation: 0,
+        drawerElevation: 0,
+        bottomSheetElevation: 0,
+        bottomSheetModalElevation: 0,
+        tabBarItemSchemeColor: SchemeColor.primary,
+        tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
+        tabBarIndicatorSize: TabBarIndicatorSize.label,
+        tabBarDividerColor: Color(0xFFF0E6D9),
+        snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+        snackBarElevation: 0,
+        fabUseShape: true,
+        fabAlwaysCircular: false,
+        elevatedButtonElevation: 0,
+      ),
+      keyColors: const FlexKeyColors(
+        useKeyColors: true,
+        useSecondary: true,
+        useTertiary: true,
+      ),
+      textTheme: _buildTextTheme(Brightness.light),
+      primaryTextTheme: _buildTextTheme(Brightness.light),
+    );
+    return _applyOverrides(base, Brightness.light);
+  }
 
-  static ThemeData get dark => FlexThemeData.dark(
-        colors: _darkColors,
-        surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
-        blendLevel: 13,
-        darkIsTrueBlack: false,
-        appBarStyle: FlexAppBarStyle.background,
-        appBarElevation: 0,
-        scaffoldBackground: const Color(0xFF0F0F12),
-        useMaterial3: true,
-        visualDensity: VisualDensity.comfortable,
-        subThemesData: const FlexSubThemesData(
-          interactionEffects: true,
-          tintedDisabledControls: true,
-          blendOnLevel: 20,
-          blendOnColors: false,
-          useMaterial3Typography: true,
-          useM2StyleDividerInM3: false,
-          defaultRadius: 10,
-          inputDecoratorRadius: 10,
-          inputDecoratorBorderType: FlexInputBorderType.outline,
-          inputDecoratorIsFilled: true,
-          cardRadius: 14,
-          cardElevation: 0,
-          dialogRadius: 16,
-          dialogElevation: 0,
-          chipRadius: 8,
-          popupMenuElevation: 0,
-          menuElevation: 0,
-          drawerElevation: 0,
-          bottomSheetElevation: 0,
-          bottomSheetModalElevation: 0,
-          tabBarItemSchemeColor: SchemeColor.primary,
-          tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
-          tabBarIndicatorSize: TabBarIndicatorSize.label,
-          snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
-          snackBarElevation: 0,
-          fabUseShape: true,
-          fabAlwaysCircular: false,
-          elevatedButtonElevation: 0,
-        ),
-        keyColors: const FlexKeyColors(
-          useKeyColors: true,
-          useSecondary: true,
-          useTertiary: true,
-        ),
-        textTheme: _buildTextTheme(Brightness.dark),
-        primaryTextTheme: _buildTextTheme(Brightness.dark),
-      );
+  static ThemeData get dark {
+    final base = FlexThemeData.dark(
+      colors: _darkColors,
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 4,
+      darkIsTrueBlack: false,
+      appBarStyle: FlexAppBarStyle.background,
+      appBarElevation: 0,
+      scaffoldBackground: const Color(0xFF1C1916),
+      useMaterial3: true,
+      visualDensity: VisualDensity.comfortable,
+      subThemesData: const FlexSubThemesData(
+        interactionEffects: true,
+        tintedDisabledControls: true,
+        blendOnLevel: 20,
+        blendOnColors: false,
+        useMaterial3Typography: true,
+        useM2StyleDividerInM3: false,
+        defaultRadius: 14,
+        inputDecoratorRadius: 14,
+        inputDecoratorBorderType: FlexInputBorderType.outline,
+        inputDecoratorIsFilled: true,
+        cardRadius: 18,
+        cardElevation: 0,
+        dialogRadius: 20,
+        dialogElevation: 0,
+        chipRadius: 12,
+        popupMenuElevation: 0,
+        menuElevation: 0,
+        drawerElevation: 0,
+        bottomSheetElevation: 0,
+        bottomSheetModalElevation: 0,
+        tabBarItemSchemeColor: SchemeColor.primary,
+        tabBarUnselectedItemSchemeColor: SchemeColor.onSurfaceVariant,
+        tabBarIndicatorSize: TabBarIndicatorSize.label,
+        snackBarBackgroundSchemeColor: SchemeColor.inverseSurface,
+        snackBarElevation: 0,
+        fabUseShape: true,
+        fabAlwaysCircular: false,
+        elevatedButtonElevation: 0,
+      ),
+      keyColors: const FlexKeyColors(
+        useKeyColors: true,
+        useSecondary: true,
+        useTertiary: true,
+      ),
+      textTheme: _buildTextTheme(Brightness.dark),
+      primaryTextTheme: _buildTextTheme(Brightness.dark),
+    );
+    return _applyOverrides(base, Brightness.dark);
+  }
 
   // ── Typography ─────────────────────────────────────────────────────────────
-  // Plus Jakarta Sans → UI body, labels, buttons.
-  // Lora           → display headlines (24px+) — alta legibilidad en pantalla.
-  // DM Mono        → números financieros, monetarios y datos tabulares.
+  // Nunito       → UI body, labels, buttons, display headings (w800).
+  // DM Mono      → numeros financieros, monetarios y datos tabulares.
 
   /// Mono para cifras monetarias y datos densos.
   static TextStyle mono({
@@ -261,17 +248,16 @@ class AppTheme {
         height: height ?? 1.2,
       );
 
-  /// Serif Lora — solo para titulares display (24px+).
-  /// Da personality editorial sin sacrificar legibilidad en pantalla.
+  /// Display heading — Nunito w800 para titulares grandes (24px+).
   static TextStyle serif({
     double fontSize = 32,
-    FontWeight fontWeight = FontWeight.w600,
+    FontWeight fontWeight = FontWeight.w800,
     Color? color,
     double? letterSpacing,
     double? height,
     FontStyle? fontStyle,
   }) =>
-      GoogleFonts.lora(
+      GoogleFonts.nunito(
         fontSize: fontSize,
         fontWeight: fontWeight,
         color: color,
@@ -280,13 +266,13 @@ class AppTheme {
         fontStyle: fontStyle,
       );
 
-  /// Eyebrow style — uppercase mono pequeño para labels contextuales arriba de
+  /// Eyebrow style — uppercase pequeno para labels contextuales arriba de
   /// titulares ("HOY · 7 MAY", "VENTAS · ESTE MES").
   static TextStyle eyebrow(BuildContext context, {Color? color}) {
     final cs = Theme.of(context).colorScheme;
-    return GoogleFonts.dmMono(
+    return GoogleFonts.nunito(
       fontSize: 11,
-      fontWeight: FontWeight.w500,
+      fontWeight: FontWeight.w700,
       color: color ?? cs.onSurfaceVariant,
       letterSpacing: 1.2,
       height: 1.2,
@@ -294,19 +280,11 @@ class AppTheme {
   }
 
   /// Construye el text theme con colores correctos por brightness.
-  ///
-  /// **Importante**: `Typography.englishLike2021` viene con colores hardcoded
-  /// (negros para light) que `copyWith` preserva. Si pasamos ese theme tal cual
-  /// a light y dark, los textos quedan negros incluso en dark mode (bug).
-  ///
-  /// Aplicamos `apply(displayColor/bodyColor)` ANTES del copyWith para que cada
-  /// brightness tenga sus colores correctos. FlexColorScheme respeta esos
-  /// colores y no los pisa.
   static TextTheme _buildTextTheme(Brightness brightness) {
     final color = brightness == Brightness.dark
-        ? const Color(0xFFE7E5E4) // matched con onSurface dark de FlexColorScheme
-        : const Color(0xFF1C1B1F); // matched con onSurface light
-    final base = GoogleFonts.plusJakartaSansTextTheme(
+        ? const Color(0xFFE7E5E4)
+        : const Color(0xFF1C1B1F);
+    final base = GoogleFonts.nunitoTextTheme(
       Typography.englishLike2021.apply(displayColor: color, bodyColor: color),
     );
     return base.copyWith(
@@ -320,9 +298,107 @@ class AppTheme {
       labelLarge:     base.labelLarge?.copyWith(fontWeight: FontWeight.w600, letterSpacing: 0),
     );
   }
+
+  /// Aplica overrides de componentes que FlexColorScheme no cubre bien.
+  static ThemeData _applyOverrides(ThemeData base, Brightness brightness) {
+    final cs = base.colorScheme;
+    final isDark = brightness == Brightness.dark;
+
+    return base.copyWith(
+      // FilledButton — mas alto, mas presencia, font tighter
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          textStyle: GoogleFonts.nunito(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
+        ),
+      ),
+      // OutlinedButton — borde sutil, no el default grueso
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          textStyle: GoogleFonts.nunito(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF4A3F35) : const Color(0xFFD4C8B8),
+          ),
+        ),
+      ),
+      // TextButton — mas discreto
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          textStyle: GoogleFonts.nunito(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+      // FAB — no el default redondo enorme de Material
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: cs.primary,
+        foregroundColor: cs.onPrimary,
+        elevation: 0,
+        hoverElevation: 0,
+        focusElevation: 0,
+        highlightElevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        extendedPadding: const EdgeInsets.symmetric(horizontal: 20),
+        extendedTextStyle: GoogleFonts.nunito(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.1,
+        ),
+      ),
+      // Dialogos — sin sombra, borde sutil
+      dialogTheme: DialogThemeData(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
+      ),
+      // BottomSheet — bordes mas suaves
+      bottomSheetTheme: BottomSheetThemeData(
+        backgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
+        modalBackgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
+        elevation: 0,
+        modalElevation: 0,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+      ),
+      // Popup menu — mas limpio
+      popupMenuTheme: PopupMenuThemeData(
+        elevation: 0,
+        color: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isDark ? const Color(0xFF3A3228) : const Color(0xFFF0E6D9),
+          ),
+        ),
+      ),
+      // Divider — mas sutil
+      dividerTheme: DividerThemeData(
+        color: isDark ? const Color(0xFF3A3228) : const Color(0xFFF0E6D9),
+        thickness: 1,
+        space: 1,
+      ),
+    );
+  }
 }
 
-/// Color helpers para semántica de intent en widgets.
+/// Color helpers para semantica de intent en widgets.
 extension SemanticColors on BuildContext {
   Color get successFg => AppTheme.success;
   Color get warningFg => AppTheme.warning;

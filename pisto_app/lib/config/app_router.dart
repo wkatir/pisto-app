@@ -28,6 +28,19 @@ class AuthRouterDelegate extends ChangeNotifier {
 
 final authRouterDelegate = AuthRouterDelegate();
 
+/// Página con crossfade sutil (150ms). Reemplaza NoTransitionPage para que la
+/// navegación se sienta fluida sin animaciones llamativas.
+class _FadePage<T> extends CustomTransitionPage<T> {
+  _FadePage({required super.child, super.key})
+      : super(
+          transitionDuration: const Duration(milliseconds: 150),
+          reverseTransitionDuration: const Duration(milliseconds: 100),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        );
+}
+
 final appRouter = GoRouter(
   initialLocation: '/',
   refreshListenable: authRouterDelegate,
@@ -43,38 +56,38 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      pageBuilder: (context, state) => const NoTransitionPage(child: LandingScreen()),
+      pageBuilder: (context, state) => _FadePage(child: const LandingScreen()),
     ),
     GoRoute(
       path: '/login',
-      pageBuilder: (context, state) => const NoTransitionPage(child: LoginScreen()),
+      pageBuilder: (context, state) => _FadePage(child: const LoginScreen()),
     ),
     GoRoute(
       path: '/register',
-      pageBuilder: (context, state) => const NoTransitionPage(child: RegisterScreen()),
+      pageBuilder: (context, state) => _FadePage(child: const RegisterScreen()),
     ),
     GoRoute(
       path: '/forgot-password',
-      pageBuilder: (context, state) => const NoTransitionPage(child: ForgotPasswordScreen()),
+      pageBuilder: (context, state) => _FadePage(child: const ForgotPasswordScreen()),
     ),
     ShellRoute(
       builder: (context, state, child) => ShellLayout(child: child),
       routes: [
         GoRoute(
           path: '/dashboard',
-          pageBuilder: (context, state) => const NoTransitionPage(child: DashboardScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const DashboardScreen()),
         ),
         GoRoute(
           path: '/inventory',
-          pageBuilder: (context, state) => const NoTransitionPage(child: InventoryScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const InventoryScreen()),
         ),
         GoRoute(
           path: '/sales',
-          pageBuilder: (context, state) => const NoTransitionPage(child: SalesScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const SalesScreen()),
         ),
         GoRoute(
           path: '/sales/customers/:id',
-          pageBuilder: (context, state) => NoTransitionPage(
+          pageBuilder: (context, state) => _FadePage(
             child: CustomerDetailScreen(
               customerId: state.pathParameters['id']!,
             ),
@@ -82,27 +95,27 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/collections',
-          pageBuilder: (context, state) => const NoTransitionPage(child: CollectionsScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const CollectionsScreen()),
         ),
         GoRoute(
           path: '/purchases',
-          pageBuilder: (context, state) => const NoTransitionPage(child: PurchasesScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const PurchasesScreen()),
         ),
         GoRoute(
           path: '/reports',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ReportsScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const ReportsScreen()),
         ),
         GoRoute(
           path: '/expenses',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ExpensesScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const ExpensesScreen()),
         ),
         GoRoute(
           path: '/profile',
-          pageBuilder: (context, state) => const NoTransitionPage(child: ProfileScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const ProfileScreen()),
         ),
         GoRoute(
           path: '/settings',
-          pageBuilder: (context, state) => const NoTransitionPage(child: SettingsScreen()),
+          pageBuilder: (context, state) => _FadePage(child: const SettingsScreen()),
         ),
       ],
     ),

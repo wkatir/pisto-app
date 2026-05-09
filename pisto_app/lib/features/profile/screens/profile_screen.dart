@@ -431,7 +431,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         FilledButton.icon(
                           onPressed: _saving ? null : _save,
                           icon: _saving
-                              ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary))
                               : const Icon(LucideIcons.check, size: 16),
                           label: Text(_saving ? 'Guardando...' : 'Guardar cambios'),
                         ),

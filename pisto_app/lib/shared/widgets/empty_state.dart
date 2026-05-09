@@ -57,16 +57,16 @@ class EmptyState extends StatelessWidget {
     final iconBlock = compact
         ? const SizedBox.shrink()
         : Container(
-            width: 56,
-            height: 56,
+            width: 72,
+            height: 72,
             decoration: BoxDecoration(
-              color: cs.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(14),
+              color: AppTheme.tintBg(context, cs.primary),
+              borderRadius: BorderRadius.circular(36),
             ),
             child: Icon(
               icon,
-              size: 24,
-              color: cs.onSurfaceVariant,
+              size: 26,
+              color: cs.primary.withValues(alpha: 0.7),
             ),
           );
 

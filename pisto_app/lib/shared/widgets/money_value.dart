@@ -145,7 +145,7 @@ class DeltaBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: AppTheme.tintBg(context, color),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

@@ -145,7 +145,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   child: Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                       side: BorderSide(color: AppTheme.borderSubtle(context)),
                     ),
                     child: Padding(
@@ -211,7 +211,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               show: true,
               drawVerticalLine: false,
               horizontalInterval: maxRevenue > 0 ? maxRevenue / 4 : 1,
-              getDrawingHorizontalLine: (value) => FlLine(color: cs.outlineVariant.withValues(alpha: 0.3), strokeWidth: 1),
+              getDrawingHorizontalLine: (value) => FlLine(color: AppTheme.borderSubtle(context), strokeWidth: 1),
             ),
             borderData: FlBorderData(show: false),
             titlesData: FlTitlesData(
@@ -400,7 +400,7 @@ class _SectionCard extends StatelessWidget {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         side: BorderSide(color: AppTheme.borderSubtle(context)),
       ),
       child: Padding(

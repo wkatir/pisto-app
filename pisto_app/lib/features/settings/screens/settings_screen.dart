@@ -228,12 +228,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             FilledButton(
               onPressed: _savingBusiness ? null : _saveBusiness,
               child: _savingBusiness
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 18,
                       width: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: cs.onPrimary,
                       ),
                     )
                   : const Text(

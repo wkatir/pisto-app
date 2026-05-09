@@ -74,24 +74,17 @@ class FinancialListRow extends StatelessWidget {
       padding: EdgeInsets.only(bottom: dense ? 0 : 8),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
           onTap: onTap,
           onLongPress: onLongPress,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: Container(
             decoration: BoxDecoration(
               color: selected
-                  ? cs.primary.withValues(alpha: 0.06)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-              border: dense
-                  ? null
-                  : Border.all(
-                      color: selected
-                          ? cs.primary.withValues(alpha: 0.5)
-                          : AppTheme.borderSubtle(context),
-                    ),
+                  ? cs.primary.withValues(alpha: 0.05)
+                  : cs.surfaceContainerLowest,
+              borderRadius: BorderRadius.circular(16),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(
@@ -199,7 +192,7 @@ class RowLeadingIcon extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         color: AppTheme.tintBg(context, color),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(size / 2),
       ),
       child: Icon(icon, size: size * 0.5, color: color),
     );
@@ -207,6 +200,9 @@ class RowLeadingIcon extends StatelessWidget {
 }
 
 /// Avatar inicial — para clientes/proveedores sin imagen.
+///
+/// Genera un color determinístico basado en el texto para que cada
+/// cliente/proveedor tenga un color consistente pero variado.
 class RowAvatar extends StatelessWidget {
   final String text;
   final Color? color;
@@ -219,10 +215,24 @@ class RowAvatar extends StatelessWidget {
     this.size = 38,
   });
 
+  /// Paleta de colores para avatares — variados pero todos en el mismo
+  /// rango de luminosidad para que se vean bien en light y dark.
+  static const _avatarColors = [
+    Color(0xFF2D8F6F), // forest green
+    Color(0xFF7E6BBF), // soft violet
+    Color(0xFF8B7EC8), // lavender
+    Color(0xFFE35D5D), // warm red
+    Color(0xFFE8835A), // terracotta
+    Color(0xFF34A853), // warm green
+    Color(0xFF5B8DEF), // soft blue
+    Color(0xFFA78BDB), // soft purple
+    Color(0xFF2D8F6F), // forest green
+    Color(0xFFF0A07C), // peach coral
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final c = color ?? cs.primary;
+    final c = color ?? _avatarColors[text.hashCode.abs() % _avatarColors.length];
     final initial = text.isEmpty ? '?' : text.trim()[0].toUpperCase();
 
     return Container(

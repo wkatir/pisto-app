@@ -239,15 +239,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
   void _downloadInvoicePdf(BuildContext context, String invoiceId) {
     final baseUrl = kIsWeb ? AppConstants.apiBaseUrlWeb : AppConstants.apiBaseUrl;
     final pdfUrl = '$baseUrl/exports/invoices/$invoiceId/pdf';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('PDF: $pdfUrl'),
-        action: SnackBarAction(
-          label: 'Copiar',
-          onPressed: () => Clipboard.setData(ClipboardData(text: pdfUrl)),
-        ),
-        duration: const Duration(seconds: 5),
-      ),
+    AppToast.show(
+      context,
+      message: 'PDF listo',
+      type: ToastType.success,
+      actionLabel: 'Copiar URL',
+      onAction: () => Clipboard.setData(ClipboardData(text: pdfUrl)),
     );
   }
 
@@ -356,37 +353,24 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
 
   // ── Cancel Sale ──
 
-  void _confirmCancelSale(BuildContext context, Map<String, dynamic> invoice) {
-    final cs = Theme.of(context).colorScheme;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(LucideIcons.triangleAlert, size: 22, color: cs.error),
-            const SizedBox(width: 8),
-            const Text('Anular Venta'),
-          ],
-        ),
-        content: Text('¿Anular la factura "${invoice['saleNumber']}"? Esta accion no se puede deshacer.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: cs.error),
-            onPressed: () async {
-              try {
-                await ref.read(salesServiceProvider).cancelSale(invoice['id'] as String);
-                if (ctx.mounted) Navigator.pop(ctx);
-                _loadData();
-              } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Anular'),
-          ),
-        ],
-      ),
+  void _confirmCancelSale(BuildContext context, Map<String, dynamic> invoice) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Anular venta',
+      description: '¿Anular la factura "${invoice['saleNumber']}"? Esta acción no se puede deshacer.',
+      confirmLabel: 'Anular',
+      icon: LucideIcons.ban,
+      destructive: true,
     );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await ref.read(salesServiceProvider).cancelSale(invoice['id'] as String);
+      if (mounted) AppToast.success(context, 'Factura anulada correctamente');
+      _loadData();
+    } catch (e) {
+      if (mounted) AppToast.error(context, 'Error: $e');
+    }
   }
 
   // ── Credit Note Form ──
@@ -448,38 +432,26 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
 
   // ── Bulk Mark Paid ──
 
-  void _bulkMarkPaid() {
+  void _bulkMarkPaid() async {
     final count = _selectedIds.length;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(LucideIcons.circleCheck, size: 22, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            const Text('Marcar como pagadas'),
-          ],
-        ),
-        content: Text('¿Marcar $count factura${count == 1 ? '' : 's'} como pagadas?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              setState(() {
-                _selectionMode = false;
-                _selectedIds.clear();
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('$count factura${count == 1 ? '' : 's'} marcada${count == 1 ? '' : 's'} como pagadas')),
-              );
-              _loadData();
-            },
-            child: const Text('Confirmar'),
-          ),
-        ],
-      ),
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'Marcar como pagadas',
+      description: '¿Marcar $count factura${count == 1 ? '' : 's'} como pagadas?',
+      confirmLabel: 'Confirmar',
+      icon: LucideIcons.circleCheck,
+      destructive: false,
     );
+    if (!confirmed || !mounted) return;
+
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+    if (mounted) {
+      AppToast.success(context, '$count factura${count == 1 ? '' : 's'} marcada${count == 1 ? '' : 's'} como pagadas');
+    }
+    _loadData();
   }
 
   // ── Customers Tab ──
@@ -685,7 +657,7 @@ class _SalesSkeletonBox extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.outlineVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(radius),
       ),
     )
@@ -709,7 +681,7 @@ class _SalesListSkeleton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surfaceContainer,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          border: Border.all(color: AppTheme.borderSubtle(context)),
         ),
         child: Row(
           children: [

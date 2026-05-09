@@ -125,10 +125,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 15),
               ),
               child: isLoading
-                  ? const SizedBox(
+                  ? SizedBox(
                       height: 18,
                       width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
                     )
                   : Text(
                       t.login,

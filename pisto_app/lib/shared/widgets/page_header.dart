@@ -51,7 +51,7 @@ class PageHeader extends StatelessWidget {
     final isCompact = width < Breakpoints.compact;
 
     final titleStyle = AppTheme.serif(
-      fontSize: isCompact ? 28 : 34,
+      fontSize: isCompact ? 26 : 30,
       fontWeight: FontWeight.w600,
       color: cs.onSurface,
       letterSpacing: -0.6,
