@@ -7,6 +7,7 @@ export const updateBusinessSchema = v.object({
   email: v.optional(v.pipe(v.string(), v.email())),
   address: v.optional(v.pipe(v.string(), v.maxLength(300))),
   currencyCode: v.optional(v.pipe(v.string(), v.length(3))), // USD, GTQ, CRC, etc.
+  logoUrl: v.optional(v.union([v.literal(''), v.pipe(v.string())])),
 })
 
 export const createTaxSchema = v.object({

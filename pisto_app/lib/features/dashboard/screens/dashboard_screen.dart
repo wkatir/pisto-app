@@ -107,6 +107,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     _buildPeriodChips(theme),
                     const SizedBox(height: 28),
                     _buildHeroNumber(theme),
+                    // Acciones rápidas circulares — sólo en mobile, justo
+                    // debajo del hero number. Es el patrón Treinta: tres
+                    // tap targets grandes para las acciones más comunes.
+                    if (!isWide) ...[
+                      const SizedBox(height: 24),
+                      _buildQuickActions(theme),
+                    ],
                     const SizedBox(height: 36),
                     _buildStatStrip(theme),
                     const SizedBox(height: 36),
@@ -309,6 +316,74 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   // ── Stat strip ─────────────────────────────────────────────────────────────
+
+  // ── Quick actions circulares (mobile-only, estilo Treinta) ───────────────────
+
+  Widget _buildQuickActions(ThemeData theme) {
+    final cs = theme.colorScheme;
+    final actions = [
+      (
+        LucideIcons.receipt,
+        'Vender',
+        cs.primary,
+        '/sales',
+      ),
+      (
+        LucideIcons.wallet,
+        'Cobrar',
+        AppTheme.success,
+        '/collections',
+      ),
+      (
+        LucideIcons.walletMinimal,
+        'Gastar',
+        AppTheme.danger,
+        '/expenses',
+      ),
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: actions.map((a) {
+        final (icon, label, color, route) = a;
+        return Expanded(
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.go(route),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: AppTheme.tintBg(context, color),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: AppTheme.borderSubtle(context)),
+                      ),
+                      child: Icon(icon, size: 26, color: color),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      label,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: cs.onSurface,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   Widget _buildStatStrip(ThemeData theme) {
     final monthlySales = _kpis?['monthlySales'] as Map<String, dynamic>? ?? {};

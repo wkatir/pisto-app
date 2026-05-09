@@ -12,6 +12,8 @@ import 'i18n/translations.g.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  LocaleSettings.setLocale(AppLocale.es);
+
   final container = ProviderContainer();
 
   final apiClient = container.read(apiClientProvider);

@@ -5,6 +5,11 @@ class AppConstants {
   static const String apiBaseUrl = 'http://10.0.2.2:3000/api/v1';
   static const String apiBaseUrlWeb = 'http://localhost:3000/api/v1';
 
+  /// Origen del servidor (sin /api/v1) — usado para construir URLs absolutas
+  /// de archivos subidos en /uploads/* que se sirven fuera del basePath.
+  static const String apiOrigin = 'http://10.0.2.2:3000';
+  static const String apiOriginWeb = 'http://localhost:3000';
+
   static const String accessTokenKey = 'accessToken';
   static const String refreshTokenKey = 'refreshToken';
 }

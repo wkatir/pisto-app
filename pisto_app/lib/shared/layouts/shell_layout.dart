@@ -7,6 +7,7 @@ import '../../core/providers/theme_provider.dart';
 import '../../core/providers/locale_provider.dart';
 import '../../i18n/translations.g.dart';
 import '../../config/app_theme.dart';
+import '../widgets/image_picker_field.dart';
 
 class ShellLayout extends ConsumerWidget {
   final Widget child;
@@ -505,6 +506,26 @@ class _MobileAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final cs = Theme.of(context).colorScheme;
     final user = ref.watch(authProvider).value;
     final initials = _initialsFor(user?.firstName, user?.lastName);
+    final avatarUrl = user?.avatarUrl;
+
+    final initialsBox = Container(
+      width: 38,
+      height: 38,
+      decoration: BoxDecoration(
+        color: AppTheme.tintBg(context, cs.primary),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.borderSubtle(context)),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: cs.primary,
+          fontWeight: FontWeight.w700,
+          fontSize: 13,
+        ),
+      ),
+    );
 
     return AppBar(
       elevation: 0,
@@ -541,23 +562,11 @@ class _MobileAppBar extends ConsumerWidget implements PreferredSizeWidget {
           child: InkWell(
             borderRadius: BorderRadius.circular(20),
             onTap: () => _showAccountSheet(context, ref, t),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: AppTheme.tintBg(context, cs.primary),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: TextStyle(
-                  color: cs.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                ),
-              ),
+            child: NetworkImageThumb(
+              url: avatarUrl,
+              size: 38,
+              borderRadius: BorderRadius.circular(20),
+              fallback: initialsBox,
             ),
           ),
         ),
@@ -635,20 +644,25 @@ class _AccountSheetContent extends ConsumerWidget {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: AppTheme.tintBg(context, cs.primary),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        _MobileAppBar._initialsFor(user.firstName, user.lastName),
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                    NetworkImageThumb(
+                      url: user.avatarUrl,
+                      size: 44,
+                      borderRadius: BorderRadius.circular(14),
+                      fallback: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: AppTheme.tintBg(context, cs.primary),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          _MobileAppBar._initialsFor(user.firstName, user.lastName),
+                          style: TextStyle(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),

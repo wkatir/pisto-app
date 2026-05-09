@@ -32,6 +32,7 @@ class ExpensesService {
     String? categoryId,
     String? paymentMethodId,
     String? notes,
+    String? receiptUrl,
   }) async {
     final resp = await _api.dio.post('/expenses', data: {
       'description': description,
@@ -40,6 +41,7 @@ class ExpensesService {
       'categoryId': categoryId,
       'paymentMethodId': paymentMethodId,
       if (notes != null && notes.isNotEmpty) 'notes': notes,
+      if (receiptUrl != null && receiptUrl.isNotEmpty) 'receiptUrl': receiptUrl,
     });
     return resp.data['data'] as Map<String, dynamic>;
   }

@@ -470,6 +470,13 @@ const tables = [
     total_due    DECIMAL(12,2)  NOT NULL,
     generated_by VARCHAR(36)    REFERENCES app_user(id)
   )`,
+
+  // ── ALTER TABLE idempotentes para columnas agregadas posteriormente ──
+  sql`IF COL_LENGTH('app_user', 'avatar_url') IS NULL
+      ALTER TABLE app_user ADD avatar_url NVARCHAR(MAX)`,
+
+  sql`IF COL_LENGTH('expense', 'receipt_url') IS NULL
+      ALTER TABLE expense ADD receipt_url NVARCHAR(MAX)`,
 ]
 
 console.log(`Creando ${tables.length} objetos en SQL Server...`)

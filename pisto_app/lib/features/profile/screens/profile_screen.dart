@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/core_providers.dart';
+import '../../../core/services/uploads_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/widgets.dart';
 
@@ -19,6 +20,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic>? _me;
   bool _loading = true;
   bool _saving = false;
+  String? _avatarUrl;
 
   final _formKey = GlobalKey<FormState>();
   final _firstNameCtrl = TextEditingController();
@@ -52,6 +54,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _lastNameCtrl.text = me['lastName']?.toString() ?? '';
         _emailCtrl.text = me['email']?.toString() ?? '';
         _phoneCtrl.text = me['phone']?.toString() ?? '';
+        _avatarUrl = me['avatarUrl'] as String?;
         _loading = false;
       });
     } catch (e) {
@@ -73,12 +76,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         lastName: _lastNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
         phone: _phoneCtrl.text.trim().isEmpty ? '' : _phoneCtrl.text.trim(),
+        avatarUrl: _avatarUrl ?? '',
       );
       if (!mounted) return;
       setState(() {
         _me = updated;
         _saving = false;
       });
+      // Refresca el UserModel global para que sidebar/AppBar muestren el
+      // avatar y nombre actualizados sin esperar al próximo login.
+      await ref.read(authProvider.notifier).refresh();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Perfil actualizado')),
       );
@@ -233,23 +241,77 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: AppTheme.tintBg(context, cs.primary),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      initials,
-                      style: AppTheme.serif(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                        color: cs.primary,
-                        letterSpacing: -0.5,
+                  // Avatar editable: si hay foto, la muestra. Si no, muestra
+                  // las iniciales con tap-to-upload encima.
+                  Stack(
+                    children: [
+                      _avatarUrl?.isNotEmpty == true
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: NetworkImageThumb(
+                                url: _avatarUrl,
+                                size: 72,
+                                borderRadius: BorderRadius.circular(20),
+                                fallback: _AvatarInitials(initials: initials),
+                              ),
+                            )
+                          : SizedBox(
+                              width: 72,
+                              height: 72,
+                              child: _AvatarInitials(initials: initials),
+                            ),
+                      Positioned.fill(
+                        child: Material(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () async {
+                              await showModalBottomSheet<void>(
+                                context: context,
+                                showDragHandle: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (sheetCtx) => SafeArea(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: ImagePickerField(
+                                      currentUrl: _avatarUrl,
+                                      folder: UploadFolder.avatars,
+                                      shape: ImagePickerShape.circle,
+                                      size: 140,
+                                      placeholderLabel: 'Subir foto',
+                                      placeholderIcon: LucideIcons.camera,
+                                      onChanged: (url) async {
+                                        Navigator.pop(sheetCtx);
+                                        setState(() => _avatarUrl = url);
+                                        await _save();
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       ),
-                    ),
+                      Positioned(
+                        right: 2,
+                        bottom: 2,
+                        child: Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: cs.primary,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: cs.surface, width: 2),
+                          ),
+                          alignment: Alignment.center,
+                          child: Icon(LucideIcons.camera, size: 11, color: cs.onPrimary),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 16),
                   Expanded(
@@ -500,6 +562,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final l = last.isEmpty ? '' : last[0].toUpperCase();
     final result = '$f$l';
     return result.isEmpty ? '?' : result;
+  }
+}
+
+class _AvatarInitials extends StatelessWidget {
+  final String initials;
+  const _AvatarInitials({required this.initials});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.tintBg(context, cs.primary),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initials,
+        style: AppTheme.serif(
+          fontSize: 24,
+          fontWeight: FontWeight.w600,
+          color: cs.primary,
+          letterSpacing: -0.5,
+        ),
+      ),
+    );
   }
 }
 

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
+import '../../../core/services/uploads_service.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
 
@@ -76,58 +78,51 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
+
+    final alertCount = _alerts.length;
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(LucideIcons.package, size: 28, color: cs.primary),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Inventario', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  ],
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
+            child: PageHeader(
+              eyebrow: 'OPERACIÓN',
+              title: 'Tu inventario',
+              meta: '${_products.length} producto${_products.length == 1 ? '' : 's'}'
+                  '${alertCount > 0 ? ' · $alertCount alerta${alertCount == 1 ? '' : 's'} de stock' : ''}',
+              metaIsMono: true,
+              actions: [
+                OutlinedButton.icon(
+                  onPressed: () => _showAdjustmentForm(context),
+                  icon: const Icon(LucideIcons.clipboardPen, size: 14),
+                  label: const Text('Ajuste'),
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _showAdjustmentForm(context),
-                      icon: const Icon(LucideIcons.clipboardPen, size: 18),
-                      label: const Text('Ajuste'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _showProductForm(context),
-                      icon: const Icon(LucideIcons.plus, size: 18),
-                      label: const Text('Producto'),
-                    ),
-                  ],
+                FilledButton.icon(
+                  onPressed: () => _showProductForm(context),
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Nuevo producto'),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.box, size: 16), const SizedBox(width: 6), Text('Productos (${_products.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.folderOpen, size: 16), const SizedBox(width: 6), Text('Categorias (${_categories.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.warehouse, size: 16), const SizedBox(width: 6), Text('Bodegas (${_warehouses.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.ruler, size: 16), const SizedBox(width: 6), Text('Unidades (${_units.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.arrowLeftRight, size: 16), const SizedBox(width: 6), Text('Transferencias (${_transfers.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.triangleAlert, size: 16), const SizedBox(width: 6), Text('Alertas (${_alerts.length})')])),
+                Tab(text: 'Productos (${_products.length})'),
+                Tab(text: 'Categorías (${_categories.length})'),
+                Tab(text: 'Bodegas (${_warehouses.length})'),
+                Tab(text: 'Unidades (${_units.length})'),
+                Tab(text: 'Transferencias (${_transfers.length})'),
+                Tab(text: 'Alertas${alertCount > 0 ? ' ($alertCount)' : ''}'),
               ],
             ),
           ),
@@ -135,12 +130,12 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildProductsTab(theme),
-                _buildCategoriesTab(theme),
-                _buildWarehousesTab(theme),
-                _buildUnitsTab(theme),
-                _buildTransfersTab(theme),
-                _buildAlertsTab(theme),
+                _buildProductsTab(theme, isWide),
+                _buildCategoriesTab(theme, isWide),
+                _buildWarehousesTab(theme, isWide),
+                _buildUnitsTab(theme, isWide),
+                _buildTransfersTab(theme, isWide),
+                _buildAlertsTab(theme, isWide),
               ],
             ),
           ),
@@ -151,19 +146,18 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
 
   // ── Products Tab ──
 
-  Widget _buildProductsTab(ThemeData theme) {
+  Widget _buildProductsTab(ThemeData theme, bool isWide) {
     final cs = theme.colorScheme;
+    final padX = isWide ? 32.0 : 20.0;
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(padX, 16, padX, 12),
           child: TextField(
-            decoration: InputDecoration(
-              hintText: 'Buscar productos...',
-              prefixIcon: const Icon(LucideIcons.search, size: 18),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: const InputDecoration(
+              hintText: 'Buscar productos por nombre o SKU...',
+              prefixIcon: Icon(LucideIcons.search, size: 18),
               isDense: true,
             ),
             onChanged: (v) {
@@ -177,58 +171,45 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
           child: _loading
               ? const _InventoryListSkeleton()
               : _products.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(LucideIcons.packageX, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                          const SizedBox(height: 12),
-                          Text('No hay productos', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-                        ],
-                      ),
+                  ? EmptyState(
+                      icon: LucideIcons.packageOpen,
+                      title: _search.isEmpty ? 'Aún no tenés productos' : 'Sin resultados',
+                      description: _search.isEmpty
+                          ? 'Agregá tu primer producto para empezar a controlar stock y precios.'
+                          : 'No encontramos productos que coincidan con "$_search".',
+                      actionLabel: _search.isEmpty ? 'Nuevo producto' : null,
+                      actionIcon: _search.isEmpty ? LucideIcons.plus : null,
+                      onAction: _search.isEmpty ? () => _showProductForm(context) : null,
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      padding: EdgeInsets.fromLTRB(padX, 0, padX, 24),
                       itemCount: _products.length,
                       itemBuilder: (context, i) {
                         final p = _products[i] as Map<String, dynamic>;
                         final salePrice = double.tryParse(p['salePrice']?.toString() ?? '0') ?? 0;
                         final costPrice = double.tryParse(p['costPrice']?.toString() ?? '0') ?? 0;
+                        final stock = p['stock']?.toString();
+                        final productImage = p['imageUrl'] as String?;
 
-                        return Card(
-                          elevation: 0,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          shape: RoundedRectangleBorder(
+                        return FinancialListRow(
+                          leading: NetworkImageThumb(
+                            url: productImage,
+                            size: 38,
                             borderRadius: BorderRadius.circular(10),
-                            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                            fallback: RowLeadingIcon(
+                              icon: LucideIcons.box,
+                              color: cs.primary,
+                            ),
                           ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                            leading: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: cs.primaryContainer.withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(LucideIcons.box, size: 20, color: cs.primary),
-                            ),
-                            title: Text(p['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(
-                              'SKU: ${p['sku'] ?? 'N/A'} · Costo: ${_fmt.format(costPrice)}',
-                              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: Text(
-                              _fmt.format(salePrice),
-                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.primary),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              textAlign: TextAlign.end,
-                            ),
-                            onTap: () => _showProductDetail(context, p),
-                          ),
+                          title: p['name']?.toString() ?? 'Sin nombre',
+                          subtitleParts: [
+                            'SKU: ${p['sku'] ?? 'N/A'}',
+                            'Costo: ${_fmt.format(costPrice)}',
+                            if (stock != null && stock.isNotEmpty) 'Stock: $stock',
+                          ],
+                          trailingValue: _fmt.format(salePrice),
+                          trailingSubtitle: 'venta',
+                          onTap: () => _showProductDetail(context, p),
                         );
                       },
                     ),
@@ -262,315 +243,185 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     );
   }
 
-  // ── Categories Tab ──
+  // ── Tab simple builder (categorías, bodegas, unidades, transferencias) ──
 
-  Widget _buildCategoriesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _simpleTab({
+    required bool isWide,
+    required List<dynamic> items,
+    required IconData emptyIcon,
+    required String emptyTitle,
+    required String emptyDescription,
+    String? actionLabel,
+    IconData? actionIcon,
+    VoidCallback? onAction,
+    required FinancialListRow Function(BuildContext, Map<String, dynamic>) builder,
+  }) {
+    final padX = isWide ? 32.0 : 20.0;
+    if (items.isEmpty) {
+      return EmptyState(
+        icon: emptyIcon,
+        title: emptyTitle,
+        description: emptyDescription,
+        actionLabel: actionLabel,
+        actionIcon: actionIcon,
+        onAction: onAction,
+      );
+    }
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Row(
-            children: [
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showCategoryForm(context),
-                icon: const Icon(LucideIcons.plus, size: 18),
-                label: const Text('Categoria'),
-              ),
-            ],
+        if (actionLabel != null && onAction != null)
+          Padding(
+            padding: EdgeInsets.fromLTRB(padX, 16, padX, 8),
+            child: Row(
+              children: [
+                const Spacer(),
+                OutlinedButton.icon(
+                  onPressed: onAction,
+                  icon: Icon(actionIcon ?? LucideIcons.plus, size: 14),
+                  label: Text(actionLabel),
+                ),
+              ],
+            ),
+          )
+        else
+          const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.fromLTRB(padX, 0, padX, 24),
+            itemCount: items.length,
+            itemBuilder: (context, i) => builder(context, items[i] as Map<String, dynamic>),
           ),
         ),
-        Expanded(
-          child: _categories.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.folderX, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No hay categorias', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: _categories.length,
-                  itemBuilder: (context, i) {
-                    final c = _categories[i] as Map<String, dynamic>;
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-                          child: Icon(LucideIcons.folderOpen, size: 20, color: cs.secondary),
-                        ),
-                        title: Text(c['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: c['description'] != null ? Text(c['description'], maxLines: 2, overflow: TextOverflow.ellipsis) : null,
-                        trailing: IconButton(
-                          icon: Icon(LucideIcons.trash2, size: 18, color: cs.error),
-                          onPressed: () => _confirmDeleteCategory(context, c),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
       ],
+    );
+  }
+
+  // ── Categories Tab ──
+
+  Widget _buildCategoriesTab(ThemeData theme, bool isWide) {
+    final cs = theme.colorScheme;
+    return _simpleTab(
+      isWide: isWide,
+      items: _categories,
+      emptyIcon: LucideIcons.folderOpen,
+      emptyTitle: 'Sin categorías',
+      emptyDescription: 'Organizá tus productos en categorías para reportes y filtros más claros.',
+      actionLabel: 'Nueva categoría',
+      actionIcon: LucideIcons.plus,
+      onAction: () => _showCategoryForm(context),
+      builder: (ctx, c) => FinancialListRow(
+        leading: RowLeadingIcon(icon: LucideIcons.folderOpen, color: cs.primary),
+        title: c['name']?.toString() ?? 'Sin nombre',
+        subtitleParts: [
+          if (c['description'] != null && (c['description'] as String).isNotEmpty)
+            c['description'] as String,
+        ],
+        onTap: () => _confirmDeleteCategory(context, c),
+      ),
     );
   }
 
   // ── Warehouses Tab ──
 
-  Widget _buildWarehousesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Row(
-            children: [
-              const Spacer(),
-              OutlinedButton.icon(
-                onPressed: () => _showWarehouseForm(context),
-                icon: const Icon(LucideIcons.plus, size: 18),
-                label: const Text('Bodega'),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _warehouses.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.warehouse, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No hay bodegas', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: _warehouses.length,
-                  itemBuilder: (context, i) {
-                    final w = _warehouses[i] as Map<String, dynamic>;
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: cs.tertiaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-                          child: Icon(LucideIcons.warehouse, size: 20, color: cs.tertiary),
-                        ),
-                        title: Text(w['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: w['address'] != null ? Text(w['address'], maxLines: 2, overflow: TextOverflow.ellipsis) : null,
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
+  Widget _buildWarehousesTab(ThemeData theme, bool isWide) {
+    return _simpleTab(
+      isWide: isWide,
+      items: _warehouses,
+      emptyIcon: LucideIcons.warehouse,
+      emptyTitle: 'Sin bodegas',
+      emptyDescription: 'Las bodegas te permiten manejar stock por ubicación y hacer transferencias entre ellas.',
+      actionLabel: 'Nueva bodega',
+      actionIcon: LucideIcons.plus,
+      onAction: () => _showWarehouseForm(context),
+      builder: (ctx, w) => FinancialListRow(
+        leading: RowLeadingIcon(icon: LucideIcons.warehouse, color: AppTheme.info),
+        title: w['name']?.toString() ?? 'Sin nombre',
+        subtitleParts: [
+          if (w['address'] != null && (w['address'] as String).isNotEmpty)
+            w['address'] as String,
+        ],
+      ),
     );
   }
 
   // ── Units Tab ──
 
-  Widget _buildUnitsTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
-    if (_units.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.ruler, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No hay unidades de medida', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
-      );
-    }
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: _units.length,
-      itemBuilder: (context, i) {
-        final u = _units[i] as Map<String, dynamic>;
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-          ),
-          child: ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: cs.primaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-              child: Icon(LucideIcons.ruler, size: 20, color: cs.primary),
-            ),
-            title: Text(u['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),
-            subtitle: Text(u['abbreviation'] ?? '', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-          ),
-        );
-      },
+  Widget _buildUnitsTab(ThemeData theme, bool isWide) {
+    return _simpleTab(
+      isWide: isWide,
+      items: _units,
+      emptyIcon: LucideIcons.ruler,
+      emptyTitle: 'Sin unidades de medida',
+      emptyDescription: 'Definí cómo medís tus productos: unidad, kilo, litro, caja, docena, etc.',
+      builder: (ctx, u) => FinancialListRow(
+        leading: RowLeadingIcon(icon: LucideIcons.ruler, color: theme.colorScheme.primary),
+        title: u['name']?.toString() ?? 'Sin nombre',
+        subtitleParts: [
+          if (u['abbreviation'] != null && (u['abbreviation'] as String).isNotEmpty)
+            u['abbreviation'] as String,
+        ],
+      ),
     );
   }
 
   // ── Transfers Tab ──
 
-  Widget _buildTransfersTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(24),
-          child: Row(
-            children: [
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () => _showTransferForm(context),
-                icon: const Icon(LucideIcons.arrowLeftRight, size: 18),
-                label: const Text('Nueva Transferencia'),
-              ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: _transfers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.arrowLeftRight, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No hay transferencias', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: _transfers.length,
-                  itemBuilder: (context, i) {
-                    final t = _transfers[i] as Map<String, dynamic>;
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(color: cs.tertiaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-                          child: Icon(LucideIcons.arrowLeftRight, size: 20, color: cs.tertiary),
-                        ),
-                        title: Text(
-                          '${t['fromWarehouseName'] ?? 'Origen'} → ${t['toWarehouseName'] ?? 'Destino'}',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        subtitle: Text(
-                          '${t['productName'] ?? ''} · Cant: ${t['quantity'] ?? 0}',
-                          style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                        ),
-                        trailing: SizedBox(
-                          width: 80,
-                          child: Text(
-                            t['createdAt']?.toString().substring(0, 10) ?? '',
-                            style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.end,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
+  Widget _buildTransfersTab(ThemeData theme, bool isWide) {
+    return _simpleTab(
+      isWide: isWide,
+      items: _transfers,
+      emptyIcon: LucideIcons.arrowLeftRight,
+      emptyTitle: 'Sin transferencias',
+      emptyDescription: 'Movés stock entre bodegas. Cada transferencia queda registrada acá.',
+      actionLabel: 'Nueva transferencia',
+      actionIcon: LucideIcons.arrowLeftRight,
+      onAction: () => _showTransferForm(context),
+      builder: (ctx, t) => FinancialListRow(
+        leading: RowLeadingIcon(icon: LucideIcons.arrowLeftRight, color: AppTheme.info),
+        title: '${t['fromWarehouseName'] ?? 'Origen'} → ${t['toWarehouseName'] ?? 'Destino'}',
+        subtitleParts: [
+          t['productName']?.toString() ?? '',
+          'Cant: ${t['quantity'] ?? 0}',
+          if (t['createdAt'] != null) formatDateShortEs(t['createdAt']?.toString()),
+        ],
+      ),
     );
   }
 
   // ── Alerts Tab ──
 
-  Widget _buildAlertsTab(ThemeData theme) {
-    final cs = theme.colorScheme;
+  Widget _buildAlertsTab(ThemeData theme, bool isWide) {
+    final padX = isWide ? 32.0 : 20.0;
 
     if (_alerts.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text('Sin alertas de stock bajo', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.circleCheck,
+        title: 'Todo en orden',
+        description: 'No hay productos con stock bajo. Cuando alguno se acerque al mínimo, te avisamos acá.',
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _alerts.length,
       itemBuilder: (context, i) {
         final a = _alerts[i] as Map<String, dynamic>;
         final currentStock = a['currentStock'] ?? a['stock'] ?? 0;
         final minStock = a['minStock'] ?? a['reorderPoint'] ?? 0;
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.error.withValues(alpha: 0.3)),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: cs.errorContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-              child: Icon(LucideIcons.triangleAlert, size: 20, color: cs.error),
-            ),
-            title: Text(a['name'] ?? a['productName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text('SKU: ${a['sku'] ?? 'N/A'}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-            trailing: SizedBox(
-              width: 80,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('$currentStock', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.error), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('min: $minStock', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ),
+        return FinancialListRow(
+          leading: RowLeadingIcon(icon: LucideIcons.triangleAlert, color: AppTheme.danger),
+          title: a['name']?.toString() ?? a['productName']?.toString() ?? 'Producto',
+          subtitleParts: [
+            'SKU: ${a['sku'] ?? 'N/A'}',
+            'Mínimo: $minStock',
+          ],
+          chips: [
+            IntentChip(label: 'Stock bajo', intent: ChipIntent.danger, small: true),
+          ],
+          trailingValue: '$currentStock',
+          trailingColor: AppTheme.danger,
+          trailingSubtitle: 'unidades',
         );
       },
     );
@@ -686,55 +537,71 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final skuCtrl = TextEditingController(text: product['sku'] ?? '');
     final priceCtrl = TextEditingController(text: product['salePrice']?.toString() ?? '');
     final costCtrl = TextEditingController(text: product['costPrice']?.toString() ?? '');
+    String? imageUrl = product['imageUrl'] as String?;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(LucideIcons.pencil, size: 22, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            const Text('Editar Producto'),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder())),
-                const SizedBox(height: 12),
-                TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU', border: OutlineInputBorder())),
-                const SizedBox(height: 12),
-                TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Precio Venta', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-                const SizedBox(height: 12),
-                TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Precio Costo', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-              ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(LucideIcons.pencil, size: 22, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              const Text('Editar producto'),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: ImagePickerField(
+                      currentUrl: imageUrl,
+                      folder: UploadFolder.products,
+                      shape: ImagePickerShape.rounded,
+                      size: 110,
+                      placeholderLabel: 'Foto del\nproducto',
+                      onChanged: (url) => setLocal(() => imageUrl = url),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
+                  const SizedBox(height: 12),
+                  TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU')),
+                  const SizedBox(height: 12),
+                  TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Precio venta'), keyboardType: TextInputType.number),
+                  const SizedBox(height: 12),
+                  TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Precio costo'), keyboardType: TextInputType.number),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () async {
+                try {
+                  await ref.read(inventoryServiceProvider).updateProduct(product['id'] as String, {
+                    'name': nameCtrl.text,
+                    'sku': skuCtrl.text,
+                    'salePrice': priceCtrl.text,
+                    'costPrice': costCtrl.text,
+                    'imageUrl': imageUrl ?? '',
+                  });
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _loadData();
+                } catch (e) {
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              },
+              child: const Text('Guardar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () async {
-              try {
-                await ref.read(inventoryServiceProvider).updateProduct(product['id'] as String, {
-                  'name': nameCtrl.text,
-                  'sku': skuCtrl.text,
-                  'salePrice': priceCtrl.text,
-                  'costPrice': costCtrl.text,
-                });
-                if (ctx.mounted) Navigator.pop(ctx);
-                _loadData();
-              } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Guardar'),
-          ),
-        ],
       ),
     );
   }
@@ -992,56 +859,72 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final skuCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
     final costCtrl = TextEditingController();
+    String? imageUrl;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(LucideIcons.packagePlus, size: 22, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            const Text('Nuevo Producto'),
-          ],
-        ),
-        content: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 400),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre', border: OutlineInputBorder())),
-                const SizedBox(height: 12),
-                TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU', border: OutlineInputBorder())),
-                const SizedBox(height: 12),
-                TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Precio Venta', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-                const SizedBox(height: 12),
-                TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Precio Costo', border: OutlineInputBorder()), keyboardType: TextInputType.number),
-              ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocal) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(LucideIcons.packagePlus, size: 22, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              const Text('Nuevo producto'),
+            ],
+          ),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: ImagePickerField(
+                      currentUrl: imageUrl,
+                      folder: UploadFolder.products,
+                      shape: ImagePickerShape.rounded,
+                      size: 110,
+                      placeholderLabel: 'Foto del\nproducto',
+                      onChanged: (url) => setLocal(() => imageUrl = url),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Nombre')),
+                  const SizedBox(height: 12),
+                  TextField(controller: skuCtrl, decoration: const InputDecoration(labelText: 'SKU')),
+                  const SizedBox(height: 12),
+                  TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Precio venta'), keyboardType: TextInputType.number),
+                  const SizedBox(height: 12),
+                  TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Precio costo'), keyboardType: TextInputType.number),
+                ],
+              ),
             ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+            FilledButton(
+              onPressed: () async {
+                try {
+                  await ref.read(inventoryServiceProvider).createProduct({
+                    'name': nameCtrl.text,
+                    'sku': skuCtrl.text,
+                    'salePrice': priceCtrl.text,
+                    'costPrice': costCtrl.text,
+                    'unitId': 1,
+                    if (imageUrl != null && imageUrl!.isNotEmpty) 'imageUrl': imageUrl,
+                  });
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _loadData();
+                } catch (e) {
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                }
+              },
+              child: const Text('Crear'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
-          FilledButton(
-            onPressed: () async {
-              try {
-                await ref.read(inventoryServiceProvider).createProduct({
-                  'name': nameCtrl.text,
-                  'sku': skuCtrl.text,
-                  'salePrice': priceCtrl.text,
-                  'costPrice': costCtrl.text,
-                  'unitId': 1,
-                });
-                if (ctx.mounted) Navigator.pop(ctx);
-                _loadData();
-              } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Crear'),
-          ),
-        ],
       ),
     );
   }

@@ -57,4 +57,25 @@ class Auth extends _$Auth {
     state = const AsyncData(null);
     authRouterDelegate.setAuthenticated(false);
   }
+
+  /// Refresca el [UserModel] desde el backend (`GET /auth/me`).
+  /// Útil después de actualizar perfil/avatar para que sidebar y AppBar
+  /// reflejen los cambios sin esperar al próximo login.
+  Future<void> refresh() async {
+    if (state.value == null) return;
+    try {
+      final authService = ref.read(authServiceProvider);
+      final me = await authService.getMe();
+      state = AsyncData(UserModel(
+        id: me['id']?.toString() ?? state.value!.id,
+        email: me['email']?.toString() ?? state.value!.email,
+        firstName: me['firstName']?.toString() ?? state.value!.firstName,
+        lastName: me['lastName']?.toString() ?? state.value!.lastName,
+        avatarUrl: me['avatarUrl'] as String?,
+        roles: (me['roles'] as List?)?.cast<String>() ?? state.value!.roles,
+      ));
+    } catch (_) {
+      // Si falla, mantenemos el state previo.
+    }
+  }
 }

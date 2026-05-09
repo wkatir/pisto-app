@@ -64,55 +64,51 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
+
+    final totalPayable = _payables.fold<double>(0, (sum, p) {
+      final ap = (p as Map<String, dynamic>)['payable'] as Map<String, dynamic>? ?? p;
+      return sum + (double.tryParse(ap['balance']?.toString() ?? '0') ?? 0);
+    });
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(LucideIcons.shoppingCart, size: 28, color: cs.primary),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Compras', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  ],
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
+            child: PageHeader(
+              eyebrow: 'OPERACIÓN',
+              title: 'Tus compras',
+              meta: '${_orders.length} orden${_orders.length == 1 ? '' : 'es'} · ${_suppliers.length} proveedor${_suppliers.length == 1 ? '' : 'es'}'
+                  '${totalPayable > 0 ? ' · debés ${_fmt.format(totalPayable)}' : ''}',
+              metaIsMono: true,
+              actions: [
+                OutlinedButton.icon(
+                  onPressed: () => _showSupplierForm(context),
+                  icon: const Icon(LucideIcons.building2, size: 14),
+                  label: const Text('Nuevo proveedor'),
                 ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    OutlinedButton.icon(
-                      onPressed: () => _showSupplierForm(context),
-                      icon: const Icon(LucideIcons.building2, size: 18),
-                      label: const Text('Proveedor'),
-                    ),
-                    FilledButton.icon(
-                      onPressed: () => _showOrderForm(context),
-                      icon: const Icon(LucideIcons.plus, size: 18),
-                      label: const Text('Nueva Orden'),
-                    ),
-                  ],
+                FilledButton.icon(
+                  onPressed: () => _showOrderForm(context),
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Nueva orden'),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.clipboardList, size: 16), const SizedBox(width: 6), Text('Ordenes (${_orders.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.building2, size: 16), const SizedBox(width: 6), Text('Proveedores (${_suppliers.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.creditCard, size: 16), const SizedBox(width: 6), Text('Por Pagar (${_payables.length})')])),
+                Tab(text: 'Órdenes (${_orders.length})'),
+                Tab(text: 'Proveedores (${_suppliers.length})'),
+                Tab(text: 'Por pagar (${_payables.length})'),
               ],
             ),
           ),
@@ -122,9 +118,9 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildOrdersTab(theme),
-                      _buildSuppliersTab(theme),
-                      _buildPayablesTab(theme),
+                      _buildOrdersTab(theme, isWide),
+                      _buildSuppliersTab(theme, isWide),
+                      _buildPayablesTab(theme, isWide),
                     ],
                   ),
           ),
@@ -135,59 +131,44 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
   // ── Orders Tab ──
 
-  Widget _buildOrdersTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildOrdersTab(ThemeData theme, bool isWide) {
     if (_orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.clipboardX, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No hay ordenes de compra', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.clipboardList,
+        title: 'Sin órdenes de compra',
+        description: 'Creá una orden a un proveedor para registrar lo que vas a recibir y mantener tu inventario al día.',
+        actionLabel: 'Nueva orden',
+        actionIcon: LucideIcons.plus,
+        onAction: () => _showOrderForm(context),
       );
     }
 
+    final padX = isWide ? 32.0 : 20.0;
+
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _orders.length,
       itemBuilder: (context, i) {
         final o = _orders[i] as Map<String, dynamic>;
-        final status = o['status'] ?? 'draft';
+        final status = o['status'] as String? ?? 'draft';
         final total = double.tryParse(o['total']?.toString() ?? '0') ?? 0;
+        final supplierName = o['supplierName']?.toString() ?? '';
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        return FinancialListRow(
+          leading: RowLeadingIcon(
+            icon: LucideIcons.clipboardList,
+            color: theme.colorScheme.primary,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(LucideIcons.clipboardList, size: 20, color: cs.primary),
-            ),
-            title: Text(o['orderNumber'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Row(
-              children: [
-                Flexible(child: Text('${o['orderDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                const SizedBox(width: 8),
-                _OrderStatusChip(status: status),
-              ],
-            ),
-            trailing: Text(_fmt.format(total), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.end),
-            onTap: () => _showOrderDetail(context, o),
-          ),
+          title: o['orderNumber']?.toString() ?? 'Sin número',
+          subtitleParts: [
+            formatDateShortEs(o['orderDate']?.toString()),
+            if (supplierName.isNotEmpty) supplierName,
+          ],
+          chips: [
+            StatusChip(status: status, type: StatusType.order),
+          ],
+          trailingValue: _fmt.format(total),
+          onTap: () => _showOrderDetail(context, o),
         );
       },
     );
@@ -232,7 +213,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DetailRow(theme: theme, label: 'Fecha', value: detail['orderDate'] ?? '', labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Fecha', value: formatDateDisplay(detail['orderDate']?.toString()), labelWidth: 80),
                     DetailRow(theme: theme, label: 'Estado', value: status, labelWidth: 80),
                     DetailRow(theme: theme, label: 'Proveedor', value: detail['supplierName'] ?? '', labelWidth: 80),
                     DetailRow(theme: theme, label: 'Total', value: _fmt.format(total), labelWidth: 80),
@@ -391,63 +372,46 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
   // ── Suppliers Tab ──
 
-  Widget _buildSuppliersTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildSuppliersTab(ThemeData theme, bool isWide) {
     if (_suppliers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.building2, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No hay proveedores', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.building2,
+        title: 'Sin proveedores',
+        description: 'Agregá tus proveedores para llevar el control de las órdenes y los pagos pendientes con cada uno.',
+        actionLabel: 'Nuevo proveedor',
+        actionIcon: LucideIcons.plus,
+        onAction: () => _showSupplierForm(context),
       );
     }
 
+    final padX = isWide ? 32.0 : 20.0;
+
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _suppliers.length,
       itemBuilder: (context, i) {
         final s = _suppliers[i] as Map<String, dynamic>;
+        final name = s['companyName']?.toString() ?? '';
+        final contact = (s['contactName']?.toString().isNotEmpty == true)
+            ? s['contactName'] as String
+            : (s['email']?.toString() ?? '');
+        final terms = s['paymentTerms']?.toString() ?? '30';
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-          ),
-          child: ListTile(
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: cs.secondaryContainer.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(8)),
-              child: Icon(LucideIcons.building2, size: 20, color: cs.secondary),
+        return FinancialListRow(
+          leading: RowAvatar(text: name.isEmpty ? '?' : name, color: AppTheme.info),
+          title: name.isEmpty ? 'Sin nombre' : name,
+          subtitleParts: [
+            if (contact.isNotEmpty) contact,
+          ],
+          chips: [
+            IntentChip(
+              label: '$terms días',
+              intent: ChipIntent.neutral,
+              icon: LucideIcons.clock,
+              small: true,
             ),
-            title: Text(s['companyName'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(s['contactName'] ?? s['email'] ?? '', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text('${s['paymentTerms'] ?? 30} dias', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: Icon(LucideIcons.pencil, size: 18, color: cs.primary),
-                  onPressed: () => _showEditSupplierForm(context, s),
-                ),
-              ],
-            ),
-          ),
+          ],
+          onTap: () => _showEditSupplierForm(context, s),
         );
       },
     );
@@ -515,71 +479,49 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
   // ── Payables Tab ──
 
-  Widget _buildPayablesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildPayablesTab(ThemeData theme, bool isWide) {
     if (_payables.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text('No hay cuentas por pagar', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.circleCheck,
+        title: 'No debés nada',
+        description: 'No hay cuentas por pagar a proveedores. Cuando recibas mercadería a crédito aparecerá acá.',
       );
     }
 
+    final padX = isWide ? 32.0 : 20.0;
+
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _payables.length,
       itemBuilder: (context, i) {
         final item = _payables[i] as Map<String, dynamic>;
         final ap = item['payable'] as Map<String, dynamic>? ?? item;
-        final supplierName = item['supplierName'] ?? '';
+        final supplierName = (item['supplierName'] ?? '') as String;
         final balance = double.tryParse(ap['balance']?.toString() ?? '0') ?? 0;
         final original = double.tryParse(ap['originalAmount']?.toString() ?? '0') ?? 0;
+        final dueDate = ap['dueDate']?.toString() ?? '';
+        final overdue = dueDate.isNotEmpty &&
+            (DateTime.tryParse(dueDate)?.isBefore(DateTime.now()) ?? false);
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        return FinancialListRow(
+          leading: RowAvatar(
+            text: supplierName.isEmpty ? '?' : supplierName,
+            color: overdue ? AppTheme.danger : AppTheme.warning,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: cs.errorContainer.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(LucideIcons.creditCard, size: 20, color: cs.error),
-            ),
-            title: Text(supplierName.isEmpty ? 'Proveedor' : supplierName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Row(
-              children: [
-                Icon(LucideIcons.calendar, size: 12, color: cs.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Flexible(child: Text('Vence: ${ap['dueDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ],
-            ),
-            trailing: SizedBox(
-              width: 110,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_fmt.format(balance), style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.negative), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text('de ${_fmt.format(original)}', style: AppTheme.mono(fontSize: 12, fontWeight: FontWeight.w400, color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-            onTap: () => _showPaymentDialog(context, ap),
-          ),
+          title: supplierName.isEmpty ? 'Proveedor' : supplierName,
+          subtitleParts: [
+            if (dueDate.isNotEmpty) 'Vence ${formatDateShortEs(dueDate)}',
+          ],
+          chips: [
+            if (overdue)
+              IntentChip(label: 'Vencida', intent: ChipIntent.danger, small: true)
+            else
+              IntentChip(label: 'Pendiente', intent: ChipIntent.warning, small: true),
+          ],
+          trailingValue: _fmt.format(balance),
+          trailingColor: overdue ? AppTheme.danger : AppTheme.warning,
+          trailingSubtitle: original > balance ? 'de ${_fmt.format(original)}' : null,
+          onTap: () => _showPaymentDialog(context, ap),
         );
       },
     );
@@ -710,25 +652,3 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
   }
 }
 
-class _OrderStatusChip extends StatelessWidget {
-  final String status;
-  const _OrderStatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final (color, label) = switch (status) {
-      'draft' => (cs.onSurfaceVariant, 'Borrador'),
-      'approved' => (cs.primary, 'Aprobada'),
-      'partial' => (cs.tertiary, 'Parcial'),
-      'received' => (cs.secondary, 'Recibida'),
-      'cancelled' => (cs.error, 'Cancelada'),
-      _ => (cs.onSurfaceVariant, status),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600)),
-    );
-  }
-}

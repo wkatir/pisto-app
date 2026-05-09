@@ -11,6 +11,7 @@ sealed class UserModel with _$UserModel {
     required String firstName,
     required String lastName,
     required List<String> roles,
+    String? avatarUrl,
   }) = _UserModel;
 
   factory UserModel.fromJson(Map<String, dynamic> json) =>

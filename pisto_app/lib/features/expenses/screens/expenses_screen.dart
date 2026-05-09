@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
+import '../../../core/services/uploads_service.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/widgets.dart';
 
@@ -60,6 +61,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     final amountCtrl = TextEditingController();
     String? selectedCategoryId;
     DateTime selectedDate = DateTime.now();
+    String? receiptUrl;
 
     await showDialog(
       context: context,
@@ -67,52 +69,74 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           title: const Text('Registrar gasto'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: descCtrl,
-                  decoration: const InputDecoration(labelText: 'Descripción'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Monto (\$)', prefixText: '\$'),
-                ),
-                const SizedBox(height: 12),
-                if (_categories.isNotEmpty)
-                  DropdownButtonFormField<String?>(
-                isExpanded: true,
-                    initialValue: selectedCategoryId,
-                    decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
-                    items: [
-                      const DropdownMenuItem(value: null, child: Text('Sin categoría')),
-                      ..._categories.map((c) => DropdownMenuItem(
-                            value: c['id'] as String,
-                            child: Text(c['name'] as String),
-                          )),
-                    ],
-                    onChanged: (v) => setDialogState(() => selectedCategoryId = v),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: descCtrl,
+                    decoration: const InputDecoration(labelText: 'Descripción'),
                   ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(LucideIcons.calendar, size: 18),
-                  title: Text('${selectedDate.day}/${selectedDate.month}/${selectedDate.year}'),
-                  trailing: const Icon(LucideIcons.chevronRight, size: 16),
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (picked != null) setDialogState(() => selectedDate = picked);
-                  },
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(labelText: 'Monto', prefixText: '\$ '),
+                  ),
+                  const SizedBox(height: 12),
+                  if (_categories.isNotEmpty)
+                    DropdownButtonFormField<String?>(
+                      isExpanded: true,
+                      initialValue: selectedCategoryId,
+                      decoration: const InputDecoration(labelText: 'Categoría (opcional)'),
+                      items: [
+                        const DropdownMenuItem(value: null, child: Text('Sin categoría')),
+                        ..._categories.map((c) => DropdownMenuItem(
+                              value: c['id'] as String,
+                              child: Text(c['name'] as String),
+                            )),
+                      ],
+                      onChanged: (v) => setDialogState(() => selectedCategoryId = v),
+                    ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(LucideIcons.calendar, size: 18),
+                    title: Text(formatDateDisplay(
+                        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}')),
+                    trailing: const Icon(LucideIcons.chevronRight, size: 16),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: ctx,
+                        initialDate: selectedDate,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                      );
+                      if (picked != null) setDialogState(() => selectedDate = picked);
+                    },
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'FOTO DEL RECIBO (OPCIONAL)',
+                    style: AppTheme.eyebrow(ctx),
+                  ),
+                  const SizedBox(height: 8),
+                  Center(
+                    child: ImagePickerField(
+                      currentUrl: receiptUrl,
+                      folder: UploadFolder.expenses,
+                      shape: ImagePickerShape.rounded,
+                      size: 110,
+                      placeholderLabel: 'Subir foto\ndel recibo',
+                      placeholderIcon: LucideIcons.receipt,
+                      onChanged: (url) => setDialogState(() => receiptUrl = url),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           actions: [
@@ -129,6 +153,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                     expenseDate:
                         '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}',
                     categoryId: selectedCategoryId,
+                    receiptUrl: receiptUrl,
                   );
                   _loadData();
                 } catch (e) {
@@ -263,13 +288,19 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   ..._expenses.map((exp) {
                     final amount = double.tryParse(exp['amount']?.toString() ?? '0') ?? 0;
                     final description = exp['description'] as String? ?? '';
-                    final date = exp['expenseDate']?.toString() ?? '';
+                    final date = formatDateShortEs(exp['expenseDate']?.toString());
                     final categoryName = exp['categoryName']?.toString() ?? '';
+                    final receiptUrl = exp['receiptUrl'] as String?;
                     return FinancialListRow(
-                      leading: RowLeadingIcon(
-                        icon: LucideIcons.receipt,
-                        color: AppTheme.danger,
+                      leading: NetworkImageThumb(
+                        url: receiptUrl,
                         size: 38,
+                        borderRadius: BorderRadius.circular(10),
+                        fallback: RowLeadingIcon(
+                          icon: LucideIcons.receipt,
+                          color: AppTheme.danger,
+                          size: 38,
+                        ),
                       ),
                       title: description.isEmpty ? 'Gasto sin descripción' : description,
                       subtitleParts: [

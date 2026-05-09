@@ -19,6 +19,7 @@ export const expense = mssqlTable('expense', {
   expenseDate: date('expense_date', { mode: 'string' }).notNull(),
   paymentMethodId: varchar('payment_method_id', { length: 36 }).references(() => paymentMethod.id),
   notes: nvarchar('notes', { length: 500 }),
+  receiptUrl: nvarchar('receipt_url', { length: 'max' }),
   createdBy: varchar('created_by', { length: 36 }).references(() => appUser.id),
   createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
 })

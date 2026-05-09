@@ -51,9 +51,17 @@ export async function createExpense(businessId: string, userId: string, data: {
   expenseDate: string
   paymentMethodId?: string
   notes?: string
+  receiptUrl?: string
 }) {
   const id = crypto.randomUUID()
-  await db.insert(expense).values({ id, businessId, createdBy: userId, ...data })
+  const { receiptUrl, ...rest } = data
+  await db.insert(expense).values({
+    id,
+    businessId,
+    createdBy: userId,
+    ...rest,
+    receiptUrl: receiptUrl || null,
+  })
   return { id, businessId, createdBy: userId, ...data }
 }
 
@@ -64,8 +72,11 @@ export async function updateExpense(id: string, businessId: string, data: Partia
   categoryId: string
   paymentMethodId: string
   notes: string
+  receiptUrl: string
 }>) {
-  await db.update(expense).set(data)
+  const updates: Record<string, unknown> = { ...data }
+  if (data.receiptUrl !== undefined) updates.receiptUrl = data.receiptUrl || null
+  await db.update(expense).set(updates)
     .where(and(eq(expense.id, id), eq(expense.businessId, businessId)))
   return { id, ...data }
 }

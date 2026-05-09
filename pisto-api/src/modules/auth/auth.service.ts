@@ -135,10 +135,12 @@ export async function getMe(userId: string) {
     firstName: appUser.firstName,
     lastName: appUser.lastName,
     phone: appUser.phone,
+    avatarUrl: appUser.avatarUrl,
     isActive: appUser.isActive,
     createdAt: appUser.createdAt,
     businessId: appUser.businessId,
     businessName: business.name,
+    businessLogoUrl: business.logoUrl,
   })
     .from(appUser)
     .leftJoin(business, eq(business.id, appUser.businessId))
@@ -155,6 +157,7 @@ export async function updateProfile(userId: string, data: {
   lastName?: string
   phone?: string
   email?: string
+  avatarUrl?: string
 }) {
   if (data.email) {
     const existing = await db.select({ id: appUser.id }).from(appUser)
@@ -169,6 +172,7 @@ export async function updateProfile(userId: string, data: {
   if (data.lastName !== undefined) updates.lastName = data.lastName
   if (data.phone !== undefined) updates.phone = data.phone
   if (data.email !== undefined) updates.email = data.email
+  if (data.avatarUrl !== undefined) updates.avatarUrl = data.avatarUrl || null
 
   if (Object.keys(updates).length === 0) {
     return getMe(userId)

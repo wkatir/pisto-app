@@ -32,6 +32,9 @@ tsc_errors*.txt
 # Drizzle
 drizzle/meta/
 
+# Uploads (user-generated content at project root)
+/uploads/
+
 # OS
 .DS_Store
 Thumbs.db

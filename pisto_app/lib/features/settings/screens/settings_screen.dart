@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
+import '../../../core/services/uploads_service.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +25,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   String _currencyCode = 'USD';
+  String? _logoUrl;
   bool _savingBusiness = false;
 
   @override
@@ -57,6 +61,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
           _phoneCtrl.text = _business!['phone'] as String? ?? '';
           _emailCtrl.text = _business!['email'] as String? ?? '';
           _currencyCode = _business!['currencyCode'] as String? ?? 'USD';
+          _logoUrl = _business!['logoUrl'] as String?;
         }
         _loading = false;
       });
@@ -73,6 +78,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         if (_phoneCtrl.text.isNotEmpty) 'phone': _phoneCtrl.text,
         if (_emailCtrl.text.isNotEmpty) 'email': _emailCtrl.text,
         'currencyCode': _currencyCode,
+        'logoUrl': _logoUrl ?? '',
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,33 +99,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            color: Theme.of(context).colorScheme.surfaceContainer,
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Configuración',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TabBar(
-                  controller: _tabController,
-                  tabs: const [
-                    Tab(text: 'Negocio'),
-                    Tab(text: 'Impuestos'),
-                    Tab(text: 'Pagos'),
-                  ],
-                ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
+            child: const PageHeader(
+              eyebrow: 'CUENTA',
+              title: 'Configuración',
+              meta: 'Ajustá los datos de tu negocio, impuestos y métodos de pago.',
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: const [
+                Tab(text: 'Negocio'),
+                Tab(text: 'Impuestos'),
+                Tab(text: 'Pagos'),
               ],
             ),
           ),
@@ -129,9 +134,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildBusinessTab(theme, cs),
-                      _buildTaxesTab(theme, cs),
-                      _buildPaymentMethodsTab(theme, cs),
+                      _buildBusinessTab(theme, cs, isWide),
+                      _buildTaxesTab(theme, cs, isWide),
+                      _buildPaymentMethodsTab(theme, cs, isWide),
                     ],
                   ),
           ),
@@ -140,19 +145,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 
-  Widget _buildBusinessTab(ThemeData theme, ColorScheme cs) {
+  Widget _buildBusinessTab(ThemeData theme, ColorScheme cs, bool isWide) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          color: cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.borderSubtle(context)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Logo del negocio (cuadrado redondeado, alineado a la izquierda).
+            Row(
+              children: [
+                ImagePickerField(
+                  currentUrl: _logoUrl,
+                  folder: UploadFolder.logos,
+                  shape: ImagePickerShape.rounded,
+                  size: 88,
+                  placeholderLabel: 'Logo',
+                  placeholderIcon: LucideIcons.image,
+                  onChanged: (url) => setState(() => _logoUrl = url),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Logo del negocio',
+                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Aparecerá en facturas, recibos y otros documentos.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurface.withValues(alpha: 0.7),
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
             TextFormField(
               controller: _nameCtrl,
               decoration: const InputDecoration(labelText: 'Nombre del negocio'),
@@ -206,17 +247,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 
-  Widget _buildTaxesTab(ThemeData theme, ColorScheme cs) {
+  Widget _buildTaxesTab(ThemeData theme, ColorScheme cs, bool isWide) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
       children: [
         ..._taxes.map((t) => Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.borderSubtle(context)),
               ),
               child: Row(
                 children: [
@@ -259,17 +300,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 
-  Widget _buildPaymentMethodsTab(ThemeData theme, ColorScheme cs) {
+  Widget _buildPaymentMethodsTab(ThemeData theme, ColorScheme cs, bool isWide) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
       children: [
         ..._paymentMethods.map((pm) => Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.borderSubtle(context)),
               ),
               child: Row(
                 children: [

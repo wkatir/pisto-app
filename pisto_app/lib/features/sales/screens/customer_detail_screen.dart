@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
+import '../../../core/utils/formatters.dart';
 
 class CustomerDetailScreen extends ConsumerStatefulWidget {
   final String customerId;
@@ -224,11 +225,7 @@ class _CustomerDetailScreenState
                 final saleNumber = inv['saleNumber'] as String? ??
                     inv['id'] as String? ??
                     '';
-                final dateStr = inv['createdAt']
-                        ?.toString()
-                        .split('T')
-                        .first ??
-                    '';
+                final dateStr = formatDateShortEs(inv['createdAt']?.toString());
                 final isPaid = status == 'paid';
 
                 return Container(

@@ -62,32 +62,38 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
+
+    final totalPending = _receivables.fold<double>(0, (sum, r) {
+      final ar = (r as Map<String, dynamic>)['receivable'] as Map<String, dynamic>? ?? r;
+      return sum + (double.tryParse(ar['balance']?.toString() ?? '0') ?? 0);
+    });
 
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Row(
-              children: [
-                Icon(LucideIcons.wallet, size: 28, color: cs.primary),
-                const SizedBox(width: 12),
-                Expanded(child: Text('Cobranza', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ],
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
+            child: PageHeader(
+              eyebrow: 'OPERACIÓN',
+              title: 'Te deben',
+              meta: '${_receivables.length} cuenta${_receivables.length == 1 ? '' : 's'} pendiente${_receivables.length == 1 ? '' : 's'}'
+                  '${totalPending > 0 ? ' · ${_fmt.format(totalPending)} por cobrar' : ''}',
+              metaIsMono: true,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.fileText, size: 16), const SizedBox(width: 6), Text('Cuentas por Cobrar (${_receivables.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.clock, size: 16), const SizedBox(width: 6), const Text('Antiguedad')])),
+                Tab(text: 'Cuentas por cobrar (${_receivables.length})'),
+                const Tab(text: 'Antigüedad'),
               ],
             ),
           ),
@@ -97,8 +103,8 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildReceivablesTab(theme),
-                      _buildAgingTab(theme),
+                      _buildReceivablesTab(theme, isWide),
+                      _buildAgingTab(theme, isWide),
                     ],
                   ),
           ),
@@ -109,87 +115,59 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
   // ── Receivables Tab ──
 
-  Widget _buildReceivablesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildReceivablesTab(ThemeData theme, bool isWide) {
     if (_receivables.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.circleCheck, size: 48, color: cs.secondary.withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text('No hay cuentas pendientes', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.circleCheck,
+        title: 'Todo cobrado',
+        description: 'No hay cuentas pendientes. Cuando emitas una factura a crédito aparecerá acá hasta que se pague.',
       );
     }
 
+    final padX = isWide ? 32.0 : 20.0;
+
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _receivables.length,
       itemBuilder: (context, i) {
         final item = _receivables[i] as Map<String, dynamic>;
         final ar = item['receivable'] as Map<String, dynamic>? ?? item;
-        final customerName = item['customerName'] ?? '';
-        final saleNumber = item['saleNumber'] ?? '';
+        final customerName = (item['customerName'] ?? '') as String;
+        final saleNumber = (item['saleNumber'] ?? '') as String;
         final balance = double.tryParse(ar['balance']?.toString() ?? '0') ?? 0;
         final original = double.tryParse(ar['originalAmount']?.toString() ?? '0') ?? 0;
         final customerId = item['customerId']?.toString() ?? ar['customerId']?.toString();
         final phone = item['customerPhone']?.toString() ?? ar['customerPhone']?.toString();
         final dueDateRaw = ar['dueDate']?.toString();
         final dueDate = dueDateRaw != null ? DateTime.tryParse(dueDateRaw) : null;
+        final overdue = dueDate != null && dueDate.isBefore(DateTime.now());
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        return FinancialListRow(
+          leading: RowAvatar(
+            text: customerName.isEmpty ? '?' : customerName,
+            color: overdue ? AppTheme.danger : AppTheme.warning,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.only(left: 16, right: 4, top: 6, bottom: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: cs.tertiaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(LucideIcons.clock, size: 20, color: cs.tertiary),
-            ),
-            title: Text(customerName.isEmpty ? 'Sin cliente' : customerName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Row(
-              children: [
-                Icon(LucideIcons.fileText, size: 12, color: cs.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Flexible(child: Text(saleNumber, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                const SizedBox(width: 8),
-                Icon(LucideIcons.calendar, size: 12, color: cs.onSurfaceVariant),
-                const SizedBox(width: 4),
-                Flexible(child: Text('${ar['dueDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(_fmt.format(balance), style: AppTheme.mono(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.negative), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    Text('de ${_fmt.format(original)}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-                IconButton(
-                  icon: const Icon(LucideIcons.messageCircle, size: 20, color: AppTheme.whatsappBrand),
-                  tooltip: 'Enviar cobro por WhatsApp',
-                  onPressed: () => _sendWhatsApp(context, phone, customerName.isEmpty ? 'Sin cliente' : customerName, 'Mi Negocio', balance, dueDate),
-                ),
-              ],
-            ),
-            onTap: () => _showReceivableDetail(context, ar, customerName, customerId),
+          title: customerName.isEmpty ? 'Sin cliente' : customerName,
+          subtitleParts: [
+            if (saleNumber.isNotEmpty) saleNumber,
+            if (dueDate != null) 'Vence ${formatDateShortEs(dueDateRaw)}',
+          ],
+          chips: [
+            if (overdue)
+              IntentChip(label: 'Vencida', intent: ChipIntent.danger, small: true)
+            else
+              IntentChip(label: 'Pendiente', intent: ChipIntent.warning, small: true),
+          ],
+          trailingValue: _fmt.format(balance),
+          trailingColor: overdue ? AppTheme.danger : AppTheme.warning,
+          trailingSubtitle: original > balance ? 'de ${_fmt.format(original)}' : null,
+          onTap: () => _showReceivableDetail(
+            context,
+            ar,
+            customerName,
+            customerId,
+            phone: phone,
+            dueDate: dueDate,
           ),
         );
       },
@@ -198,7 +176,14 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
   // ── Receivable Detail with Payment History ──
 
-  void _showReceivableDetail(BuildContext context, Map<String, dynamic> ar, String customerName, String? customerId) {
+  void _showReceivableDetail(
+    BuildContext context,
+    Map<String, dynamic> ar,
+    String customerName,
+    String? customerId, {
+    String? phone,
+    DateTime? dueDate,
+  }) {
     final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
     final balance = double.tryParse(ar['balance']?.toString() ?? '0') ?? 0;
@@ -225,7 +210,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
               children: [
                 _MonoDetailRow(theme: theme, label: 'Monto Original', amount: original, labelWidth: 120),
                 _MonoDetailRow(theme: theme, label: 'Saldo', amount: balance, isNegative: true, labelWidth: 120),
-                DetailRow(theme: theme, label: 'Vencimiento', value: ar['dueDate'] ?? '', labelWidth: 120),
+                DetailRow(theme: theme, label: 'Vencimiento', value: formatDateDisplay(ar['dueDate']?.toString()), labelWidth: 120),
                 const Divider(height: 24),
                 Row(
                   children: [
@@ -258,7 +243,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                             children: [
                               Icon(LucideIcons.banknote, size: 14, color: cs.secondary),
                               const SizedBox(width: 6),
-                              Expanded(child: Text(payment['paymentDate']?.toString().substring(0, 10) ?? '', style: theme.textTheme.bodySmall)),
+                              Expanded(child: Text(formatDateDisplay(payment['paymentDate']?.toString()), style: theme.textTheme.bodySmall)),
                               Text(_fmt.format(amount), style: AppTheme.mono(fontSize: 13, fontWeight: FontWeight.w600, color: cs.secondary)),
                             ],
                           ),
@@ -286,15 +271,35 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
           ),
         ),
         actions: [
-          if (balance > 0)
+          if (balance > 0) ...[
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(ctx);
+                _sendWhatsApp(
+                  context,
+                  phone,
+                  customerName.isEmpty ? 'Cliente' : customerName,
+                  'Mi Negocio',
+                  balance,
+                  dueDate,
+                );
+              },
+              icon: const Icon(LucideIcons.messageCircle, size: 16, color: AppTheme.whatsappBrand),
+              label: const Text('WhatsApp'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.whatsappBrand,
+                side: BorderSide(color: AppTheme.whatsappBrand.withValues(alpha: 0.5)),
+              ),
+            ),
             FilledButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
                 _showPaymentDialog(context, ar);
               },
               icon: const Icon(LucideIcons.banknote, size: 16),
-              label: const Text('Registrar Abono'),
+              label: const Text('Registrar abono'),
             ),
+          ],
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
         ],
       ),
@@ -372,7 +377,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(entry['saleNumber'] ?? '', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
-                                    Text('Vence: ${entry['dueDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontSize: 11)),
+                                    Text('Vence ${formatDateShortEs(entry['dueDate']?.toString())}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant, fontSize: 11)),
                                   ],
                                 ),
                               ),
@@ -397,59 +402,44 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
 
   // ── Aging Tab ──
 
-  Widget _buildAgingTab(ThemeData theme) {
+  Widget _buildAgingTab(ThemeData theme, bool isWide) {
     final cs = theme.colorScheme;
+    final padX = isWide ? 32.0 : 20.0;
 
     if (_aging.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.clock, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('Sin datos de antiguedad', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.clock,
+        title: 'Sin datos de antigüedad',
+        description: 'Cuando tengas cuentas pendientes, acá vas a ver cuánto debe cada cliente y desde cuándo.',
       );
     }
 
-    final agingColors = [cs.secondary, cs.primary, cs.tertiary, AppTheme.chartAmber, cs.error];
+    // Mapeo a intent semántico por rango — más vencido = más severo.
+    Color colorForRange(String range) => switch (range) {
+          'current' => AppTheme.success,
+          '1-30' => AppTheme.info,
+          '31-60' => AppTheme.warning,
+          '61-90' => AppTheme.accent,
+          '90+' => AppTheme.danger,
+          _ => cs.onSurfaceVariant,
+        };
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(padX, 16, padX, 24),
       itemCount: _aging.length,
       itemBuilder: (context, i) {
         final row = _aging[i] as Map<String, dynamic>;
-        final color = agingColors[i % agingColors.length];
+        final range = row['range']?.toString() ?? '';
+        final color = colorForRange(range);
         final total = double.tryParse(row['total']?.toString() ?? '0') ?? 0;
+        final count = row['count'] ?? 0;
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10), side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4))),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 4,
-                  height: 40,
-                  decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(_agingLabel(row['range']?.toString() ?? ''), style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                      Text('${row['count'] ?? 0} cuentas', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                ),
-                Text(_fmt.format(total), style: AppTheme.mono(fontSize: 16, fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
+        return FinancialListRow(
+          leading: RowLeadingIcon(icon: LucideIcons.clock, color: color),
+          title: _agingLabel(range),
+          subtitleParts: ['$count cuenta${count == 1 ? '' : 's'}'],
+          trailingValue: _fmt.format(total),
+          trailingColor: color,
         );
       },
     );
@@ -458,10 +448,10 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
   String _agingLabel(String range) {
     return switch (range) {
       'current' => 'Vigente',
-      '1-30' => '1-30 dias',
-      '31-60' => '31-60 dias',
-      '61-90' => '61-90 dias',
-      '90+' => '90+ dias',
+      '1-30' => '1 a 30 días',
+      '31-60' => '31 a 60 días',
+      '61-90' => '61 a 90 días',
+      '90+' => 'Más de 90 días',
       _ => range,
     };
   }

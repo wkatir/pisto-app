@@ -48,6 +48,7 @@ export const updateProfileSchema = v.object({
   lastName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1, 'Apellido requerido'))),
   phone: v.optional(v.pipe(v.string(), v.trim())),
   email: v.optional(emailSchema),
+  avatarUrl: v.optional(v.union([v.literal(''), v.pipe(v.string(), v.trim())])),
 })
 
 export const changePasswordSchema = v.object({

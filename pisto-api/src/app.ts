@@ -12,6 +12,7 @@ import { reports } from './modules/reports/reports.routes'
 import { exports } from './modules/exports/exports.routes'
 import { settings } from './modules/settings/settings.routes'
 import { expenses } from './modules/expenses/expenses.routes'
+import { uploads } from './modules/uploads/uploads.routes'
 import { authGuard } from './middleware/auth.middleware'
 import { AppError } from './shared/errors/app-error'
 import type { AppEnv } from './types/app-env'
@@ -46,7 +47,7 @@ if (env.RATE_LIMIT_ENABLED) {
 }
 app.route('/auth', auth)
 
-const protectedRoutes = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses']
+const protectedRoutes = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses', '/uploads']
 for (const path of protectedRoutes) {
   if (env.RATE_LIMIT_ENABLED) {
     app.use(`${path}/*`, authGuard, rateLimitMiddleware)
@@ -63,6 +64,7 @@ app.route('/reports', reports)
 app.route('/exports', exports)
 app.route('/settings', settings)
 app.route('/expenses', expenses)
+app.route('/uploads', uploads)
 
 app.onError((err, c) => {
   if (err instanceof AppError) {

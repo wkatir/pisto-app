@@ -68,7 +68,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final width = MediaQuery.sizeOf(context).width;
+    final isWide = width > Breakpoints.gridDense;
+
+    final totalInvoices = _invoices.length;
+    final totalRevenue = _invoices.fold<double>(0, (sum, inv) {
+      return sum + (double.tryParse((inv as Map<String, dynamic>)['total']?.toString() ?? '0') ?? 0);
+    });
+    final pendingInvoices = _invoices.where((inv) => (inv as Map<String, dynamic>)['paymentStatus'] == 'credit').length;
 
     return Scaffold(
       floatingActionButton: _selectionMode && _selectedIds.isNotEmpty
@@ -82,59 +89,48 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(LucideIcons.receipt, size: 28, color: cs.primary),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text('Ventas', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                    if (_selectionMode)
-                      IconButton(
-                        icon: const Icon(LucideIcons.x),
-                        tooltip: 'Cancelar selección',
-                        onPressed: () => setState(() {
-                          _selectionMode = false;
-                          _selectedIds.clear();
-                        }),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: () async {
-                        await Navigator.push(context, PageRouteBuilder(
-                          pageBuilder: (context, _, _) => const CreateSaleScreen(),
-                          transitionDuration: Duration.zero,
-                          reverseTransitionDuration: Duration.zero,
-                        ));
-                        _loadData();
-                      },
-                      icon: const Icon(LucideIcons.plus, size: 18),
-                      label: const Text('Nueva Venta'),
-                    ),
-                  ],
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
+            child: PageHeader(
+              eyebrow: 'OPERACIÓN',
+              title: 'Tus ventas',
+              meta: '$totalInvoices factura${totalInvoices == 1 ? '' : 's'} · ${_fmt.format(totalRevenue)} facturado${pendingInvoices > 0 ? ' · $pendingInvoices a crédito' : ''}',
+              metaIsMono: true,
+              actions: [
+                if (_selectionMode)
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() {
+                      _selectionMode = false;
+                      _selectedIds.clear();
+                    }),
+                    icon: const Icon(LucideIcons.x, size: 14),
+                    label: const Text('Cancelar selección'),
+                  ),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Navigator.push(context, PageRouteBuilder(
+                      pageBuilder: (context, _, _) => const CreateSaleScreen(),
+                      transitionDuration: Duration.zero,
+                      reverseTransitionDuration: Duration.zero,
+                    ));
+                    _loadData();
+                  },
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Nueva venta'),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
             child: TabBar(
               controller: _tabController,
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.fileText, size: 16), const SizedBox(width: 6), Text('Facturas (${_invoices.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.users, size: 16), const SizedBox(width: 6), Text('Clientes (${_customers.length})')])),
-                Tab(child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(LucideIcons.fileX, size: 16), const SizedBox(width: 6), Text('Notas Credito (${_creditNotes.length})')])),
+                Tab(text: 'Facturas (${_invoices.length})'),
+                Tab(text: 'Clientes (${_customers.length})'),
+                Tab(text: 'Notas crédito (${_creditNotes.length})'),
               ],
             ),
           ),
@@ -144,9 +140,9 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                 : TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildInvoicesTab(theme),
-                      _buildCustomersTab(theme),
-                      _buildCreditNotesTab(theme),
+                      _buildInvoicesTab(theme, isWide),
+                      _buildCustomersTab(theme, isWide),
+                      _buildCreditNotesTab(theme, isWide),
                     ],
                   ),
           ),
@@ -157,121 +153,82 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
 
   // ── Invoices Tab ──
 
-  Widget _buildInvoicesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildInvoicesTab(ThemeData theme, bool isWide) {
     if (_invoices.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.fileX, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No hay facturas', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.fileText,
+        title: 'Aún no facturaste',
+        description: 'Creá tu primera venta y empezá a cobrar. Cada factura aparece acá con su estado.',
+        actionLabel: 'Nueva venta',
+        actionIcon: LucideIcons.plus,
+        onAction: () async {
+          await Navigator.push(context, PageRouteBuilder(
+            pageBuilder: (context, _, _) => const CreateSaleScreen(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ));
+          _loadData();
+        },
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 32),
       itemCount: _invoices.length,
       itemBuilder: (context, i) {
         final inv = _invoices[i] as Map<String, dynamic>;
-        final status = inv['status'] ?? 'completed';
-        final paymentStatus = inv['paymentStatus'] ?? 'paid';
+        final status = inv['status'] as String? ?? 'completed';
+        final paymentStatus = inv['paymentStatus'] as String? ?? 'paid';
         final total = double.tryParse(inv['total']?.toString() ?? '0') ?? 0;
         final invoiceId = inv['id'] as String? ?? '';
         final isSelected = _selectedIds.contains(invoiceId);
+        final cancelled = status == 'cancelled';
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(
-              color: isSelected
-                  ? cs.primary.withValues(alpha: 0.6)
-                  : cs.outlineVariant.withValues(alpha: 0.4),
-            ),
-          ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: _selectionMode
-                ? Checkbox(
-                    value: isSelected,
-                    onChanged: (v) => setState(() {
-                      if (v == true) {
-                        _selectedIds.add(invoiceId);
-                      } else {
-                        _selectedIds.remove(invoiceId);
-                        if (_selectedIds.isEmpty) _selectionMode = false;
-                      }
-                    }),
-                  )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: status == 'cancelled'
-                          ? cs.errorContainer.withValues(alpha: 0.5)
-                          : cs.primaryContainer.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      status == 'cancelled' ? LucideIcons.fileX : LucideIcons.fileText,
-                      size: 20,
-                      color: status == 'cancelled' ? cs.error : cs.primary,
-                    ),
-                  ),
-            title: Text(inv['saleNumber'] ?? '', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Row(
-              children: [
-                Flexible(child: Text('${inv['saleDate'] ?? ''}', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                const SizedBox(width: 8),
-                _PaymentChip(status: paymentStatus),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _fmt.format(total),
-                      style: AppTheme.mono(fontSize: 15, fontWeight: FontWeight.w700),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    _StatusChip(status: status),
-                  ],
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(LucideIcons.fileDown, size: 18),
-                  tooltip: 'Descargar PDF',
-                  onPressed: () => _downloadInvoicePdf(context, invoiceId),
-                ),
-              ],
-            ),
-            onLongPress: () => setState(() {
-              _selectionMode = true;
-              _selectedIds.add(invoiceId);
-            }),
-            onTap: _selectionMode
-                ? () => setState(() {
-                    if (isSelected) {
+        return FinancialListRow(
+          leading: _selectionMode
+              ? Checkbox(
+                  value: isSelected,
+                  onChanged: (v) => setState(() {
+                    if (v == true) {
+                      _selectedIds.add(invoiceId);
+                    } else {
                       _selectedIds.remove(invoiceId);
                       if (_selectedIds.isEmpty) _selectionMode = false;
-                    } else {
-                      _selectedIds.add(invoiceId);
                     }
-                  })
-                : () => _showInvoiceDetail(context, inv),
-          ),
+                  }),
+                )
+              : RowLeadingIcon(
+                  icon: cancelled ? LucideIcons.fileX : LucideIcons.fileText,
+                  color: cancelled ? AppTheme.danger : theme.colorScheme.primary,
+                ),
+          title: inv['saleNumber']?.toString() ?? 'Sin número',
+          subtitleParts: [
+            formatDateShortEs(inv['saleDate']?.toString()),
+            if (inv['customerName'] != null && (inv['customerName'] as String).isNotEmpty)
+              inv['customerName'] as String,
+          ],
+          chips: [
+            PaymentChip(status: paymentStatus),
+            if (cancelled) IntentChip(label: 'Anulada', intent: ChipIntent.danger, small: true),
+          ],
+          trailingValue: _fmt.format(total),
+          trailingColor: cancelled ? AppTheme.danger : null,
+          trailingSubtitle: paymentStatus == 'credit' ? 'a crédito' : null,
+          selected: isSelected,
+          onLongPress: () => setState(() {
+            _selectionMode = true;
+            _selectedIds.add(invoiceId);
+          }),
+          onTap: _selectionMode
+              ? () => setState(() {
+                  if (isSelected) {
+                    _selectedIds.remove(invoiceId);
+                    if (_selectedIds.isEmpty) _selectionMode = false;
+                  } else {
+                    _selectedIds.add(invoiceId);
+                  }
+                })
+              : () => _showInvoiceDetail(context, inv),
         );
       },
     );
@@ -333,7 +290,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    DetailRow(theme: theme, label: 'Fecha', value: detail['saleDate'] ?? '', labelWidth: 80),
+                    DetailRow(theme: theme, label: 'Fecha', value: formatDateDisplay(detail['saleDate']?.toString()), labelWidth: 80),
                     DetailRow(theme: theme, label: 'Estado', value: status, labelWidth: 80),
                     DetailRow(theme: theme, label: 'Pago', value: detail['paymentStatus'] ?? '', labelWidth: 80),
                     if (customerName.isNotEmpty) DetailRow(theme: theme, label: 'Cliente', value: customerName, labelWidth: 80),
@@ -380,9 +337,17 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                 _showCreditNoteForm(context, invoice);
               },
               icon: const Icon(LucideIcons.fileMinus, size: 16),
-              label: const Text('Nota Credito'),
+              label: const Text('Nota crédito'),
             ),
           ],
+          OutlinedButton.icon(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _downloadInvoicePdf(context, invoiceId);
+            },
+            icon: const Icon(LucideIcons.fileDown, size: 16),
+            label: const Text('PDF'),
+          ),
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cerrar')),
         ],
       ),
@@ -519,13 +484,31 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
 
   // ── Customers Tab ──
 
-  Widget _buildCustomersTab(ThemeData theme) {
+  Widget _buildCustomersTab(ThemeData theme, bool isWide) {
     final cs = theme.colorScheme;
+
+    if (_customers.isEmpty) {
+      return EmptyState(
+        icon: LucideIcons.users,
+        title: 'Aún no tenés clientes',
+        description: 'Agregá tu primer cliente para empezar a facturar a su nombre y llevar el seguimiento de sus pagos.',
+        actionLabel: 'Nuevo cliente',
+        actionIcon: LucideIcons.userPlus,
+        onAction: () async {
+          await Navigator.push(context, PageRouteBuilder(
+            pageBuilder: (context, _, _) => const CustomerFormScreen(),
+            transitionDuration: Duration.zero,
+            reverseTransitionDuration: Duration.zero,
+          ));
+          _loadData();
+        },
+      );
+    }
 
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 8),
           child: Row(
             children: [
               const Spacer(),
@@ -538,59 +521,41 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                   ));
                   _loadData();
                 },
-                icon: const Icon(LucideIcons.userPlus, size: 18),
-                label: const Text('Cliente'),
+                icon: const Icon(LucideIcons.userPlus, size: 14),
+                label: const Text('Nuevo cliente'),
               ),
             ],
           ),
         ),
         Expanded(
-          child: _customers.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(LucideIcons.users, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-                      const SizedBox(height: 12),
-                      Text('No hay clientes', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-                    ],
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: _customers.length,
-                  itemBuilder: (context, i) {
-                    final c = _customers[i] as Map<String, dynamic>;
-                    final isCompany = c['customerType'] == 'company';
-                    final name = c['companyName'] ?? '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.trim();
+          child: ListView.builder(
+            padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 0, isWide ? 32 : 20, 32),
+            itemCount: _customers.length,
+            itemBuilder: (context, i) {
+              final c = _customers[i] as Map<String, dynamic>;
+              final isCompany = c['customerType'] == 'company';
+              final name = (isCompany
+                      ? c['companyName']?.toString()
+                      : '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.trim()) ??
+                  '';
+              final contact = (c['email']?.toString().isNotEmpty == true)
+                  ? c['email'] as String
+                  : (c['phone']?.toString() ?? '');
 
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
-                      ),
-                      child: ListTile(
-                        leading: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: cs.secondaryContainer.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(isCompany ? LucideIcons.building2 : LucideIcons.user, size: 20, color: cs.secondary),
-                        ),
-                        title: Text(name.isEmpty ? 'Sin nombre' : name, style: const TextStyle(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(c['email'] ?? c['phone'] ?? '', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
-                        trailing: IconButton(
-                          icon: Icon(LucideIcons.pencil, size: 18, color: cs.primary),
-                          onPressed: () => _showEditCustomerForm(context, c),
-                        ),
-                      ),
-                    );
-                  },
+              return FinancialListRow(
+                leading: RowLeadingIcon(
+                  icon: isCompany ? LucideIcons.building2 : LucideIcons.user,
+                  color: cs.primary,
                 ),
+                title: name.isEmpty ? 'Sin nombre' : name,
+                subtitleParts: [
+                  if (contact.isNotEmpty) contact,
+                  if (isCompany) 'Empresa',
+                ],
+                onTap: () => _showEditCustomerForm(context, c),
+              );
+            },
+          ),
         ),
       ],
     );
@@ -663,104 +628,40 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
 
   // ── Credit Notes Tab ──
 
-  Widget _buildCreditNotesTab(ThemeData theme) {
-    final cs = theme.colorScheme;
-
+  Widget _buildCreditNotesTab(ThemeData theme, bool isWide) {
     if (_creditNotes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(LucideIcons.fileMinus, size: 48, color: cs.onSurfaceVariant.withValues(alpha: 0.4)),
-            const SizedBox(height: 12),
-            Text('No hay notas de credito', style: theme.textTheme.bodyLarge?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
+      return EmptyState(
+        icon: LucideIcons.fileMinus,
+        title: 'Sin notas de crédito',
+        description: 'Cuando emitas una nota de crédito sobre una factura, aparecerá acá con su monto descontado.',
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 32),
       itemCount: _creditNotes.length,
       itemBuilder: (context, i) {
         final cn = _creditNotes[i] as Map<String, dynamic>;
         final amount = double.tryParse(cn['amount']?.toString() ?? '0') ?? 0;
+        final number = cn['creditNoteNumber']?.toString() ??
+            'NC-${cn['id']?.toString().substring(0, 8) ?? ''}';
+        final saleNumber = cn['saleNumber']?.toString() ?? '';
+        final date = formatDateShortEs(cn['createdAt']?.toString());
 
-        return Card(
-          elevation: 0,
-          margin: const EdgeInsets.only(bottom: 8),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        return FinancialListRow(
+          leading: RowLeadingIcon(
+            icon: LucideIcons.fileMinus,
+            color: AppTheme.danger,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: cs.errorContainer.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(8)),
-              child: Icon(LucideIcons.fileMinus, size: 20, color: cs.error),
-            ),
-            title: Text(cn['creditNoteNumber'] ?? 'NC-${cn['id']?.toString().substring(0, 8) ?? ''}', style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), maxLines: 1, overflow: TextOverflow.ellipsis),
-            subtitle: Text(
-              'Factura: ${cn['saleNumber'] ?? ''} · ${cn['createdAt']?.toString().substring(0, 10) ?? ''}',
-              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: SizedBox(
-              width: 110,
-              child: Text(
-                '-${_fmt.format(amount)}',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: cs.error),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.end,
-              ),
-            ),
-          ),
+          title: number,
+          subtitleParts: [
+            if (saleNumber.isNotEmpty) 'Factura $saleNumber',
+            if (date.isNotEmpty) date,
+          ],
+          trailingValue: '−${_fmt.format(amount)}',
+          trailingColor: AppTheme.danger,
         );
       },
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final String status;
-  const _StatusChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final (color, label) = switch (status) {
-      'completed' => (cs.primary, 'Completada'),
-      'cancelled' => (cs.error, 'Cancelada'),
-      _ => (cs.tertiary, status),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
-    );
-  }
-}
-
-class _PaymentChip extends StatelessWidget {
-  final String status;
-  const _PaymentChip({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final (color, label) = switch (status) {
-      'paid' => (cs.secondary, 'Pagada'),
-      'credit' => (cs.tertiary, 'Credito'),
-      _ => (cs.onSurfaceVariant, status),
-    };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(color: AppTheme.tintBg(context, color), borderRadius: BorderRadius.circular(4)),
-      child: Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w500)),
     );
   }
 }

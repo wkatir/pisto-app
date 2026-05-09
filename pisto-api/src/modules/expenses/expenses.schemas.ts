@@ -12,6 +12,7 @@ export const createExpenseSchema = v.object({
   expenseDate: v.pipe(v.string(), v.minLength(1)),
   paymentMethodId: v.optional(v.string()),
   notes: v.optional(v.string()),
+  receiptUrl: v.optional(v.union([v.literal(''), v.pipe(v.string())])),
 })
 
 export const updateExpenseSchema = v.partial(createExpenseSchema)

@@ -23,6 +23,7 @@ export const appUser = mssqlTable('app_user', {
   firstName: nvarchar('first_name', { length: 80 }).notNull(),
   lastName: nvarchar('last_name', { length: 80 }).notNull(),
   phone: nvarchar('phone', { length: 20 }),
+  avatarUrl: nvarchar('avatar_url', { length: 'max' }),
   isActive: bit('is_active').default(true).notNull(),
   createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
   updatedAt: datetimeOffset('updated_at').$defaultFn(() => new Date()).notNull(),

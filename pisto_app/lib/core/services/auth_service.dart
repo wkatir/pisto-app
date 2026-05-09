@@ -65,12 +65,14 @@ class AuthService {
     String? lastName,
     String? phone,
     String? email,
+    String? avatarUrl,
   }) async {
     final body = <String, dynamic>{};
     if (firstName != null) body['firstName'] = firstName;
     if (lastName != null) body['lastName'] = lastName;
     if (phone != null) body['phone'] = phone;
     if (email != null) body['email'] = email;
+    if (avatarUrl != null) body['avatarUrl'] = avatarUrl;
     final res = await _apiClient.dio.patch('/auth/me', data: body);
     return res.data as Map<String, dynamic>;
   }

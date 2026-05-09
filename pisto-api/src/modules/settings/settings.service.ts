@@ -8,9 +8,11 @@ export async function getBusiness(businessId: string) {
 }
 
 export async function updateBusiness(businessId: string, data: Partial<{
-  name: string; tradeName: string; phone: string; email: string; address: string; currencyCode: string;
+  name: string; tradeName: string; phone: string; email: string; address: string; currencyCode: string; logoUrl: string;
 }>) {
-  await db.update(business).set({ ...data, updatedAt: new Date() }).where(eq(business.id, businessId))
+  const updates: Record<string, unknown> = { ...data, updatedAt: new Date() }
+  if (data.logoUrl !== undefined) updates.logoUrl = data.logoUrl || null
+  await db.update(business).set(updates).where(eq(business.id, businessId))
   return getBusiness(businessId)
 }
 

@@ -12,6 +12,7 @@ _UserModel _$UserModelFromJson(Map<String, dynamic> json) => _UserModel(
   firstName: json['firstName'] as String,
   lastName: json['lastName'] as String,
   roles: (json['roles'] as List<dynamic>).map((e) => e as String).toList(),
+  avatarUrl: json['avatarUrl'] as String?,
 );
 
 Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
@@ -21,6 +22,7 @@ Map<String, dynamic> _$UserModelToJson(_UserModel instance) =>
       'firstName': instance.firstName,
       'lastName': instance.lastName,
       'roles': instance.roles,
+      'avatarUrl': instance.avatarUrl,
     };
 
 _AuthResponse _$AuthResponseFromJson(Map<String, dynamic> json) =>

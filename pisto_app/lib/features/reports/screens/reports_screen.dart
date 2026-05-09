@@ -6,6 +6,7 @@ import 'package:auto_size_text/auto_size_text.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
@@ -54,9 +55,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final width = MediaQuery.of(context).size.width;
-    final isWide = width > 900;
+    final isWide = width > Breakpoints.gridDense;
+    final isExtra = width > 900;
 
     return Scaffold(
       body: _loading
@@ -65,54 +66,40 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               onRefresh: _loadData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
+                padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(LucideIcons.chartColumn, size: 28, color: cs.primary),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text('Reportes', style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            FilledButton.tonalIcon(
-                              onPressed: _loadData,
-                              icon: const Icon(LucideIcons.refreshCw, size: 16),
-                              label: const Text('Actualizar'),
-                            ),
-                          ],
+                    PageHeader(
+                      eyebrow: 'INSIGHTS',
+                      title: 'Cómo va tu negocio',
+                      meta: 'Resumen y tendencias del mes en curso.',
+                      actions: [
+                        OutlinedButton.icon(
+                          onPressed: _loadData,
+                          icon: const Icon(LucideIcons.refreshCw, size: 14),
+                          label: const Text('Actualizar'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 24),
                     _buildSalesSummaryCards(theme),
                     const SizedBox(height: 24),
-                    if (isWide)
+                    if (isExtra)
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(child: _buildTopProductsChart(theme)),
-                          const SizedBox(width: 24),
+                          const SizedBox(width: 20),
                           Expanded(child: _buildGrossProfitSection(theme)),
                         ],
                       )
                     else ...[
                       _buildTopProductsChart(theme),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       _buildGrossProfitSection(theme),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     _buildInventoryValuationTable(theme),
                   ],
                 ),
@@ -159,7 +146,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                      side: BorderSide(color: AppTheme.borderSubtle(context)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -414,7 +401,7 @@ class _SectionCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        side: BorderSide(color: AppTheme.borderSubtle(context)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
