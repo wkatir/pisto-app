@@ -13,6 +13,9 @@ import { exports } from './modules/exports/exports.routes'
 import { settings } from './modules/settings/settings.routes'
 import { expenses } from './modules/expenses/expenses.routes'
 import { uploads } from './modules/uploads/uploads.routes'
+import { aiScan } from './modules/ai/ai-scan.routes'
+import { ai } from './modules/ai/ai.routes'
+import { aiInsights } from './modules/ai/ai-insights.routes'
 import { authGuard } from './middleware/auth.middleware'
 import { AppError } from './shared/errors/app-error'
 import type { AppEnv } from './types/app-env'
@@ -47,7 +50,7 @@ if (env.RATE_LIMIT_ENABLED) {
 }
 app.route('/auth', auth)
 
-const protectedRoutes = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses', '/uploads']
+const protectedRoutes = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses', '/uploads', '/ai']
 for (const path of protectedRoutes) {
   if (env.RATE_LIMIT_ENABLED) {
     app.use(`${path}/*`, authGuard, rateLimitMiddleware)
@@ -65,6 +68,9 @@ app.route('/exports', exports)
 app.route('/settings', settings)
 app.route('/expenses', expenses)
 app.route('/uploads', uploads)
+app.route('/ai', aiScan)
+app.route('/ai', ai)
+app.route('/ai', aiInsights)
 
 app.onError((err, c) => {
   if (err instanceof AppError) {

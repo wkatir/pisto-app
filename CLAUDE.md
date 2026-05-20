@@ -30,6 +30,7 @@ pisto-api/    → Hono + Bun API (backend)
 | purchases | `/purchases` | Proveedores, ordenes de compra, recepcion, cuentas por pagar |
 | reports | `/reports` | Dashboard KPIs, resumen ventas, top productos, utilidad bruta, valuacion inventario |
 | exports | `/exports` | Generadores Excel, CSV, PDF |
+| ai | `/ai` | Chat financiero, escaneo facturas, forecast, anomalias (OpenAI-compatible) |
 
 ### Comandos
 
@@ -55,6 +56,9 @@ JWT_REFRESH_SECRET=...
 CORS_ORIGIN=*
 PORT=3000
 RATE_LIMIT_ENABLED=false
+AI_API_KEY=...
+AI_BASE_URL=              # OpenAI-compatible endpoint (dejar vacio para OpenAI)
+AI_MODEL=gpt-4o           # o qwen-plus, deepseek-chat, moonshot-v1-8k, etc.
 ```
 
 ### Docker (SQL Server)

@@ -14,6 +14,9 @@ import '../features/reports/screens/reports_screen.dart';
 import '../features/expenses/screens/expenses_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
+import '../features/ai/screens/ai_chat_screen.dart';
+import '../features/ai/screens/scan_receipt_screen.dart';
+import '../features/ai/screens/ai_forecast_screen.dart';
 import '../shared/layouts/shell_layout.dart';
 
 class AuthRouterDelegate extends ChangeNotifier {
@@ -116,6 +119,18 @@ final appRouter = GoRouter(
         GoRoute(
           path: '/settings',
           pageBuilder: (context, state) => _FadePage(child: const SettingsScreen()),
+        ),
+        GoRoute(
+          path: '/ai-chat',
+          pageBuilder: (context, state) => _FadePage(child: const AiChatScreen()),
+        ),
+        GoRoute(
+          path: '/ai-scan',
+          pageBuilder: (context, state) => _FadePage(child: const ScanReceiptScreen()),
+        ),
+        GoRoute(
+          path: '/ai-forecast',
+          pageBuilder: (context, state) => _FadePage(child: const AiForecastScreen()),
         ),
       ],
     ),

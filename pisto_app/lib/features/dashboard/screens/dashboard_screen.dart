@@ -200,17 +200,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
         ),
-        const SizedBox(width: 12),
-        IconButton(
-          onPressed: _loadData,
-          icon: const Icon(LucideIcons.refreshCw, size: 16),
-          tooltip: t.refresh,
-          style: IconButton.styleFrom(
-            foregroundColor: cs.onSurfaceVariant,
-            backgroundColor: cs.surfaceContainerHigh,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        ),
       ],
     );
   }

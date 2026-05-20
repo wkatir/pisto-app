@@ -30,10 +30,14 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     try {
       final authService = ref.read(authServiceProvider);
       await authService.forgotPassword(_emailCtrl.text.trim());
-    } catch (e, st) {
-      debugPrint('forgotPassword failed: $e\n$st');
-    } finally {
       if (mounted) setState(() { _loading = false; _sent = true; });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo enviar el correo. Intentá de nuevo.')),
+        );
+      }
     }
   }
 

@@ -9,6 +9,11 @@ class PurchasesService {
     return res.data as List<dynamic>;
   }
 
+  Future<Map<String, dynamic>> getSupplier(String id) async {
+    final res = await _api.dio.get('/purchases/suppliers/$id');
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<Map<String, dynamic>> createSupplier(Map<String, dynamic> data) async {
     final res = await _api.dio.post('/purchases/suppliers', data: data);
     return res.data as Map<String, dynamic>;
@@ -55,6 +60,11 @@ class PurchasesService {
 
   Future<Map<String, dynamic>> createOrder(Map<String, dynamic> data) async {
     final res = await _api.dio.post('/purchases/orders', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateOrder(String id, Map<String, dynamic> data) async {
+    final res = await _api.dio.put('/purchases/orders/$id', data: data);
     return res.data as Map<String, dynamic>;
   }
 

@@ -74,13 +74,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                       eyebrow: 'INSIGHTS',
                       title: 'Cómo va tu negocio',
                       meta: 'Resumen y tendencias del mes en curso.',
-                      actions: [
-                        OutlinedButton.icon(
-                          onPressed: _loadData,
-                          icon: const Icon(LucideIcons.refreshCw, size: 14),
-                          label: const Text('Actualizar'),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 24),
                     _buildSalesSummaryCards(theme),

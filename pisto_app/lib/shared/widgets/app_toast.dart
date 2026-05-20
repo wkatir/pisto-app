@@ -113,7 +113,6 @@ class _ToastCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final (color, icon) = switch (type) {
       ToastType.success => (AppTheme.success, LucideIcons.circleCheck),
@@ -130,13 +129,6 @@ class _ToastCard extends StatelessWidget {
           color: cs.surfaceContainer,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppTheme.borderSubtle(context)),
-          boxShadow: [
-            BoxShadow(
-              color: cs.onSurface.withValues(alpha: isDark ? 0.3 : 0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: IntrinsicHeight(
           child: Row(

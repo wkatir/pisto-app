@@ -28,6 +28,9 @@ class ShellLayout extends ConsumerWidget {
       _NavDest(LucideIcons.shoppingCart, t.purchases, '/purchases', _NavSection.main),
       _NavDest(LucideIcons.walletMinimal, t.expenses, '/expenses', _NavSection.main),
       _NavDest(LucideIcons.chartColumn, t.reports, '/reports', _NavSection.insights),
+      _NavDest(LucideIcons.sparkles, 'Chat IA', '/ai-chat', _NavSection.assistant),
+      _NavDest(LucideIcons.scan, 'Escanear', '/ai-scan', _NavSection.assistant),
+      _NavDest(LucideIcons.trendingUp, 'Pronóstico', '/ai-forecast', _NavSection.assistant),
     ];
 
     final path = GoRouterState.of(context).uri.path;
@@ -89,12 +92,16 @@ class _Sidebar extends ConsumerWidget {
     // Agrupa destinos por sección preservando el índice global.
     final mainItems = <(int, _NavDest)>[];
     final insightsItems = <(int, _NavDest)>[];
+    final assistantItems = <(int, _NavDest)>[];
     for (var i = 0; i < destinations.length; i++) {
       final d = destinations[i];
-      if (d.section == _NavSection.main) {
-        mainItems.add((i, d));
-      } else {
-        insightsItems.add((i, d));
+      switch (d.section) {
+        case _NavSection.main:
+          mainItems.add((i, d));
+        case _NavSection.insights:
+          insightsItems.add((i, d));
+        case _NavSection.assistant:
+          assistantItems.add((i, d));
       }
     }
 
@@ -121,6 +128,18 @@ class _Sidebar extends ConsumerWidget {
                   const SizedBox(height: 14),
                   if (isExtended) _SectionLabel(text: 'INSIGHTS'),
                   ...insightsItems.map(
+                    (e) => _NavItem(
+                      dest: e.$2,
+                      selected: e.$1 == selectedIdx,
+                      isExtended: isExtended,
+                      onTap: () => context.go(e.$2.path),
+                    ),
+                  ),
+                ],
+                if (assistantItems.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  if (isExtended) _SectionLabel(text: 'ASISTENTE'),
+                  ...assistantItems.map(
                     (e) => _NavItem(
                       dest: e.$2,
                       selected: e.$1 == selectedIdx,
@@ -490,7 +509,7 @@ class _IconBtn extends StatelessWidget {
   }
 }
 
-enum _NavSection { main, insights }
+enum _NavSection { main, insights, assistant }
 
 class _NavDest {
   final IconData icon;
@@ -720,6 +739,33 @@ class _AccountSheetContent extends ConsumerWidget {
               onTap: () {
                 Navigator.pop(context);
                 context.go('/settings');
+              },
+            ),
+            const SizedBox(height: 8),
+            Container(height: 1, color: AppTheme.borderSubtle(context)),
+            const SizedBox(height: 8),
+            _SheetTile(
+              icon: LucideIcons.sparkles,
+              label: 'Chat IA',
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/ai-chat');
+              },
+            ),
+            _SheetTile(
+              icon: LucideIcons.scan,
+              label: 'Escanear Factura',
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/ai-scan');
+              },
+            ),
+            _SheetTile(
+              icon: LucideIcons.trendingUp,
+              label: 'Pronóstico',
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/ai-forecast');
               },
             ),
             const SizedBox(height: 8),

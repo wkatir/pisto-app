@@ -41,6 +41,11 @@ class InventoryService {
     return res.data as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> updateCategory(String id, Map<String, dynamic> data) async {
+    final res = await _api.dio.put('/inventory/categories/$id', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
   Future<void> deleteCategory(String id) async {
     await _api.dio.delete('/inventory/categories/$id');
   }
@@ -52,6 +57,11 @@ class InventoryService {
 
   Future<Map<String, dynamic>> createWarehouse(Map<String, dynamic> data) async {
     final res = await _api.dio.post('/inventory/warehouses', data: data);
+    return res.data as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> updateWarehouse(String id, Map<String, dynamic> data) async {
+    final res = await _api.dio.put('/inventory/warehouses/$id', data: data);
     return res.data as Map<String, dynamic>;
   }
 

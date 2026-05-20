@@ -59,4 +59,11 @@ export const env = {
   CORS_ORIGIN: parseCorsOrigin(process.env.CORS_ORIGIN),
   RATE_LIMIT_ENABLED: process.env.RATE_LIMIT_ENABLED !== 'false',
   TRUST_PROXY: process.env.TRUST_PROXY === 'true',
+  AI_API_KEY: process.env.AI_API_KEY || (() => {
+    if (IS_PRODUCTION) throw new Error('AI_API_KEY is required in production')
+    console.warn('⚠ AI_API_KEY not set — AI endpoints will fail at runtime')
+    return ''
+  })(),
+  AI_BASE_URL: process.env.AI_BASE_URL ?? '',
+  AI_MODEL: process.env.AI_MODEL ?? 'gpt-4o',
 }
