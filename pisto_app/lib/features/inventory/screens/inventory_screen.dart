@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/services/uploads_service.dart';
@@ -70,7 +71,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     } catch (e) {
       setState(() => _loading = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
       }
     }
   }
@@ -595,7 +596,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                 } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
                 }
               },
               child: const Text('Guardar'),
@@ -632,7 +633,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Eliminar'),
@@ -668,7 +669,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Eliminar'),
@@ -753,7 +754,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                 } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
                 }
               },
               child: const Text('Transferir'),
@@ -841,7 +842,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                 } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
                 }
               },
               child: const Text('Guardar'),
@@ -860,6 +861,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
     final priceCtrl = TextEditingController();
     final costCtrl = TextEditingController();
     String? imageUrl;
+    String? selectedUnitId = _units.isNotEmpty ? _units.first['id']?.toString() : null;
 
     showDialog(
       context: context,
@@ -898,6 +900,16 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                   TextField(controller: priceCtrl, decoration: const InputDecoration(labelText: 'Precio venta'), keyboardType: TextInputType.number),
                   const SizedBox(height: 12),
                   TextField(controller: costCtrl, decoration: const InputDecoration(labelText: 'Precio costo'), keyboardType: TextInputType.number),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    value: selectedUnitId,
+                    decoration: const InputDecoration(labelText: 'Unidad de medida'),
+                    items: _units.map<DropdownMenuItem<String>>((u) => DropdownMenuItem(
+                      value: u['id']?.toString(),
+                      child: Text('${u['name']} (${u['code']})'),
+                    )).toList(),
+                    onChanged: (v) => setLocal(() => selectedUnitId = v),
+                  ),
                 ],
               ),
             ),
@@ -906,19 +918,23 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
             FilledButton(
               onPressed: () async {
+                if (selectedUnitId == null) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Selecciona una unidad de medida')));
+                  return;
+                }
                 try {
                   await ref.read(inventoryServiceProvider).createProduct({
                     'name': nameCtrl.text,
-                    'sku': skuCtrl.text,
+                    'sku': skuCtrl.text.isNotEmpty ? skuCtrl.text : null,
                     'salePrice': priceCtrl.text,
-                    'costPrice': costCtrl.text,
-                    'unitId': 1,
+                    'costPrice': costCtrl.text.isNotEmpty ? costCtrl.text : '0',
+                    'unitId': selectedUnitId,
                     if (imageUrl != null && imageUrl!.isNotEmpty) 'imageUrl': imageUrl,
                   });
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                 } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
                 }
               },
               child: const Text('Crear'),
@@ -954,7 +970,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Crear'),
@@ -1003,7 +1019,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Crear'),

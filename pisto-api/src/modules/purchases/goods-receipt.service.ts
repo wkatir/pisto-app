@@ -24,12 +24,12 @@ export async function receiveGoods(
   const receiptNumber = await generateCorrelative(businessId, 'REC-C', 'goods_receipt')
 
   return db.transaction(async (tx) => {
-    const [receipt] = await tx.insert(goodsReceipt).output().values({
+    const [receipt] = await tx.insert(goodsReceipt).values({
       purchaseOrderId,
       receiptNumber,
       notes: data.notes,
       receivedBy: userId,
-    } as any)
+    } as any).returning()
 
     let allReceived = true
 

@@ -36,7 +36,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
       final results = await Future.wait([
         service.listCategories(),
         service.listExpenses(startDate: startDate),
-        service.getSummary(startDate: startDate),
+        service.getSummary(from: startDate),
       ]);
 
       setState(() {
@@ -159,7 +159,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                 } catch (e) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: $e')),
+                      SnackBar(content: Text(ApiClient.parseError(e))),
                     );
                   }
                 }

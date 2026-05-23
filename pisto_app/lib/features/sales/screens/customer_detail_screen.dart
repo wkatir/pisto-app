@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
@@ -51,7 +52,7 @@ class _CustomerDetailScreenState
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = ApiClient.parseError(e);
       });
     }
   }
@@ -70,7 +71,32 @@ class _CustomerDetailScreenState
     if (_error != null || _customer == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Detalle de cliente')),
-        body: Center(child: Text(_error ?? 'No encontrado')),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(LucideIcons.circleAlert, size: 40, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(height: 16),
+                Text(
+                  _error ?? 'Cliente no encontrado',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(height: 20),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() { _loading = true; _error = null; });
+                    _loadData();
+                  },
+                  icon: const Icon(LucideIcons.refreshCw, size: 16),
+                  label: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

@@ -11,7 +11,7 @@ class AppConstants {
   );
   static const String apiBaseUrlWeb = String.fromEnvironment(
     'API_BASE_URL_WEB',
-    defaultValue: 'http://localhost:3000/api/v1',
+    defaultValue: 'http://127.0.0.1:3000/api/v1',
   );
 
   /// Origen del servidor (sin /api/v1) — usado para construir URLs absolutas
@@ -22,7 +22,7 @@ class AppConstants {
   );
   static const String apiOriginWeb = String.fromEnvironment(
     'API_ORIGIN_WEB',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'http://127.0.0.1:3000',
   );
 
   static const String accessTokenKey = 'accessToken';

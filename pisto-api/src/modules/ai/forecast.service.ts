@@ -1,10 +1,10 @@
-import { client, AI_MODEL } from './ai-client'
+import { client, getAiModel } from './ai-client'
 import { sql } from 'drizzle-orm'
 import { db } from '../../config/database'
 
 async function execRows<T = Record<string, unknown>>(query: Parameters<typeof db.execute>[0]): Promise<T[]> {
   const result = await db.execute(query)
-  return ((result as any).recordset ?? result) as T[]
+  return result as unknown as T[]
 }
 
 // ── Cash Flow Forecast ──────────────────────────────────────────────
@@ -17,13 +17,13 @@ interface PendingPayable { due_date: string; total_balance: string; count: numbe
 async function getLast90DaysSales(businessId: string): Promise<DailySales[]> {
   return execRows<DailySales>(sql`
     SELECT
-      CONVERT(VARCHAR(10), sale_date, 23) AS sale_date,
-      CAST(COALESCE(SUM(total), 0) AS NVARCHAR(50)) AS total_sales,
+      TO_CHAR(sale_date, 'YYYY-MM-DD') AS sale_date,
+      CAST(COALESCE(SUM(total), 0) AS TEXT) AS total_sales,
       CAST(COUNT(*) AS INT) AS sale_count
     FROM sale
     WHERE business_id = ${businessId}
       AND status != 'cancelled'
-      AND sale_date >= DATEADD(DAY, -90, CAST(GETDATE() AS DATE))
+      AND sale_date >= (CURRENT_DATE - INTERVAL '90 day')
     GROUP BY sale_date
     ORDER BY sale_date
   `)
@@ -32,12 +32,12 @@ async function getLast90DaysSales(businessId: string): Promise<DailySales[]> {
 async function getLast90DaysExpenses(businessId: string): Promise<DailyExpenses[]> {
   return execRows<DailyExpenses>(sql`
     SELECT
-      CONVERT(VARCHAR(10), expense_date, 23) AS expense_date,
-      CAST(COALESCE(SUM(amount), 0) AS NVARCHAR(50)) AS total_expenses,
+      TO_CHAR(expense_date, 'YYYY-MM-DD') AS expense_date,
+      CAST(COALESCE(SUM(amount), 0) AS TEXT) AS total_expenses,
       CAST(COUNT(*) AS INT) AS expense_count
     FROM expense
     WHERE business_id = ${businessId}
-      AND expense_date >= DATEADD(DAY, -90, CAST(GETDATE() AS DATE))
+      AND expense_date >= (CURRENT_DATE - INTERVAL '90 day')
     GROUP BY expense_date
     ORDER BY expense_date
   `)
@@ -46,8 +46,8 @@ async function getLast90DaysExpenses(businessId: string): Promise<DailyExpenses[
 async function getPendingReceivables(businessId: string): Promise<PendingReceivable[]> {
   return execRows<PendingReceivable>(sql`
     SELECT
-      CONVERT(VARCHAR(10), due_date, 23) AS due_date,
-      CAST(COALESCE(SUM(balance), 0) AS NVARCHAR(50)) AS total_balance,
+      TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date,
+      CAST(COALESCE(SUM(balance), 0) AS TEXT) AS total_balance,
       CAST(COUNT(*) AS INT) AS count
     FROM account_receivable
     WHERE business_id = ${businessId}
@@ -60,8 +60,8 @@ async function getPendingReceivables(businessId: string): Promise<PendingReceiva
 async function getPendingPayables(businessId: string): Promise<PendingPayable[]> {
   return execRows<PendingPayable>(sql`
     SELECT
-      CONVERT(VARCHAR(10), due_date, 23) AS due_date,
-      CAST(COALESCE(SUM(balance), 0) AS NVARCHAR(50)) AS total_balance,
+      TO_CHAR(due_date, 'YYYY-MM-DD') AS due_date,
+      CAST(COALESCE(SUM(balance), 0) AS TEXT) AS total_balance,
       CAST(COUNT(*) AS INT) AS count
     FROM account_payable
     WHERE business_id = ${businessId}
@@ -96,7 +96,7 @@ export async function forecastCashFlow(businessId: string, days: number = 30) {
   }
 
   const response = await client.chat.completions.create({
-    model: AI_MODEL,
+    model: getAiModel(),
     max_tokens: 4096,
     messages: [
       {
@@ -139,27 +139,27 @@ interface TransactionRow {
 async function getTransactions(businessId: string, daysAgo: number, daysEnd: number): Promise<TransactionRow[]> {
   return execRows<TransactionRow>(sql`
     SELECT
-      CONVERT(VARCHAR(10), sale_date, 23) AS transaction_date,
+      TO_CHAR(sale_date, 'YYYY-MM-DD') AS transaction_date,
       'venta' AS type,
       sale_number AS description,
-      CAST(total AS NVARCHAR(50)) AS amount
+      CAST(total AS TEXT) AS amount
     FROM sale
     WHERE business_id = ${businessId}
       AND status != 'cancelled'
-      AND sale_date >= DATEADD(DAY, ${-daysAgo}, CAST(GETDATE() AS DATE))
-      AND sale_date < DATEADD(DAY, ${-daysEnd}, CAST(GETDATE() AS DATE))
+      AND sale_date >= (CURRENT_DATE - ${daysAgo}::int * INTERVAL '1 day')
+      AND sale_date < (CURRENT_DATE - ${daysEnd}::int * INTERVAL '1 day')
 
     UNION ALL
 
     SELECT
-      CONVERT(VARCHAR(10), expense_date, 23) AS transaction_date,
+      TO_CHAR(expense_date, 'YYYY-MM-DD') AS transaction_date,
       'gasto' AS type,
       description,
-      CAST(amount AS NVARCHAR(50)) AS amount
+      CAST(amount AS TEXT) AS amount
     FROM expense
     WHERE business_id = ${businessId}
-      AND expense_date >= DATEADD(DAY, ${-daysAgo}, CAST(GETDATE() AS DATE))
-      AND expense_date < DATEADD(DAY, ${-daysEnd}, CAST(GETDATE() AS DATE))
+      AND expense_date >= (CURRENT_DATE - ${daysAgo}::int * INTERVAL '1 day')
+      AND expense_date < (CURRENT_DATE - ${daysEnd}::int * INTERVAL '1 day')
 
     ORDER BY transaction_date
   `)
@@ -179,7 +179,7 @@ export async function detectAnomalies(businessId: string) {
   }
 
   const response = await client.chat.completions.create({
-    model: AI_MODEL,
+    model: getAiModel(),
     max_tokens: 4096,
     messages: [
       {

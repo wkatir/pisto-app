@@ -23,6 +23,9 @@
     // Stricter dead-code checks
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noPropertyAccessFromIndexSignature": false
+    "noPropertyAccessFromIndexSignature": false,
+
+    // Cloudflare Workers types
+    "types": ["@cloudflare/workers-types"]
   }
 }

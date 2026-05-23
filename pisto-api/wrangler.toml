@@ -1,0 +1,19 @@
+name = "pisto-api"
+main = "src/index.ts"
+compatibility_date = "2025-09-27"
+compatibility_flags = ["nodejs_compat"]
+account_id = "862a466eb72b12e342a73ae1feb6036b"
+
+[vars]
+NODE_ENV = "production"
+CORS_ORIGIN = "*"
+AI_MODEL = "gpt-4o"
+RATE_LIMIT_ENABLED = "false"
+
+[[r2_buckets]]
+binding = "UPLOADS_BUCKET"
+bucket_name = "pisto-uploads"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "922b158b468941fcbc793e81a430c26f"

@@ -9,7 +9,7 @@ export async function listWarehouses(businessId: string) {
 }
 
 export async function createWarehouse(businessId: string, data: { name: string; address?: string }) {
-  const [wh] = await db.insert(warehouse).output().values({ businessId, ...data })
+  const [wh] = await db.insert(warehouse).values({ businessId, ...data }).returning()
   return wh
 }
 
@@ -17,7 +17,6 @@ export async function updateWarehouse(businessId: string, id: string, data: { na
   const [updated] = await db.update(warehouse)
     .set(data)
     .where(and(eq(warehouse.id, id), eq(warehouse.businessId, businessId)))
-    .output()
   if (!updated) throw new AppError(404, 'Bodega no encontrada')
   return updated
 }
@@ -26,7 +25,7 @@ export async function deleteWarehouse(businessId: string, id: string) {
   const [updated] = await db.update(warehouse)
     .set({ isActive: false })
     .where(and(eq(warehouse.id, id), eq(warehouse.businessId, businessId)))
-    .output()
+    .returning()
   if (!updated) throw new AppError(404, 'Bodega no encontrada')
   return updated
 }

@@ -13,8 +13,8 @@ export async function listCategories(businessId: string) {
 
 export async function createCategory(businessId: string, data: { name: string; parentId?: string; description?: string }) {
   const [category] = await db.insert(productCategory)
-    .output()
     .values({ businessId, ...data })
+    .returning()
   return category
 }
 
@@ -22,7 +22,6 @@ export async function updateCategory(businessId: string, id: string, data: { nam
   const [updated] = await db.update(productCategory)
     .set(data)
     .where(and(eq(productCategory.id, id), eq(productCategory.businessId, businessId)))
-    .output()
   if (!updated) throw new AppError(404, 'Categoría no encontrada')
   return updated
 }
@@ -31,7 +30,7 @@ export async function deleteCategory(businessId: string, id: string) {
   const [updated] = await db.update(productCategory)
     .set({ isActive: false })
     .where(and(eq(productCategory.id, id), eq(productCategory.businessId, businessId)))
-    .output()
+    .returning()
   if (!updated) throw new AppError(404, 'Categoría no encontrada')
   return updated
 }

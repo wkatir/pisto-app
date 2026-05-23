@@ -25,7 +25,7 @@ export async function createTransfer(
   }
 
   return db.transaction(async (tx) => {
-    const [transfer] = await tx.insert(inventoryTransfer).output().values({
+    const [transfer] = await tx.insert(inventoryTransfer).values({
       businessId,
       fromWarehouseId: data.fromWarehouseId,
       toWarehouseId: data.toWarehouseId,
@@ -33,7 +33,7 @@ export async function createTransfer(
       createdBy: userId,
       status: 'completed',
       completedAt: new Date(),
-    } as any)
+    } as any).returning()
 
     for (const line of data.lines) {
       await tx.insert(inventoryTransferLine).values({

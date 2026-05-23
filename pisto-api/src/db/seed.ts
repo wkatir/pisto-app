@@ -1,5 +1,6 @@
-import { drizzle } from 'drizzle-orm/node-mssql'
-import mssql from 'mssql'
+import 'dotenv/config'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import { eq, and } from 'drizzle-orm'
 import { subDays, format } from 'date-fns'
 import {
@@ -12,18 +13,20 @@ import {
   goodsReceipt, accountPayable,
 } from './schema'
 
-const pool = await mssql.connect({
-  server: process.env.DB_SERVER ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? '1433'),
-  database: process.env.DB_NAME ?? 'pisto_app',
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: process.env.DB_ENCRYPT !== 'false',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
-  },
-})
-const db = drizzle(pool)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256)
+  const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
+  return `${toHex(salt)}:${toHex(new Uint8Array(hash))}`
+}
+
+const url = process.env.DATABASE_URL_DIRECT
+if (!url) throw new Error('DATABASE_URL_DIRECT no definida en .dev.vars')
+
+const client = postgres(url, { max: 1 })
+const db = drizzle(client)
 
 const BIZ_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -44,11 +47,11 @@ async function tryInsertOne<T>(fn: () => Promise<T[]>): Promise<T | null> {
     const rows = await fn()
     return rows[0] ?? null
   } catch (e: any) {
-    if (e?.number === 2627 || e?.number === 2601) return null
+    // Unique constraint violation en Postgres
+    if (e?.code === '23505') return null
     throw e
   }
 }
-
 
 async function main() {
   console.log('Seeding database...\n')
@@ -66,7 +69,7 @@ async function main() {
     { code: 'SRV', name: 'Servicio' },
   ]
   for (const u of unitDefs) {
-    await tryInsertOne(() => db.insert(unitOfMeasure).output().values(u))
+    await tryInsertOne(() => db.insert(unitOfMeasure).values(u).returning())
   }
   console.log(`  + ${unitDefs.length} units of measure`)
 
@@ -84,61 +87,61 @@ async function main() {
   ]
   for (const code of permCodes) {
     await tryInsertOne(() =>
-      db.insert(permission).output().values({
+      db.insert(permission).values({
         code,
         description: code.replace(':', ' - ').replace('_', ' '),
-      })
+      }).returning()
     )
   }
   console.log(`  + ${permCodes.length} permissions`)
 
   const demoBusiness = await tryInsertOne(() =>
-    db.insert(business).output().values({
+    db.insert(business).values({
       id: BIZ_ID,
       name: 'Empresa Demo',
       tradeName: 'Pisto Demo',
       currencyCode: 'USD',
       email: 'demo@pistoapp.com',
       phone: '2222-2222',
-    } as any)
+    } as any).returning()
   )
 
   let adminUserId: string
 
   if (demoBusiness) {
     const adminRole = await tryInsertOne(() =>
-      db.insert(role).output().values({
+      db.insert(role).values({
         businessId: BIZ_ID,
         name: 'admin',
         description: 'Administrador con acceso total',
-      } as any)
+      } as any).returning()
     )
 
     if (adminRole) {
       const allPerms = await db.select().from(permission)
       for (const p of allPerms) {
         await tryInsertOne(() =>
-          db.insert(rolePermission).output().values({ roleId: (adminRole as any).id, permissionId: p.id })
+          db.insert(rolePermission).values({ roleId: (adminRole as any).id, permissionId: p.id }).returning()
         )
       }
 
       const adminEmail = process.env.ADMIN_EMAIL ?? 'admin@pistoapp.com'
       const adminPassword = process.env.ADMIN_PASSWORD
         ?? `${crypto.randomUUID().replace(/-/g, '')}!Aa1`
-      const passwordHash = await Bun.password.hash(adminPassword)
+      const passwordHash = await hashPassword(adminPassword)
       const adminUser = await tryInsertOne(() =>
-        db.insert(appUser).output().values({
+        db.insert(appUser).values({
           businessId: BIZ_ID,
           email: adminEmail,
           passwordHash,
           firstName: 'Admin',
           lastName: 'Pisto',
-        } as any)
+        } as any).returning()
       )
 
       if (adminUser) {
         await tryInsertOne(() =>
-          db.insert(userRole).output().values({ userId: (adminUser as any).id, roleId: (adminRole as any).id })
+          db.insert(userRole).values({ userId: (adminUser as any).id, roleId: (adminRole as any).id }).returning()
         )
         adminUserId = (adminUser as any).id
         console.log('  + Admin user created')
@@ -146,7 +149,6 @@ async function main() {
         if (!process.env.ADMIN_PASSWORD) {
           console.log(`    password: ${adminPassword}`)
           console.log('    >> IMPORTANT: store this password now. It will not be shown again.')
-          console.log('    >> Set ADMIN_PASSWORD env var to control credentials in production.')
         } else {
           console.log('    password: (from ADMIN_PASSWORD env)')
         }
@@ -160,20 +162,20 @@ async function main() {
     }
 
     await tryInsertOne(() =>
-      db.insert(tax).output().values({
+      db.insert(tax).values({
         businessId: BIZ_ID,
         name: 'IVA 13%',
         rate: '13.00',
         isActive: true,
-      } as any)
+      } as any).returning()
     )
 
     await tryInsertOne(() =>
-      db.insert(warehouse).output().values({
+      db.insert(warehouse).values({
         businessId: BIZ_ID,
         name: 'Principal',
         address: 'Bodega principal',
-      } as any)
+      } as any).returning()
     )
 
     const docTypeDefs = [
@@ -184,7 +186,7 @@ async function main() {
       { businessId: BIZ_ID, code: 'COT', name: 'Cotización', isActive: true },
     ]
     for (const dt of docTypeDefs) {
-      await tryInsertOne(() => db.insert(documentType).output().values(dt as any))
+      await tryInsertOne(() => db.insert(documentType).values(dt as any).returning())
     }
     console.log(`  + ${docTypeDefs.length} document types`)
 
@@ -196,10 +198,9 @@ async function main() {
       { businessId: BIZ_ID, name: 'Cheque', isActive: true },
     ]
     for (const pm of payMethodDefs) {
-      await tryInsertOne(() => db.insert(paymentMethod).output().values(pm as any))
+      await tryInsertOne(() => db.insert(paymentMethod).values(pm as any).returning())
     }
     console.log(`  + ${payMethodDefs.length} payment methods`)
-
     console.log(`  + Demo business: Empresa Demo`)
   } else {
     const existing = await db.select().from(appUser).where(eq(appUser.email, 'admin@pistoapp.com'))
@@ -213,9 +214,9 @@ async function main() {
   const [unitCJ]  = await db.select().from(unitOfMeasure).where(eq(unitOfMeasure.code, 'CJ'))
   const [unitGAL] = await db.select().from(unitOfMeasure).where(eq(unitOfMeasure.code, 'GAL'))
 
-  const [docFAC]    = await db.select().from(documentType).where(and(eq(documentType.businessId, BIZ_ID), eq(documentType.code, 'FAC')))
-  const [pmCash]    = await db.select().from(paymentMethod).where(and(eq(paymentMethod.businessId, BIZ_ID), eq(paymentMethod.name, 'Efectivo')))
-  const [pmCard]    = await db.select().from(paymentMethod).where(and(eq(paymentMethod.businessId, BIZ_ID), eq(paymentMethod.name, 'Tarjeta de Crédito')))
+  const [docFAC]     = await db.select().from(documentType).where(and(eq(documentType.businessId, BIZ_ID), eq(documentType.code, 'FAC')))
+  const [pmCash]     = await db.select().from(paymentMethod).where(and(eq(paymentMethod.businessId, BIZ_ID), eq(paymentMethod.name, 'Efectivo')))
+  const [pmCard]     = await db.select().from(paymentMethod).where(and(eq(paymentMethod.businessId, BIZ_ID), eq(paymentMethod.name, 'Tarjeta de Crédito')))
   const [pmTransfer] = await db.select().from(paymentMethod).where(and(eq(paymentMethod.businessId, BIZ_ID), eq(paymentMethod.name, 'Transferencia Bancaria')))
 
   const [ivaTax] = await db.select().from(tax).where(eq(tax.businessId, BIZ_ID))
@@ -233,11 +234,11 @@ async function main() {
   console.log('\n  Seeding rich demo data...\n')
 
   const wh2 = await tryInsertOne(() =>
-    db.insert(warehouse).output().values({
+    db.insert(warehouse).values({
       businessId: BIZ_ID,
       name: 'Sucursal Norte',
       address: 'Boulevard del Norte, Local 12',
-    } as any)
+    } as any).returning()
   )
   console.log('  + Warehouse: Sucursal Norte')
 
@@ -252,7 +253,7 @@ async function main() {
 
   const insertedCategories: { id: string; name: string }[] = []
   for (const cd of categoryDefs) {
-    const row = await tryInsertOne(() => db.insert(productCategory).output().values(cd as any))
+    const row = await tryInsertOne(() => db.insert(productCategory).values(cd as any).returning())
     if (row) insertedCategories.push(row as any)
   }
 
@@ -262,109 +263,107 @@ async function main() {
 
   const catMap: Record<string, string> = {}
   for (const c of cats) catMap[c.name] = c.id
-
   console.log(`  + ${cats.length} categories`)
 
   const productDefs = [
-    { name: 'Audífonos Bluetooth',   sku: 'ELEC-001', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice: 12.50, salePrice: 24.99, minStock: 10 },
-    { name: 'Cargador USB-C',        sku: 'ELEC-002', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice:  5.00, salePrice: 12.99, minStock: 15 },
-    { name: 'Cable HDMI 2m',         sku: 'ELEC-003', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice:  3.50, salePrice:  8.99, minStock: 20 },
-    { name: 'Mouse Inalámbrico',     sku: 'ELEC-004', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice:  7.00, salePrice: 15.99, minStock: 10 },
-    { name: 'Teclado USB',           sku: 'ELEC-005', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice:  8.00, salePrice: 18.50, minStock:  8 },
-    { name: 'Memoria USB 64GB',      sku: 'ELEC-006', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice:  4.50, salePrice:  9.99, minStock: 25 },
-    { name: 'Power Bank 10000mAh',   sku: 'ELEC-007', categoryId: catMap['Electrónica'],       unitId: unitUND!.id, costPrice: 10.00, salePrice: 22.99, minStock:  8 },
-    { name: 'Café Molido 500g',      sku: 'ALIM-001', categoryId: catMap['Alimentos y Bebidas'], unitId: unitUND!.id, costPrice:  3.80, salePrice:  6.99, minStock: 30 },
-    { name: 'Azúcar 2.5lb',          sku: 'ALIM-002', categoryId: catMap['Alimentos y Bebidas'], unitId: unitLB!.id,  costPrice:  1.20, salePrice:  2.49, minStock: 50 },
-    { name: 'Aceite Vegetal 1L',     sku: 'ALIM-003', categoryId: catMap['Alimentos y Bebidas'], unitId: unitLT!.id,  costPrice:  2.00, salePrice:  3.99, minStock: 30 },
-    { name: 'Arroz 5lb',             sku: 'ALIM-004', categoryId: catMap['Alimentos y Bebidas'], unitId: unitLB!.id,  costPrice:  2.50, salePrice:  4.99, minStock: 40 },
-    { name: 'Galletas Surtidas',     sku: 'ALIM-005', categoryId: catMap['Alimentos y Bebidas'], unitId: unitCJ!.id,  costPrice:  1.80, salePrice:  3.49, minStock: 20 },
-    { name: 'Agua Purificada Pack 24',sku: 'ALIM-006',categoryId: catMap['Alimentos y Bebidas'], unitId: unitCJ!.id,  costPrice:  4.50, salePrice:  7.99, minStock: 15 },
-    { name: 'Jugo de Naranja 1L',    sku: 'ALIM-007', categoryId: catMap['Alimentos y Bebidas'], unitId: unitLT!.id,  costPrice:  1.50, salePrice:  2.99, minStock: 25 },
-    { name: 'Detergente Líquido 1L', sku: 'LIMP-001', categoryId: catMap['Limpieza'],          unitId: unitLT!.id,  costPrice:  2.80, salePrice:  5.49, minStock: 20 },
-    { name: 'Cloro 1gal',            sku: 'LIMP-002', categoryId: catMap['Limpieza'],          unitId: unitGAL!.id, costPrice:  2.00, salePrice:  3.99, minStock: 15 },
-    { name: 'Desinfectante Multiusos',sku: 'LIMP-003',categoryId: catMap['Limpieza'],          unitId: unitUND!.id, costPrice:  3.00, salePrice:  5.99, minStock: 15 },
-    { name: 'Jabón Líquido 500ml',   sku: 'LIMP-004', categoryId: catMap['Limpieza'],          unitId: unitUND!.id, costPrice:  1.80, salePrice:  3.49, minStock: 20 },
-    { name: 'Papel Toalla 6 Rollos', sku: 'LIMP-005', categoryId: catMap['Limpieza'],          unitId: unitCJ!.id,  costPrice:  3.50, salePrice:  6.99, minStock: 10 },
-    { name: 'Bolsas de Basura x25',  sku: 'LIMP-006', categoryId: catMap['Limpieza'],          unitId: unitCJ!.id,  costPrice:  2.20, salePrice:  4.49, minStock: 15 },
-    { name: 'Resma Papel Bond',      sku: 'OFIC-001', categoryId: catMap['Papelería y Oficina'], unitId: unitUND!.id, costPrice:  3.50, salePrice:  5.99, minStock: 15 },
-    { name: 'Lapiceros Caja x12',    sku: 'OFIC-002', categoryId: catMap['Papelería y Oficina'], unitId: unitCJ!.id,  costPrice:  1.50, salePrice:  3.49, minStock: 20 },
-    { name: 'Folder Manila x25',     sku: 'OFIC-003', categoryId: catMap['Papelería y Oficina'], unitId: unitCJ!.id,  costPrice:  2.00, salePrice:  4.49, minStock: 10 },
-    { name: 'Engrapadora',           sku: 'OFIC-004', categoryId: catMap['Papelería y Oficina'], unitId: unitUND!.id, costPrice:  3.00, salePrice:  6.99, minStock:  5 },
-    { name: 'Cinta Adhesiva',        sku: 'OFIC-005', categoryId: catMap['Papelería y Oficina'], unitId: unitUND!.id, costPrice:  0.80, salePrice:  1.99, minStock: 30 },
-    { name: 'Martillo',              sku: 'FERR-001', categoryId: catMap['Ferretería'],        unitId: unitUND!.id, costPrice:  5.00, salePrice: 11.99, minStock:  5 },
-    { name: 'Destornillador Phillips',sku: 'FERR-002',categoryId: catMap['Ferretería'],        unitId: unitUND!.id, costPrice:  2.50, salePrice:  5.99, minStock:  8 },
-    { name: 'Cinta Métrica 5m',      sku: 'FERR-003', categoryId: catMap['Ferretería'],        unitId: unitUND!.id, costPrice:  2.00, salePrice:  4.99, minStock: 10 },
-    { name: 'Pintura Látex 1gal',    sku: 'FERR-004', categoryId: catMap['Ferretería'],        unitId: unitGAL!.id, costPrice: 12.00, salePrice: 24.99, minStock:  5 },
-    { name: 'Brochas 3 pulgadas',    sku: 'FERR-005', categoryId: catMap['Ferretería'],        unitId: unitUND!.id, costPrice:  1.50, salePrice:  3.99, minStock: 10 },
-    { name: 'Bombillo LED 9W',       sku: 'HOG-001', categoryId: catMap['Hogar'],              unitId: unitUND!.id, costPrice:  1.20, salePrice:  2.99, minStock: 30 },
-    { name: 'Extensión Eléctrica 3m',sku: 'HOG-002', categoryId: catMap['Hogar'],              unitId: unitUND!.id, costPrice:  3.50, salePrice:  7.99, minStock: 10 },
-    { name: 'Pilas AA Pack 4',       sku: 'HOG-003', categoryId: catMap['Hogar'],              unitId: unitCJ!.id,  costPrice:  1.80, salePrice:  3.49, minStock: 25 },
+    { name: 'Audífonos Bluetooth',    sku: 'ELEC-001', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice: 12.50, salePrice: 24.99, minStock: 10 },
+    { name: 'Cargador USB-C',         sku: 'ELEC-002', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice:  5.00, salePrice: 12.99, minStock: 15 },
+    { name: 'Cable HDMI 2m',          sku: 'ELEC-003', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice:  3.50, salePrice:  8.99, minStock: 20 },
+    { name: 'Mouse Inalámbrico',      sku: 'ELEC-004', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice:  7.00, salePrice: 15.99, minStock: 10 },
+    { name: 'Teclado USB',            sku: 'ELEC-005', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice:  8.00, salePrice: 18.50, minStock:  8 },
+    { name: 'Memoria USB 64GB',       sku: 'ELEC-006', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice:  4.50, salePrice:  9.99, minStock: 25 },
+    { name: 'Power Bank 10000mAh',    sku: 'ELEC-007', categoryId: catMap['Electrónica'],        unitId: unitUND!.id, costPrice: 10.00, salePrice: 22.99, minStock:  8 },
+    { name: 'Café Molido 500g',       sku: 'ALIM-001', categoryId: catMap['Alimentos y Bebidas'],unitId: unitUND!.id, costPrice:  3.80, salePrice:  6.99, minStock: 30 },
+    { name: 'Azúcar 2.5lb',           sku: 'ALIM-002', categoryId: catMap['Alimentos y Bebidas'],unitId: unitLB!.id,  costPrice:  1.20, salePrice:  2.49, minStock: 50 },
+    { name: 'Aceite Vegetal 1L',      sku: 'ALIM-003', categoryId: catMap['Alimentos y Bebidas'],unitId: unitLT!.id,  costPrice:  2.00, salePrice:  3.99, minStock: 30 },
+    { name: 'Arroz 5lb',              sku: 'ALIM-004', categoryId: catMap['Alimentos y Bebidas'],unitId: unitLB!.id,  costPrice:  2.50, salePrice:  4.99, minStock: 40 },
+    { name: 'Galletas Surtidas',      sku: 'ALIM-005', categoryId: catMap['Alimentos y Bebidas'],unitId: unitCJ!.id,  costPrice:  1.80, salePrice:  3.49, minStock: 20 },
+    { name: 'Agua Purificada Pack 24',sku: 'ALIM-006', categoryId: catMap['Alimentos y Bebidas'],unitId: unitCJ!.id,  costPrice:  4.50, salePrice:  7.99, minStock: 15 },
+    { name: 'Jugo de Naranja 1L',     sku: 'ALIM-007', categoryId: catMap['Alimentos y Bebidas'],unitId: unitLT!.id,  costPrice:  1.50, salePrice:  2.99, minStock: 25 },
+    { name: 'Detergente Líquido 1L',  sku: 'LIMP-001', categoryId: catMap['Limpieza'],           unitId: unitLT!.id,  costPrice:  2.80, salePrice:  5.49, minStock: 20 },
+    { name: 'Cloro 1gal',             sku: 'LIMP-002', categoryId: catMap['Limpieza'],           unitId: unitGAL!.id, costPrice:  2.00, salePrice:  3.99, minStock: 15 },
+    { name: 'Desinfectante Multiusos',sku: 'LIMP-003', categoryId: catMap['Limpieza'],           unitId: unitUND!.id, costPrice:  3.00, salePrice:  5.99, minStock: 15 },
+    { name: 'Jabón Líquido 500ml',    sku: 'LIMP-004', categoryId: catMap['Limpieza'],           unitId: unitUND!.id, costPrice:  1.80, salePrice:  3.49, minStock: 20 },
+    { name: 'Papel Toalla 6 Rollos',  sku: 'LIMP-005', categoryId: catMap['Limpieza'],           unitId: unitCJ!.id,  costPrice:  3.50, salePrice:  6.99, minStock: 10 },
+    { name: 'Bolsas de Basura x25',   sku: 'LIMP-006', categoryId: catMap['Limpieza'],           unitId: unitCJ!.id,  costPrice:  2.20, salePrice:  4.49, minStock: 15 },
+    { name: 'Resma Papel Bond',       sku: 'OFIC-001', categoryId: catMap['Papelería y Oficina'],unitId: unitUND!.id, costPrice:  3.50, salePrice:  5.99, minStock: 15 },
+    { name: 'Lapiceros Caja x12',     sku: 'OFIC-002', categoryId: catMap['Papelería y Oficina'],unitId: unitCJ!.id,  costPrice:  1.50, salePrice:  3.49, minStock: 20 },
+    { name: 'Folder Manila x25',      sku: 'OFIC-003', categoryId: catMap['Papelería y Oficina'],unitId: unitCJ!.id,  costPrice:  2.00, salePrice:  4.49, minStock: 10 },
+    { name: 'Engrapadora',            sku: 'OFIC-004', categoryId: catMap['Papelería y Oficina'],unitId: unitUND!.id, costPrice:  3.00, salePrice:  6.99, minStock:  5 },
+    { name: 'Cinta Adhesiva',         sku: 'OFIC-005', categoryId: catMap['Papelería y Oficina'],unitId: unitUND!.id, costPrice:  0.80, salePrice:  1.99, minStock: 30 },
+    { name: 'Martillo',               sku: 'FERR-001', categoryId: catMap['Ferretería'],         unitId: unitUND!.id, costPrice:  5.00, salePrice: 11.99, minStock:  5 },
+    { name: 'Destornillador Phillips', sku: 'FERR-002',categoryId: catMap['Ferretería'],         unitId: unitUND!.id, costPrice:  2.50, salePrice:  5.99, minStock:  8 },
+    { name: 'Cinta Métrica 5m',       sku: 'FERR-003', categoryId: catMap['Ferretería'],         unitId: unitUND!.id, costPrice:  2.00, salePrice:  4.99, minStock: 10 },
+    { name: 'Pintura Látex 1gal',     sku: 'FERR-004', categoryId: catMap['Ferretería'],         unitId: unitGAL!.id, costPrice: 12.00, salePrice: 24.99, minStock:  5 },
+    { name: 'Brochas 3 pulgadas',     sku: 'FERR-005', categoryId: catMap['Ferretería'],         unitId: unitUND!.id, costPrice:  1.50, salePrice:  3.99, minStock: 10 },
+    { name: 'Bombillo LED 9W',        sku: 'HOG-001',  categoryId: catMap['Hogar'],              unitId: unitUND!.id, costPrice:  1.20, salePrice:  2.99, minStock: 30 },
+    { name: 'Extensión Eléctrica 3m', sku: 'HOG-002',  categoryId: catMap['Hogar'],              unitId: unitUND!.id, costPrice:  3.50, salePrice:  7.99, minStock: 10 },
+    { name: 'Pilas AA Pack 4',        sku: 'HOG-003',  categoryId: catMap['Hogar'],              unitId: unitCJ!.id,  costPrice:  1.80, salePrice:  3.49, minStock: 25 },
   ]
 
   const insertedProducts: any[] = []
   for (const pd of productDefs) {
     const row = await tryInsertOne(() =>
-      db.insert(product).output().values({ ...pd, businessId: BIZ_ID } as any)
+      db.insert(product).values({ ...pd, businessId: BIZ_ID } as any).returning()
     )
     if (row) insertedProducts.push(row)
   }
-
   console.log(`  + ${insertedProducts.length} products`)
 
   for (const p of insertedProducts) {
     await tryInsertOne(() =>
-      db.insert(productStock).output().values({
+      db.insert(productStock).values({
         productId: p.id,
         warehouseId: wh1.id,
         quantity: money(randomBetween(20, 150)),
-      } as any)
+      } as any).returning()
     )
   }
 
   if (wh2) {
     for (const p of insertedProducts.slice(0, 15)) {
       await tryInsertOne(() =>
-        db.insert(productStock).output().values({
+        db.insert(productStock).values({
           productId: p.id,
           warehouseId: (wh2 as any).id,
           quantity: money(randomBetween(5, 40)),
-        } as any)
+        } as any).returning()
       )
     }
   }
   console.log('  + Product stock assigned')
 
   const customerDefs = [
-    { businessId: BIZ_ID, customerType: 'company', companyName: 'Comercial El Buen Precio',  taxId: '0614-050390-104-2', email: 'ventas@buenprecio.sv',       phone: '2234-5678', creditLimit: 5000, creditDays: 30 },
-    { businessId: BIZ_ID, customerType: 'company', companyName: 'Distribuidora ABC',         taxId: '0614-120485-102-5', email: 'compras@abc.sv',             phone: '2245-6789', creditLimit: 10000, creditDays: 15 },
-    { businessId: BIZ_ID, customerType: 'person',  firstName: 'María',   lastName: 'García',  email: 'maria.garcia@email.com', phone: '7890-1234', creditLimit: 0,     creditDays: 0 },
-    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Juan',    lastName: 'Pérez',   email: 'juan.perez@email.com',   phone: '7891-2345', creditLimit: 500,   creditDays: 15 },
-    { businessId: BIZ_ID, customerType: 'company', companyName: 'TechStore SA de CV',        taxId: '0614-080295-103-8', email: 'pedidos@techstore.sv',       phone: '2256-7890', creditLimit: 8000,  creditDays: 45 },
-    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Ana',     lastName: 'López',   email: 'ana.lopez@email.com',    phone: '7892-3456', creditLimit: 0,     creditDays: 0 },
-    { businessId: BIZ_ID, customerType: 'company', companyName: 'Supermercado La Familia',   taxId: '0614-150190-105-1', email: 'admin@lafamilia.sv',         phone: '2267-8901', creditLimit: 15000, creditDays: 30 },
-    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Carlos',  lastName: 'Ramírez', email: 'carlos.ramirez@email.com', phone: '7893-4567', creditLimit: 1000, creditDays: 15 },
-    { businessId: BIZ_ID, customerType: 'company', companyName: 'Oficinas Modernas',         taxId: '0614-200398-106-3', email: 'compras@oficinasmodernas.sv', phone: '2278-9012', creditLimit: 3000,  creditDays: 30 },
-    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Roberto', lastName: 'Hernández', phone: '7894-5678', creditLimit: 0, creditDays: 0 },
+    { businessId: BIZ_ID, customerType: 'company', companyName: 'Comercial El Buen Precio',   taxId: '0614-050390-104-2', email: 'ventas@buenprecio.sv',        phone: '2234-5678', creditLimit: 5000,  creditDays: 30 },
+    { businessId: BIZ_ID, customerType: 'company', companyName: 'Distribuidora ABC',           taxId: '0614-120485-102-5', email: 'compras@abc.sv',              phone: '2245-6789', creditLimit: 10000, creditDays: 15 },
+    { businessId: BIZ_ID, customerType: 'person',  firstName: 'María',   lastName: 'García',   email: 'maria.garcia@email.com',   phone: '7890-1234', creditLimit: 0,     creditDays: 0 },
+    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Juan',    lastName: 'Pérez',    email: 'juan.perez@email.com',     phone: '7891-2345', creditLimit: 500,   creditDays: 15 },
+    { businessId: BIZ_ID, customerType: 'company', companyName: 'TechStore SA de CV',          taxId: '0614-080295-103-8', email: 'pedidos@techstore.sv',        phone: '2256-7890', creditLimit: 8000,  creditDays: 45 },
+    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Ana',     lastName: 'López',    email: 'ana.lopez@email.com',      phone: '7892-3456', creditLimit: 0,     creditDays: 0 },
+    { businessId: BIZ_ID, customerType: 'company', companyName: 'Supermercado La Familia',     taxId: '0614-150190-105-1', email: 'admin@lafamilia.sv',          phone: '2267-8901', creditLimit: 15000, creditDays: 30 },
+    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Carlos',  lastName: 'Ramírez',  email: 'carlos.ramirez@email.com', phone: '7893-4567', creditLimit: 1000,  creditDays: 15 },
+    { businessId: BIZ_ID, customerType: 'company', companyName: 'Oficinas Modernas',           taxId: '0614-200398-106-3', email: 'compras@oficinasmodernas.sv', phone: '2278-9012', creditLimit: 3000,  creditDays: 30 },
+    { businessId: BIZ_ID, customerType: 'person',  firstName: 'Roberto', lastName: 'Hernández',                                   phone: '7894-5678', creditLimit: 0,     creditDays: 0 },
   ]
 
   const insertedCustomers: any[] = []
   for (const cd of customerDefs) {
-    const row = await tryInsertOne(() => db.insert(customer).output().values(cd as any))
+    const row = await tryInsertOne(() => db.insert(customer).values(cd as any).returning())
     if (row) insertedCustomers.push(row)
   }
   console.log(`  + ${insertedCustomers.length} customers`)
 
   const supplierDefs = [
-    { businessId: BIZ_ID, companyName: 'Distribuidora TechMax',     contactName: 'Roberto Flores',   email: 'ventas@techmax.sv',         phone: '2201-1234', paymentTerms: 30 },
-    { businessId: BIZ_ID, companyName: 'Alimentos del Valle',       contactName: 'Patricia Morales', email: 'ventas@alimentosvalle.sv',  phone: '2202-2345', paymentTerms: 15 },
-    { businessId: BIZ_ID, companyName: 'Productos de Limpieza SA',  contactName: 'Fernando Rivas',   email: 'pedidos@limpieza-sa.sv',    phone: '2203-3456', paymentTerms: 30 },
-    { businessId: BIZ_ID, companyName: 'Papelera Nacional',         contactName: 'Claudia Mejía',    email: 'ventas@papeleranacional.sv', phone: '2204-4567', paymentTerms: 45 },
-    { businessId: BIZ_ID, companyName: 'Ferretería Industrial',     contactName: 'Miguel Castillo',  email: 'compras@ferrindustrial.sv', phone: '2205-5678', paymentTerms: 30 },
+    { businessId: BIZ_ID, companyName: 'Distribuidora TechMax',    contactName: 'Roberto Flores',   email: 'ventas@techmax.sv',          phone: '2201-1234', paymentTerms: 30 },
+    { businessId: BIZ_ID, companyName: 'Alimentos del Valle',      contactName: 'Patricia Morales', email: 'ventas@alimentosvalle.sv',   phone: '2202-2345', paymentTerms: 15 },
+    { businessId: BIZ_ID, companyName: 'Productos de Limpieza SA', contactName: 'Fernando Rivas',   email: 'pedidos@limpieza-sa.sv',     phone: '2203-3456', paymentTerms: 30 },
+    { businessId: BIZ_ID, companyName: 'Papelera Nacional',        contactName: 'Claudia Mejía',    email: 'ventas@papeleranacional.sv', phone: '2204-4567', paymentTerms: 45 },
+    { businessId: BIZ_ID, companyName: 'Ferretería Industrial',    contactName: 'Miguel Castillo',  email: 'compras@ferrindustrial.sv',  phone: '2205-5678', paymentTerms: 30 },
   ]
 
   const insertedSuppliers: any[] = []
   for (const sd of supplierDefs) {
-    const row = await tryInsertOne(() => db.insert(supplier).output().values(sd as any))
+    const row = await tryInsertOne(() => db.insert(supplier).values(sd as any).returning())
     if (row) insertedSuppliers.push(row)
   }
   console.log(`  + ${insertedSuppliers.length} suppliers`)
@@ -434,7 +433,7 @@ async function main() {
         : undefined
 
       const insertedSale = await tryInsertOne(() =>
-        db.insert(sale).output().values({
+        db.insert(sale).values({
           businessId: BIZ_ID,
           customerId: selectedCustomer.id,
           documentTypeId: docFAC!.id,
@@ -449,38 +448,38 @@ async function main() {
           discountAmount: money(totalDiscount),
           total: money(grandTotal),
           createdBy: adminUserId!,
-        } as any)
+        } as any).returning()
       )
       if (!insertedSale) continue
 
       const insertedLines: any[] = []
       for (const l of lines) {
         const sl = await tryInsertOne(() =>
-          db.insert(saleLine).output().values({ ...l, saleId: (insertedSale as any).id } as any)
+          db.insert(saleLine).values({ ...l, saleId: (insertedSale as any).id } as any).returning()
         )
         if (sl) insertedLines.push(sl)
       }
 
       for (let i = 0; i < insertedLines.length; i++) {
         await tryInsertOne(() =>
-          db.insert(saleLineTax).output().values({
+          db.insert(saleLineTax).values({
             saleLineId: insertedLines[i].id,
             taxId: ivaTax!.id,
             taxBase: money(lines[i]!.lineTotal - lines[i]!.taxAmount),
             taxAmount: money(lines[i]!.taxAmount),
-          } as any)
+          } as any).returning()
         )
       }
 
       if (paymentStatus === 'paid') {
         const pm = pick([pmCash!, pmCard!, pmTransfer!])
         await tryInsertOne(() =>
-          db.insert(salePayment).output().values({
+          db.insert(salePayment).values({
             saleId: (insertedSale as any).id,
             paymentMethodId: pm.id,
             amount: money(grandTotal),
             paymentDate: saleDate,
-          } as any)
+          } as any).returning()
         )
       }
 
@@ -490,7 +489,7 @@ async function main() {
         const balance = arStatus === 'paid' ? 0 : money(grandTotal)
 
         const ar = await tryInsertOne(() =>
-          db.insert(accountReceivable).output().values({
+          db.insert(accountReceivable).values({
             businessId: BIZ_ID,
             customerId: selectedCustomer.id,
             saleId: (insertedSale as any).id,
@@ -498,12 +497,12 @@ async function main() {
             balance,
             dueDate: dueDate!,
             status: arStatus,
-          } as any)
+          } as any).returning()
         )
 
         if (ar && arStatus === 'paid') {
           await tryInsertOne(() =>
-            db.insert(collectionPayment).output().values({
+            db.insert(collectionPayment).values({
               businessId: BIZ_ID,
               accountReceivableId: (ar as any).id,
               paymentMethodId: pmTransfer!.id,
@@ -511,7 +510,7 @@ async function main() {
               amount: money(grandTotal),
               paymentDate: format(subDays(today, Math.max(0, dayOffset - selectedCustomer.creditDays)), 'yyyy-MM-dd'),
               collectedBy: adminUserId!,
-            } as any)
+            } as any).returning()
           )
         }
       }
@@ -559,7 +558,7 @@ async function main() {
     const poTotal = poSubtotal + poTax
 
     const po = await tryInsertOne(() =>
-      db.insert(purchaseOrder).output().values({
+      db.insert(purchaseOrder).values({
         businessId: BIZ_ID,
         supplierId: sup.id,
         warehouseId: wh1.id,
@@ -570,31 +569,31 @@ async function main() {
         taxAmount: money(poTax),
         total: money(poTotal),
         createdBy: adminUserId!,
-      } as any)
+      } as any).returning()
     )
     if (!po) continue
 
     for (const l of poLines) {
       await tryInsertOne(() =>
-        db.insert(purchaseOrderLine).output().values({ ...l, purchaseOrderId: (po as any).id } as any)
+        db.insert(purchaseOrderLine).values({ ...l, purchaseOrderId: (po as any).id } as any).returning()
       )
     }
 
     const receiptNumber = `REC-C-2026-${String(i + 1).padStart(6, '0')}`
     await tryInsertOne(() =>
-      db.insert(goodsReceipt).output().values({
+      db.insert(goodsReceipt).values({
         purchaseOrderId: (po as any).id,
         receiptNumber,
         receiptDate: orderDate,
         receivedBy: adminUserId!,
-      } as any)
+      } as any).returning()
     )
 
     const apDueDate = format(subDays(today, randomBetween(-10, 5)), 'yyyy-MM-dd')
     const apStatus = Math.random() < 0.4 ? 'paid' : 'pending'
 
     await tryInsertOne(() =>
-      db.insert(accountPayable).output().values({
+      db.insert(accountPayable).values({
         businessId: BIZ_ID,
         supplierId: sup.id,
         purchaseOrderId: (po as any).id,
@@ -602,12 +601,11 @@ async function main() {
         balance: apStatus === 'paid' ? 0 : money(poTotal),
         dueDate: apDueDate,
         status: apStatus,
-      } as any)
+      } as any).returning()
     )
   }
 
   console.log(`  + ${insertedSuppliers.length} purchase orders with goods receipts`)
-
   console.log('\nSeed completed!')
 }
 
@@ -616,6 +614,6 @@ main()
     console.error('Seed error:', e)
     process.exit(1)
   })
-  .finally(() => {
-    pool.close()
+  .finally(async () => {
+    await client.end()
   })

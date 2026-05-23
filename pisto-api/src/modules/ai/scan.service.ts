@@ -1,4 +1,4 @@
-import { client, AI_MODEL } from './ai-client'
+import { client, getAiModel } from './ai-client'
 import { db } from '../../config/database'
 import { expenseCategory } from '../../db/schema'
 import { eq } from 'drizzle-orm'
@@ -32,7 +32,7 @@ export async function scanReceipt(
   }
 
   const response = await client.chat.completions.create({
-    model: AI_MODEL,
+    model: getAiModel(),
     max_tokens: 2048,
     messages: [
       {
@@ -93,7 +93,7 @@ export async function categorizeExpense(
   const vendorPart = vendor ? ` de ${vendor}` : ''
 
   const response = await client.chat.completions.create({
-    model: AI_MODEL,
+    model: getAiModel(),
     max_tokens: 256,
     messages: [
       {

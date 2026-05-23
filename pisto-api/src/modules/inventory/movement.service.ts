@@ -3,6 +3,20 @@ import { db } from '../../config/database'
 import { inventoryMovement, productStock, product } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
 
+export async function listMovements(businessId: string, limit = 100) {
+  return db.select({
+    movement: inventoryMovement,
+    productName: product.name,
+    sku: product.sku,
+  })
+    .from(inventoryMovement)
+    .leftJoin(product, eq(inventoryMovement.productId, product.id))
+    .where(eq(product.businessId, businessId))
+    .orderBy(desc(inventoryMovement.createdAt))
+    .offset(0)
+    .limit(limit)
+}
+
 export async function getProductMovements(productId: string, businessId: string, limit = 50) {
   const [p] = await db.select({ id: product.id }).from(product)
     .where(and(eq(product.id, productId), eq(product.businessId, businessId)))
@@ -12,7 +26,7 @@ export async function getProductMovements(productId: string, businessId: string,
     .where(eq(inventoryMovement.productId, productId))
     .orderBy(desc(inventoryMovement.createdAt))
     .offset(0)
-    .fetch(limit)
+    .limit(limit)
 }
 
 export async function createAdjustment(
@@ -36,7 +50,6 @@ export async function createAdjustment(
 
   return db.transaction(async (tx) => {
     const [movement] = await tx.insert(inventoryMovement)
-      .output()
       .values({
         productId: data.productId,
         warehouseId: data.warehouseId,
@@ -46,6 +59,7 @@ export async function createAdjustment(
         notes: data.notes,
         createdBy: userId,
       } as any)
+      .returning()
 
     await upsertStock(tx, data.productId, data.warehouseId, delta)
 

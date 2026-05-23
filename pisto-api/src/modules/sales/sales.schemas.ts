@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { intParam } from '../../shared/schemas/pagination'
 
 export const createCustomerSchema = v.object({
   customerType: v.optional(v.picklist(['person', 'company']), 'person'),
@@ -44,6 +45,12 @@ export const createSaleSchema = v.object({
     amount: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
     reference: v.optional(v.string()),
   }))),
+})
+
+export const invoiceQuerySchema = v.object({
+  page: intParam(1, 10000),
+  limit: intParam(1, 200),
+  customerId: v.optional(v.pipe(v.string(), v.uuid())),
 })
 
 export const creditNoteSchema = v.object({

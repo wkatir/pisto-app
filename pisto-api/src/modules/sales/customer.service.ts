@@ -26,7 +26,7 @@ export async function listCustomers(businessId: string, query: { page: number; l
   const where = and(...conditions)
 
   const [items, [total]] = await Promise.all([
-    db.select().from(customer).where(where).orderBy(customer.createdAt).offset(offset).fetch(limit),
+    db.select().from(customer).where(where).orderBy(customer.createdAt).offset(offset).limit(limit),
     db.select({ count: count() }).from(customer).where(where),
   ])
 
@@ -42,8 +42,8 @@ export async function getCustomer(businessId: string, id: string) {
 
 export async function createCustomer(businessId: string, data: CustomerInsert) {
   const [c] = await db.insert(customer)
-    .output()
     .values({ businessId, ...data })
+    .returning()
   return c
 }
 
@@ -51,7 +51,6 @@ export async function updateCustomer(businessId: string, id: string, data: Custo
   const [updated] = await db.update(customer)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(customer.id, id), eq(customer.businessId, businessId)))
-    .output()
   if (!updated) throw new AppError(404, 'Cliente no encontrado')
   return updated
 }

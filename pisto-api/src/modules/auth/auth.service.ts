@@ -1,10 +1,41 @@
 import { sign, verify } from 'hono/jwt'
 import { eq, and, isNull } from 'drizzle-orm'
-import { createHash } from 'crypto'
+import { createHash, randomUUID } from 'crypto'
 import { db } from '../../config/database'
 import { appUser, business, role, userRole, refreshToken } from '../../db/schema'
 import { env } from '../../config/env'
 import { AppError } from '../../shared/errors/app-error'
+
+// Hash de password con PBKDF2 (WebCrypto, compatible con Cloudflare Workers)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${saltHex}:${hashHex}`;
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const [saltHex, hashHex] = stored.split(':');
+  const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits']
+  );
+  const hash = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 256
+  );
+  const newHashHex = Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex === newHashHex;
+}
 
 export async function loginUser(email: string, password: string) {
   const rows = await db
@@ -26,7 +57,7 @@ export async function loginUser(email: string, password: string) {
   const first = rows[0]
   if (!first || !first.isActive) throw new AppError(401, 'Credenciales inválidas')
 
-  const isValid = await Bun.password.verify(password, first.passwordHash)
+  const isValid = await verifyPassword(password, first.passwordHash)
   if (!isValid) throw new AppError(401, 'Credenciales inválidas')
 
   const roles = rows.map((r) => r.roleName).filter((n): n is string => Boolean(n))
@@ -49,19 +80,18 @@ export async function registerUser(data: {
 
   if (existing.length > 0) throw new AppError(409, 'Email ya registrado')
 
-  const passwordHash = await Bun.password.hash(data.password)
+  const passwordHash = await hashPassword(data.password)
 
   const result = await db.transaction(async (tx) => {
     const [newBusiness] = await tx.insert(business)
-      .output()
       .values({ name: data.businessName })
+      .returning()
 
     const [newRole] = await tx.insert(role)
-      .output()
       .values({ businessId: newBusiness!.id, name: 'admin', description: 'Administrador' })
+      .returning()
 
     const [newUser] = await tx.insert(appUser)
-      .output()
       .values({
         businessId: newBusiness!.id,
         email: data.email,
@@ -70,8 +100,9 @@ export async function registerUser(data: {
         lastName: data.lastName,
         phone: data.phone,
       })
+      .returning()
 
-    await tx.insert(userRole).values({ userId: newUser!.id, roleId: newRole!.id })
+    await tx.insert(userRole).values({ id: randomUUID(), userId: newUser!.id, roleId: newRole!.id })
 
     return { user: newUser!, business: newBusiness! }
   })
@@ -188,10 +219,10 @@ export async function changePassword(userId: string, currentPassword: string, ne
   const user = rows[0]
   if (!user) throw new AppError(404, 'Usuario no encontrado')
 
-  const ok = await Bun.password.verify(currentPassword, user.passwordHash)
+  const ok = await verifyPassword(currentPassword, user.passwordHash)
   if (!ok) throw new AppError(401, 'Contraseña actual incorrecta')
 
-  const passwordHash = await Bun.password.hash(newPassword)
+  const passwordHash = await hashPassword(newPassword)
   await db.update(appUser).set({ passwordHash }).where(eq(appUser.id, userId))
   return { success: true }
 }
@@ -213,7 +244,7 @@ async function generateTokens(userId: string, businessId: string, roles: string[
     env.JWT_ACCESS_SECRET,
   )
   const refreshTokenVal = await sign(
-    { sub: userId, exp: now + REFRESH_TTL },
+    { sub: userId, exp: now + REFRESH_TTL, jti: randomUUID() },
     env.JWT_REFRESH_SECRET,
   )
 
@@ -227,7 +258,8 @@ function hashToken(token: string): string {
 async function createRefreshToken(userId: string, token: string) {
   const expiresAt = new Date()
   expiresAt.setDate(expiresAt.getDate() + 7)
-  await db.insert(refreshToken).values({ userId, tokenHash: hashToken(token), expiresAt })
+  const id = randomUUID()
+  await db.insert(refreshToken).values({ id, userId, tokenHash: hashToken(token), expiresAt })
 }
 
 async function revokeRefreshToken(token: string) {

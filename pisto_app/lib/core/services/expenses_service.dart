@@ -50,10 +50,10 @@ class ExpensesService {
     await _api.dio.delete('/expenses/$id');
   }
 
-  Future<Map<String, dynamic>> getSummary({String? startDate, String? endDate}) async {
+  Future<Map<String, dynamic>> getSummary({String? from, String? to}) async {
     final params = <String, String>{};
-    if (startDate != null) params['startDate'] = startDate;
-    if (endDate != null) params['endDate'] = endDate;
+    if (from != null) params['from'] = from;
+    if (to != null) params['to'] = to;
     final resp = await _api.dio.get('/expenses/summary', queryParameters: params.isEmpty ? null : params);
     return (resp.data['data'] as Map<String, dynamic>?) ?? {'total': '0.00', 'count': 0};
   }

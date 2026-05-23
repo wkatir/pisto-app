@@ -23,6 +23,7 @@ tsc_errors*.txt
 .env
 .env.local
 .env.*.local
+.dev.vars
 
 # Caches
 .eslintcache

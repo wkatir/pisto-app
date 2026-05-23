@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
@@ -48,7 +49,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.parseError(e))),
+        );
+      }
     }
   }
 

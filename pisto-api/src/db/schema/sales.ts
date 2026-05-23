@@ -1,46 +1,46 @@
-import { mssqlTable, varchar, nvarchar, bit, datetimeOffset, int, decimal, date, uniqueIndex, index } from 'drizzle-orm/mssql-core'
+import { pgTable, varchar, text, boolean, timestamp, numeric, integer, date, uniqueIndex, index } from 'drizzle-orm/pg-core'
 import { randomUUID } from 'crypto'
 import { business, appUser, documentType, paymentMethod, tax } from './core'
 import { product, warehouse } from './inventory'
 
-export const customer = mssqlTable('customer', {
+export const customer = pgTable('customer', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   businessId: varchar('business_id', { length: 36 }).notNull().references(() => business.id),
-  customerType: nvarchar('customer_type', { length: 10 }).default('person').notNull(),
-  firstName: nvarchar('first_name', { length: 80 }),
-  lastName: nvarchar('last_name', { length: 80 }),
-  companyName: nvarchar('company_name', { length: 150 }),
-  taxId: nvarchar('tax_id', { length: 20 }),
-  taxReg: nvarchar('tax_reg', { length: 20 }),
-  email: nvarchar('email', { length: 150 }),
-  phone: nvarchar('phone', { length: 20 }),
-  address: nvarchar('address', { length: 'max' }),
-  creditLimit: decimal('credit_limit', { precision: 12, scale: 2 }).default(0).notNull(),
-  creditDays: int('credit_days').default(0).notNull(),
-  isActive: bit('is_active').default(true).notNull(),
-  createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
-  updatedAt: datetimeOffset('updated_at').$defaultFn(() => new Date()).notNull(),
+  customerType: varchar('customer_type', { length: 10 }).default('person').notNull(),
+  firstName: varchar('first_name', { length: 80 }),
+  lastName: varchar('last_name', { length: 80 }),
+  companyName: varchar('company_name', { length: 150 }),
+  taxId: varchar('tax_id', { length: 20 }),
+  taxReg: varchar('tax_reg', { length: 20 }),
+  email: varchar('email', { length: 150 }),
+  phone: varchar('phone', { length: 20 }),
+  address: text('address'),
+  creditLimit: numeric('credit_limit', { precision: 12, scale: 2 }).default(0).notNull(),
+  creditDays: integer('credit_days').default(0).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at').$defaultFn(() => new Date()).notNull(),
+  updatedAt: timestamp('updated_at').$defaultFn(() => new Date()).notNull(),
 })
 
-export const sale = mssqlTable('sale', {
+export const sale = pgTable('sale', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   businessId: varchar('business_id', { length: 36 }).notNull().references(() => business.id),
   customerId: varchar('customer_id', { length: 36 }).references(() => customer.id),
   documentTypeId: varchar('document_type_id', { length: 36 }).notNull().references(() => documentType.id),
   warehouseId: varchar('warehouse_id', { length: 36 }).notNull().references(() => warehouse.id),
-  saleNumber: nvarchar('sale_number', { length: 30 }).notNull(),
+  saleNumber: varchar('sale_number', { length: 30 }).notNull(),
   saleDate: date('sale_date').$defaultFn(() => new Date()).notNull(),
   dueDate: date('due_date'),
-  status: nvarchar('status', { length: 20 }).default('completed').notNull(),
-  paymentStatus: nvarchar('payment_status', { length: 20 }).default('paid').notNull(),
-  subtotal: decimal('subtotal', { precision: 12, scale: 2 }).default(0).notNull(),
-  taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }).default(0).notNull(),
-  discountAmount: decimal('discount_amount', { precision: 12, scale: 2 }).default(0).notNull(),
-  total: decimal('total', { precision: 12, scale: 2 }).default(0).notNull(),
-  notes: nvarchar('notes', { length: 'max' }),
+  status: varchar('status', { length: 20 }).default('completed').notNull(),
+  paymentStatus: varchar('payment_status', { length: 20 }).default('paid').notNull(),
+  subtotal: numeric('subtotal', { precision: 12, scale: 2 }).default(0).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 12, scale: 2 }).default(0).notNull(),
+  discountAmount: numeric('discount_amount', { precision: 12, scale: 2 }).default(0).notNull(),
+  total: numeric('total', { precision: 12, scale: 2 }).default(0).notNull(),
+  notes: text('notes'),
   createdBy: varchar('created_by', { length: 36 }).references(() => appUser.id),
-  createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
-  cancelledAt: datetimeOffset('cancelled_at'),
+  createdAt: timestamp('created_at').$defaultFn(() => new Date()).notNull(),
+  cancelledAt: timestamp('cancelled_at'),
   cancelledBy: varchar('cancelled_by', { length: 36 }).references(() => appUser.id),
 }, (t) => [
   uniqueIndex('sale_business_number_idx').on(t.businessId, t.saleNumber),
@@ -49,56 +49,56 @@ export const sale = mssqlTable('sale', {
   index('sale_payment_status_idx').on(t.businessId, t.paymentStatus),
 ])
 
-export const saleLine = mssqlTable('sale_line', {
+export const saleLine = pgTable('sale_line', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   saleId: varchar('sale_id', { length: 36 }).notNull().references(() => sale.id, { onDelete: 'cascade' }),
   productId: varchar('product_id', { length: 36 }).notNull().references(() => product.id),
-  quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
-  unitPrice: decimal('unit_price', { precision: 12, scale: 2 }).notNull(),
-  discountPct: decimal('discount_pct', { precision: 5, scale: 2 }).default(0).notNull(),
-  discountAmount: decimal('discount_amount', { precision: 12, scale: 2 }).default(0).notNull(),
+  quantity: numeric('quantity', { precision: 12, scale: 2 }).notNull(),
+  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull(),
+  discountPct: numeric('discount_pct', { precision: 5, scale: 2 }).default(0).notNull(),
+  discountAmount: numeric('discount_amount', { precision: 12, scale: 2 }).default(0).notNull(),
   taxId: varchar('tax_id', { length: 36 }).references(() => tax.id),
-  taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }).default(0).notNull(),
-  lineTotal: decimal('line_total', { precision: 12, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 12, scale: 2 }).default(0).notNull(),
+  lineTotal: numeric('line_total', { precision: 12, scale: 2 }).notNull(),
 })
 
-export const saleLineTax = mssqlTable('sale_line_tax', {
+export const saleLineTax = pgTable('sale_line_tax', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   saleLineId: varchar('sale_line_id', { length: 36 }).notNull().references(() => saleLine.id, { onDelete: 'cascade' }),
   taxId: varchar('tax_id', { length: 36 }).notNull().references(() => tax.id),
-  taxBase: decimal('tax_base', { precision: 12, scale: 2 }).notNull(),
-  taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }).notNull(),
+  taxBase: numeric('tax_base', { precision: 12, scale: 2 }).notNull(),
+  taxAmount: numeric('tax_amount', { precision: 12, scale: 2 }).notNull(),
 })
 
-export const salePayment = mssqlTable('sale_payment', {
+export const salePayment = pgTable('sale_payment', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   saleId: varchar('sale_id', { length: 36 }).notNull().references(() => sale.id, { onDelete: 'cascade' }),
   paymentMethodId: varchar('payment_method_id', { length: 36 }).notNull().references(() => paymentMethod.id),
-  amount: decimal('amount', { precision: 12, scale: 2 }).notNull(),
-  reference: nvarchar('reference', { length: 100 }),
+  amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
+  reference: varchar('reference', { length: 100 }),
   paymentDate: date('payment_date').$defaultFn(() => new Date()).notNull(),
 })
 
-export const creditNote = mssqlTable('credit_note', {
+export const creditNote = pgTable('credit_note', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   businessId: varchar('business_id', { length: 36 }).notNull().references(() => business.id),
   saleId: varchar('sale_id', { length: 36 }).notNull().references(() => sale.id),
   customerId: varchar('customer_id', { length: 36 }).notNull().references(() => customer.id),
-  noteNumber: nvarchar('note_number', { length: 30 }).notNull(),
-  reason: nvarchar('reason', { length: 'max' }).notNull(),
-  total: decimal('total', { precision: 12, scale: 2 }).notNull(),
-  status: nvarchar('status', { length: 20 }).default('active').notNull(),
+  noteNumber: varchar('note_number', { length: 30 }).notNull(),
+  reason: text('reason').notNull(),
+  total: numeric('total', { precision: 12, scale: 2 }).notNull(),
+  status: varchar('status', { length: 20 }).default('active').notNull(),
   createdBy: varchar('created_by', { length: 36 }).references(() => appUser.id),
-  createdAt: datetimeOffset('created_at').$defaultFn(() => new Date()).notNull(),
+  createdAt: timestamp('created_at').$defaultFn(() => new Date()).notNull(),
 }, (t) => [
   uniqueIndex('credit_note_business_number_idx').on(t.businessId, t.noteNumber),
 ])
 
-export const creditNoteLine = mssqlTable('credit_note_line', {
+export const creditNoteLine = pgTable('credit_note_line', {
   id: varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID()),
   creditNoteId: varchar('credit_note_id', { length: 36 }).notNull().references(() => creditNote.id, { onDelete: 'cascade' }),
   productId: varchar('product_id', { length: 36 }).notNull().references(() => product.id),
-  quantity: decimal('quantity', { precision: 12, scale: 2 }).notNull(),
-  unitPrice: decimal('unit_price', { precision: 12, scale: 2 }).notNull(),
-  lineTotal: decimal('line_total', { precision: 12, scale: 2 }).notNull(),
+  quantity: numeric('quantity', { precision: 12, scale: 2 }).notNull(),
+  unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull(),
+  lineTotal: numeric('line_total', { precision: 12, scale: 2 }).notNull(),
 })

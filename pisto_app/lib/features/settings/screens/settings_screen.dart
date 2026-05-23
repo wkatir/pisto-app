@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/services/uploads_service.dart';
@@ -66,7 +67,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.parseError(e))),
+        );
+      }
     }
   }
 
@@ -88,7 +94,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text(ApiClient.parseError(e))),
         );
       }
     }

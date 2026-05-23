@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
 import { eq, and } from 'drizzle-orm'
-import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, createSaleSchema, creditNoteSchema } from './sales.schemas'
+import { createCustomerSchema, updateCustomerSchema, customerQuerySchema, createSaleSchema, creditNoteSchema, invoiceQuerySchema } from './sales.schemas'
 import * as customerService from './customer.service'
 import * as invoiceService from './invoice.service'
 import * as creditNoteService from './credit-note.service'
@@ -41,10 +41,10 @@ sales.put('/customers/:id', vValidator('json', updateCustomerSchema), async (c) 
   return c.json(customer)
 })
 
-sales.get('/invoices', vValidator('query', paginationQuerySchema), async (c) => {
+sales.get('/invoices', vValidator('query', invoiceQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const { page = 1, limit = 20 } = c.req.valid('query')
-  const result = await invoiceService.listSales(businessId, page, limit)
+  const { page = 1, limit = 20, customerId } = c.req.valid('query')
+  const result = await invoiceService.listSales(businessId, page, limit, customerId)
   return c.json(result)
 })
 

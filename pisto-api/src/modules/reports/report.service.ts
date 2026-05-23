@@ -3,7 +3,7 @@ import { db } from '../../config/database'
 
 async function execRows<T = Record<string, unknown>>(query: Parameters<typeof db.execute>[0]): Promise<T[]> {
   const result = await db.execute(query)
-  return ((result as any).recordset ?? result) as T[]
+  return result as unknown as T[]
 }
 
 export async function getSalesSummary(businessId: string, from?: string, to?: string) {
@@ -13,10 +13,10 @@ export async function getSalesSummary(businessId: string, from?: string, to?: st
   const rows = await execRows(sql`
     SELECT
       CAST(COUNT(*) AS INT) AS total_sales,
-      CAST(COALESCE(SUM(total), 0) AS NVARCHAR(50)) AS total_revenue,
-      CAST(COALESCE(SUM(tax_amount), 0) AS NVARCHAR(50)) AS total_tax,
-      CAST(COALESCE(SUM(discount_amount), 0) AS NVARCHAR(50)) AS total_discount,
-      CAST(COALESCE(AVG(total), 0) AS NVARCHAR(50)) AS avg_sale
+      CAST(COALESCE(SUM(total), 0) AS TEXT) AS total_revenue,
+      CAST(COALESCE(SUM(tax_amount), 0) AS TEXT) AS total_tax,
+      CAST(COALESCE(SUM(discount_amount), 0) AS TEXT) AS total_discount,
+      CAST(COALESCE(AVG(total), 0) AS TEXT) AS avg_sale
     FROM sale
     WHERE business_id = ${businessId}
       AND status != 'cancelled'
@@ -31,10 +31,10 @@ export async function getTopProducts(businessId: string, limit = 10, from?: stri
   const toDate = to || new Date().toISOString().split('T')[0]
 
   return execRows(sql`
-    SELECT TOP (${limit})
+    SELECT
       p.id, p.name, p.sku,
-      CAST(SUM(sl.quantity) AS NVARCHAR(50)) AS total_quantity,
-      CAST(SUM(sl.line_total) AS NVARCHAR(50)) AS total_revenue
+      CAST(SUM(sl.quantity) AS TEXT) AS total_quantity,
+      CAST(SUM(sl.line_total) AS TEXT) AS total_revenue
     FROM sale_line sl
     JOIN sale s ON s.id = sl.sale_id
     JOIN product p ON p.id = sl.product_id
@@ -44,6 +44,7 @@ export async function getTopProducts(businessId: string, limit = 10, from?: stri
       AND s.sale_date <= ${toDate}
     GROUP BY p.id, p.name, p.sku
     ORDER BY SUM(sl.line_total) DESC
+    LIMIT ${limit}
   `)
 }
 
@@ -51,11 +52,11 @@ export async function getInventoryValuation(businessId: string) {
   return execRows(sql`
     SELECT
       p.id, p.name, p.sku, p.cost_price,
-      CAST(COALESCE(SUM(ps.quantity), 0) AS NVARCHAR(50)) AS total_stock,
-      CAST(COALESCE(SUM(ps.quantity), 0) * p.cost_price AS NVARCHAR(50)) AS valuation
+      CAST(COALESCE(SUM(ps.quantity), 0) AS TEXT) AS total_stock,
+      CAST(COALESCE(SUM(ps.quantity), 0) * p.cost_price AS TEXT) AS valuation
     FROM product p
     LEFT JOIN product_stock ps ON ps.product_id = p.id
-    WHERE p.business_id = ${businessId} AND p.is_active = 1
+    WHERE p.business_id = ${businessId} AND p.is_active = true
     GROUP BY p.id, p.name, p.sku, p.cost_price
     HAVING COALESCE(SUM(ps.quantity), 0) > 0
     ORDER BY COALESCE(SUM(ps.quantity), 0) * p.cost_price DESC
@@ -65,9 +66,9 @@ export async function getInventoryValuation(businessId: string) {
 export async function getReceivablesAging(businessId: string) {
   return execRows(sql`
     SELECT
-      COALESCE(c.company_name, c.first_name + ' ' + c.last_name) AS customer_name,
+      COALESCE(c.company_name, c.first_name || ' ' || c.last_name) AS customer_name,
       CAST(COUNT(*) AS INT) AS open_invoices,
-      CAST(SUM(ar.balance) AS NVARCHAR(50)) AS total_balance,
+      CAST(SUM(ar.balance) AS TEXT) AS total_balance,
       MIN(ar.due_date) AS oldest_due
     FROM account_receivable ar
     JOIN customer c ON c.id = ar.customer_id
@@ -85,7 +86,7 @@ export async function getPurchasesBySupplier(businessId: string, from?: string, 
     SELECT
       s.id AS supplier_id, s.company_name,
       CAST(COUNT(*) AS INT) AS total_orders,
-      CAST(SUM(po.total) AS NVARCHAR(50)) AS total_amount
+      CAST(SUM(po.total) AS TEXT) AS total_amount
     FROM purchase_order po
     JOIN supplier s ON s.id = po.supplier_id
     WHERE po.business_id = ${businessId}
@@ -103,14 +104,14 @@ export async function getGrossProfit(businessId: string, from?: string, to?: str
 
   const rows = await execRows(sql`
     SELECT
-      CAST(SUM(sl.line_total) AS NVARCHAR(50)) AS revenue,
-      CAST(SUM(sl.quantity * p.cost_price) AS NVARCHAR(50)) AS cost,
-      CAST(SUM(sl.line_total) - SUM(sl.quantity * p.cost_price) AS NVARCHAR(50)) AS gross_profit,
+      CAST(SUM(sl.line_total) AS TEXT) AS revenue,
+      CAST(SUM(sl.quantity * p.cost_price) AS TEXT) AS cost,
+      CAST(SUM(sl.line_total) - SUM(sl.quantity * p.cost_price) AS TEXT) AS gross_profit,
       CAST(
         CASE WHEN SUM(sl.line_total) > 0
           THEN (SUM(sl.line_total) - SUM(sl.quantity * p.cost_price)) / SUM(sl.line_total) * 100
           ELSE 0
-        END AS NVARCHAR(50)
+        END AS TEXT
       ) AS margin_pct
     FROM sale_line sl
     JOIN sale s ON s.id = sl.sale_id
@@ -139,9 +140,9 @@ export async function getSalesTrend(businessId: string, days = 30, startDate?: s
 
   return execRows(sql`
     SELECT
-      CAST(sale_date AS NVARCHAR(10)) AS date,
+      TO_CHAR(sale_date, 'YYYY-MM-DD') AS date,
       CAST(COUNT(*) AS INT) AS count,
-      CAST(COALESCE(SUM(total), 0) AS NVARCHAR(50)) AS revenue
+      CAST(COALESCE(SUM(total), 0) AS TEXT) AS revenue
     FROM sale
     WHERE business_id = ${businessId}
       AND status != 'cancelled'
@@ -156,7 +157,7 @@ export async function getSalesByCategory(businessId: string) {
   return execRows(sql`
     SELECT
       COALESCE(pc.name, 'Sin categoría') AS category,
-      CAST(SUM(sl.line_total) AS NVARCHAR(50)) AS revenue
+      CAST(SUM(sl.line_total) AS TEXT) AS revenue
     FROM sale_line sl
     JOIN sale s ON s.id = sl.sale_id
     JOIN product p ON p.id = sl.product_id
@@ -176,7 +177,7 @@ export async function getDashboardKPIs(businessId: string, startDate?: string, e
     execRows(sql`
       SELECT
         CAST(COUNT(*) AS INT) AS sales_count,
-        CAST(COALESCE(SUM(total), 0) AS NVARCHAR(50)) AS revenue
+        CAST(COALESCE(SUM(total), 0) AS TEXT) AS revenue
       FROM sale
       WHERE business_id = ${businessId} AND status != 'cancelled'
         AND sale_date >= ${monthStart} AND sale_date <= ${today}
@@ -184,7 +185,7 @@ export async function getDashboardKPIs(businessId: string, startDate?: string, e
     execRows(sql`
       SELECT
         CAST(COUNT(*) AS INT) AS pending_count,
-        CAST(COALESCE(SUM(balance), 0) AS NVARCHAR(50)) AS total_pending
+        CAST(COALESCE(SUM(balance), 0) AS TEXT) AS total_pending
       FROM account_receivable
       WHERE business_id = ${businessId} AND status != 'paid'
     `),
@@ -192,7 +193,7 @@ export async function getDashboardKPIs(businessId: string, startDate?: string, e
       SELECT CAST(COUNT(*) AS INT) AS low_stock_count
       FROM product p
       JOIN product_stock ps ON ps.product_id = p.id
-      WHERE p.business_id = ${businessId} AND p.is_active = 1
+      WHERE p.business_id = ${businessId} AND p.is_active = true
         AND ps.quantity <= p.min_stock AND p.min_stock > 0
     `),
   ])

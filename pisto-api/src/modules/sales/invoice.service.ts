@@ -89,7 +89,6 @@ export async function createSale(
     const paymentStatus = data.paymentStatus || PaymentStatus.PAID
 
     const [newSale] = await tx.insert(sale)
-      .output()
       .values({
         businessId,
         customerId: data.customerId,
@@ -105,10 +104,10 @@ export async function createSale(
         notes: data.notes,
         createdBy: userId,
       } as any)
+      .returning()
 
     for (const line of lineData) {
       const [sl] = await tx.insert(saleLine)
-        .output()
         .values({
           saleId: newSale!.id,
           productId: line.productId,
@@ -120,6 +119,7 @@ export async function createSale(
           taxAmount: line.taxAmount,
           lineTotal: line.lineTotal,
         } as any)
+        .returning()
 
       if (line.taxId) {
         await tx.insert(saleLineTax).values({
@@ -159,14 +159,17 @@ export async function createSale(
   })
 }
 
-export async function listSales(businessId: string, page = 1, limit = 20) {
+export async function listSales(businessId: string, page = 1, limit = 20, customerId?: string) {
   const offset = (page - 1) * limit
+  const whereClause = customerId
+    ? and(eq(sale.businessId, businessId), eq(sale.customerId, customerId))
+    : eq(sale.businessId, businessId)
   const [items, [total]] = await Promise.all([
     db.select().from(sale)
-      .where(eq(sale.businessId, businessId))
+      .where(whereClause)
       .orderBy(desc(sale.createdAt))
-      .offset(offset).fetch(limit),
-    db.select({ count: count() }).from(sale).where(eq(sale.businessId, businessId)),
+      .offset(offset).limit(limit),
+    db.select({ count: count() }).from(sale).where(whereClause),
   ])
   return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
 }

@@ -1,5 +1,5 @@
 import type OpenAI from 'openai'
-import { client, AI_MODEL } from './ai-client'
+import { client, getAiModel } from './ai-client'
 import { sql } from 'drizzle-orm'
 import { db } from '../../config/database'
 
@@ -9,7 +9,7 @@ const SYSTEM_PROMPT = `Eres el asistente financiero de Pisto App. Ayudas a micro
 
 async function execRows<T = Record<string, unknown>>(query: Parameters<typeof db.execute>[0]): Promise<T[]> {
   const result = await db.execute(query)
-  return ((result as any).recordset ?? result) as T[]
+  return result as unknown as T[]
 }
 
 // ── Tool functions ──
@@ -71,8 +71,8 @@ async function queryReceivables(businessId: string) {
     SELECT
       CAST(COUNT(*) AS INT) AS total_accounts,
       CAST(COALESCE(SUM(CAST(balance AS FLOAT)), 0) AS FLOAT) AS total_pending,
-      CAST(COALESCE(SUM(CASE WHEN due_date < CAST(GETDATE() AS DATE) THEN CAST(balance AS FLOAT) ELSE 0 END), 0) AS FLOAT) AS total_overdue,
-      CAST(SUM(CASE WHEN due_date < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS INT) AS overdue_count
+      CAST(COALESCE(SUM(CASE WHEN due_date < CURRENT_DATE THEN CAST(balance AS FLOAT) ELSE 0 END), 0) AS FLOAT) AS total_overdue,
+      CAST(SUM(CASE WHEN due_date < CURRENT_DATE THEN 1 ELSE 0 END) AS INT) AS overdue_count
     FROM account_receivable
     WHERE business_id = ${businessId}
       AND status != 'paid'
@@ -88,11 +88,11 @@ async function queryInventory(businessId: string) {
       CAST(COALESCE(SUM(CAST(ps.quantity AS FLOAT) * CAST(p.cost_price AS FLOAT)), 0) AS FLOAT) AS total_valuation
     FROM product p
     LEFT JOIN product_stock ps ON ps.product_id = p.id
-    WHERE p.business_id = ${businessId} AND p.is_active = 1
+    WHERE p.business_id = ${businessId} AND p.is_active = true
   `)
 
   const lowStock = await execRows(sql`
-    SELECT TOP (10)
+    SELECT
       p.name,
       p.sku,
       CAST(COALESCE(SUM(CAST(ps.quantity AS FLOAT)), 0) AS FLOAT) AS current_stock,
@@ -100,11 +100,12 @@ async function queryInventory(businessId: string) {
     FROM product p
     LEFT JOIN product_stock ps ON ps.product_id = p.id
     WHERE p.business_id = ${businessId}
-      AND p.is_active = 1
-      AND p.is_service = 0
+      AND p.is_active = true
+      AND p.is_service = false
     GROUP BY p.id, p.name, p.sku, p.min_stock
     HAVING COALESCE(SUM(CAST(ps.quantity AS FLOAT)), 0) <= CAST(p.min_stock AS FLOAT)
     ORDER BY COALESCE(SUM(CAST(ps.quantity AS FLOAT)), 0) ASC
+    LIMIT 10
   `)
 
   return { ...summary[0], low_stock_items: lowStock }
@@ -254,7 +255,7 @@ export async function chat(
 
   for (let i = 0; i < 10; i++) {
     const response = await client.chat.completions.create({
-      model: AI_MODEL,
+      model: getAiModel(),
       max_tokens: 1024,
       tools,
       messages,

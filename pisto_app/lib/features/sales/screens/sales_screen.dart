@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../core/providers/service_providers.dart';
@@ -61,7 +62,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
         _loading = false;
       });
     } catch (e) {
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(ApiClient.parseError(e))),
+        );
+      }
     }
   }
 
@@ -369,7 +375,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
       if (mounted) AppToast.success(context, 'Factura anulada correctamente');
       _loadData();
     } catch (e) {
-      if (mounted) AppToast.error(context, 'Error: $e');
+      if (mounted) AppToast.error(context, ApiClient.parseError(e));
     }
   }
 
@@ -420,7 +426,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Crear'),
@@ -588,7 +594,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> with SingleTickerProv
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Guardar'),

@@ -1,11 +1,14 @@
 import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
-import { createSupplierSchema, updateSupplierSchema, createPurchaseOrderSchema, receiveGoodsSchema, supplierPaymentSchema } from './purchases.schemas'
+import { createSupplierSchema, updateSupplierSchema, createSupplierProductSchema, updateSupplierProductSchema, createPurchaseOrderSchema, receiveGoodsSchema, supplierPaymentSchema } from './purchases.schemas'
 import * as supplierService from './supplier.service'
 import * as poService from './purchase-order.service'
 import * as grService from './goods-receipt.service'
 import * as payableService from './payable.service'
 import { paginationQuerySchema } from '../../shared/schemas/pagination'
+import { db } from '../../config/database'
+import { goodsReceipt, purchaseOrder } from '../../db/schema'
+import { eq, desc } from 'drizzle-orm'
 import type { AppEnv } from '../../types/app-env'
 
 const purchases = new Hono<AppEnv>()
@@ -52,17 +55,17 @@ purchases.get('/supplier-products', async (c) => {
   return c.json(products)
 })
 
-purchases.post('/supplier-products', async (c) => {
+purchases.post('/supplier-products', vValidator('json', createSupplierProductSchema), async (c) => {
   const businessId = c.get('businessId')
-  const body = await c.req.json()
+  const body = c.req.valid('json')
   const sp = await supplierService.createSupplierProduct(businessId, body)
   return c.json(sp, 201)
 })
 
-purchases.put('/supplier-products/:id', async (c) => {
+purchases.put('/supplier-products/:id', vValidator('json', updateSupplierProductSchema), async (c) => {
   const businessId = c.get('businessId')
   const id = c.req.param('id')
-  const body = await c.req.json()
+  const body = c.req.valid('json')
   const sp = await supplierService.updateSupplierProduct(businessId, id, body)
   return c.json(sp)
 })
@@ -111,6 +114,23 @@ purchases.post('/orders/:id/receive', vValidator('json', receiveGoodsSchema), as
   const body = c.req.valid('json')
   const receipt = await grService.receiveGoods(businessId, userId, id, body)
   return c.json(receipt, 201)
+})
+
+purchases.get('/receipts', vValidator('query', paginationQuerySchema), async (c) => {
+  const businessId = c.get('businessId')
+  const { page = 1, limit = 20 } = c.req.valid('query')
+  const offset = (page - 1) * limit
+  const receipts = await db.select({
+    receipt: goodsReceipt,
+    orderNumber: purchaseOrder.orderNumber,
+  })
+    .from(goodsReceipt)
+    .leftJoin(purchaseOrder, eq(goodsReceipt.purchaseOrderId, purchaseOrder.id))
+    .where(eq(purchaseOrder.businessId, businessId))
+    .orderBy(desc(goodsReceipt.createdAt))
+    .offset(offset)
+    .limit(limit)
+  return c.json(receipts)
 })
 
 purchases.get('/payables', vValidator('query', paginationQuerySchema), async (c) => {

@@ -70,7 +70,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
       await _processImage(bytes, mime);
     } catch (e) {
       setState(() {
-        _error = 'No se pudo obtener la imagen';
+        _error = 'No se pudo acceder a la imagen. Verifica que la app tenga permisos de cámara/galería.';
         _step = _ScanStep.pick;
       });
     }

@@ -43,7 +43,6 @@ export async function createCreditNote(
     }
 
     const [note] = await tx.insert(creditNote)
-      .output()
       .values({
         businessId,
         saleId,
@@ -53,6 +52,7 @@ export async function createCreditNote(
         total: total.toFixed(2),
         createdBy: userId,
       } as any)
+      .returning()
 
     for (const line of lineData) {
       await tx.insert(creditNoteLine).values({
@@ -89,7 +89,7 @@ export async function listCreditNotes(businessId: string, page = 1, limit = 20) 
     db.select().from(creditNote)
       .where(eq(creditNote.businessId, businessId))
       .orderBy(desc(creditNote.createdAt))
-      .offset(offset).fetch(limit),
+      .offset(offset).limit(limit),
     db.select({ count: count() }).from(creditNote).where(eq(creditNote.businessId, businessId)),
   ])
   return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })

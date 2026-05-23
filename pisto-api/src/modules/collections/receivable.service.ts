@@ -11,7 +11,7 @@ export async function listReceivables(businessId: string, page = 1, limit = 20) 
   const [items, [total]] = await Promise.all([
     db.select({
       receivable: accountReceivable,
-      customerName: sql<string>`COALESCE(${customer.companyName}, ${customer.firstName} + ' ' + ${customer.lastName})`,
+      customerName: sql<string>`COALESCE(${customer.companyName}, ${customer.firstName} || ' ' || ${customer.lastName})`,
       saleNumber: sale.saleNumber,
     })
       .from(accountReceivable)
@@ -19,7 +19,7 @@ export async function listReceivables(businessId: string, page = 1, limit = 20) 
       .leftJoin(sale, eq(accountReceivable.saleId, sale.id))
       .where(where)
       .orderBy(desc(accountReceivable.createdAt))
-      .offset(offset).fetch(limit),
+      .offset(offset).limit(limit),
     db.select({ count: count() }).from(accountReceivable).where(where),
   ])
 
@@ -47,9 +47,9 @@ export async function getAgingReport(businessId: string) {
       SELECT
         CASE
           WHEN due_date >= CAST(${today} AS DATE) THEN 'current'
-          WHEN due_date >= DATEADD(day, -30, CAST(${today} AS DATE)) THEN '1-30'
-          WHEN due_date >= DATEADD(day, -60, CAST(${today} AS DATE)) THEN '31-60'
-          WHEN due_date >= DATEADD(day, -90, CAST(${today} AS DATE)) THEN '61-90'
+          WHEN due_date >= (CAST(${today} AS DATE) - INTERVAL '30 day') THEN '1-30'
+          WHEN due_date >= (CAST(${today} AS DATE) - INTERVAL '60 day') THEN '31-60'
+          WHEN due_date >= (CAST(${today} AS DATE) - INTERVAL '90 day') THEN '61-90'
           ELSE '90+'
         END AS bucket,
         balance
@@ -59,12 +59,12 @@ export async function getAgingReport(businessId: string) {
     SELECT
       bucket AS range,
       CAST(COUNT(*) AS INT) AS count,
-      CAST(COALESCE(SUM(balance), 0) AS NVARCHAR(50)) AS total
+      CAST(COALESCE(SUM(balance), 0) AS TEXT) AS total
     FROM cte
     GROUP BY bucket
     ORDER BY bucket
   `)
-  return (raw as any).recordset ?? raw
+  return raw
 }
 
 export async function getCustomerStatement(businessId: string, customerId: string) {

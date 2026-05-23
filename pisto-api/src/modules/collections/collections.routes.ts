@@ -4,9 +4,30 @@ import { createPaymentSchema } from './collections.schemas'
 import * as receivableService from './receivable.service'
 import * as paymentService from './payment.service'
 import { paginationQuerySchema } from '../../shared/schemas/pagination'
+import { db } from '../../config/database'
+import { collectionPayment } from '../../db/schema'
+import { eq, desc } from 'drizzle-orm'
 import type { AppEnv } from '../../types/app-env'
 
 const collections = new Hono<AppEnv>()
+
+collections.get('/payments', async (c) => {
+  const businessId = c.get('businessId')
+  const limitParam = c.req.query('limit')
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 50, 200) : 50
+  const payments = await db.select().from(collectionPayment)
+    .where(eq(collectionPayment.businessId, businessId))
+    .orderBy(desc(collectionPayment.createdAt))
+    .offset(0)
+    .limit(limit)
+  return c.json(payments)
+})
+
+collections.get('/aging', async (c) => {
+  const businessId = c.get('businessId')
+  const report = await receivableService.getAgingReport(businessId)
+  return c.json(report)
+})
 
 collections.get('/receivables', vValidator('query', paginationQuerySchema), async (c) => {
   const businessId = c.get('businessId')

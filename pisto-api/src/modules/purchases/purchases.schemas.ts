@@ -14,18 +14,15 @@ export const updateSupplierSchema = v.partial(createSupplierSchema)
 
 export const createPurchaseOrderSchema = v.object({
   supplierId: v.pipe(v.string(), v.uuid()),
-  warehouseId: v.pipe(v.string(), v.uuid()),
+  warehouseId: v.optional(v.pipe(v.string(), v.uuid())),
   expectedDate: v.optional(v.string()),
   notes: v.optional(v.string()),
-  lines: v.pipe(
-    v.array(v.object({
-      productId: v.pipe(v.string(), v.uuid()),
-      quantityOrdered: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-      unitCost: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-      taxId: v.optional(v.pipe(v.string(), v.uuid())),
-    })),
-    v.minLength(1, 'Al menos un producto'),
-  ),
+  lines: v.optional(v.array(v.object({
+    productId: v.pipe(v.string(), v.uuid()),
+    quantityOrdered: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+    unitCost: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+    taxId: v.optional(v.pipe(v.string(), v.uuid())),
+  })), []),
 })
 
 export const receiveGoodsSchema = v.object({
@@ -39,6 +36,16 @@ export const receiveGoodsSchema = v.object({
     v.minLength(1),
   ),
 })
+
+export const createSupplierProductSchema = v.object({
+  supplierId: v.pipe(v.string(), v.uuid()),
+  productId: v.pipe(v.string(), v.uuid()),
+  supplierSku: v.optional(v.string()),
+  supplierPrice: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/))),
+  leadTimeDays: v.optional(v.pipe(v.number(), v.integer(), v.minValue(0))),
+})
+
+export const updateSupplierProductSchema = v.partial(createSupplierProductSchema)
 
 export const supplierPaymentSchema = v.object({
   paymentMethodId: v.pipe(v.string(), v.uuid()),

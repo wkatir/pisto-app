@@ -28,3 +28,10 @@ ehthumbs.db
 
 # Kilo Code
 .kilo/
+
+# Deploy runbook (local-only, contiene credenciales/IDs)
+DEPLOY.md
+**/.dev.vars
+
+# Wrangler local cache
+**/.wrangler/

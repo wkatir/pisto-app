@@ -76,7 +76,7 @@ class _ImagePickerFieldState extends ConsumerState<ImagePickerField> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('No se pudo abrir el selector: $e')),
+        SnackBar(content: Text('No se pudo abrir el selector de imagen. Verifica los permisos.')),
       );
       return;
     }

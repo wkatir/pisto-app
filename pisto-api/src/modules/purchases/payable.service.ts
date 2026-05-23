@@ -18,7 +18,7 @@ export async function listPayables(businessId: string, page = 1, limit = 20) {
       .leftJoin(supplier, eq(accountPayable.supplierId, supplier.id))
       .where(where)
       .orderBy(desc(accountPayable.createdAt))
-      .offset(offset).fetch(limit),
+      .offset(offset).limit(limit),
     db.select({ count: count() }).from(accountPayable).where(where),
   ])
 
@@ -44,7 +44,7 @@ export async function createSupplierPayment(
   }
 
   return db.transaction(async (tx) => {
-    const [payment] = await tx.insert(supplierPayment).output().values({
+    const [payment] = await tx.insert(supplierPayment).values({
       businessId,
       accountPayableId: payableId,
       paymentMethodId: data.paymentMethodId,
@@ -52,7 +52,7 @@ export async function createSupplierPayment(
       reference: data.reference,
       notes: data.notes,
       paidBy: userId,
-    } as any)
+    } as any).returning()
 
     const newBalance = currentBalance.minus(payAmount)
     await tx.update(accountPayable).set({

@@ -563,7 +563,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen> with Sing
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Pagar'),

@@ -26,7 +26,7 @@ export async function createCollectionPayment(
   const receiptNumber = await generateCorrelative(businessId, 'REC', 'collection_payment')
 
   return db.transaction(async (tx) => {
-    const [payment] = await tx.insert(collectionPayment).output().values({
+    const [payment] = await tx.insert(collectionPayment).values({
       businessId,
       accountReceivableId: receivableId,
       paymentMethodId: data.paymentMethodId,
@@ -35,7 +35,7 @@ export async function createCollectionPayment(
       reference: data.reference,
       notes: data.notes,
       collectedBy: userId,
-    } as any)
+    } as any).returning()
 
     const newBalance = currentBalance.minus(payAmount)
     await tx.update(accountReceivable).set({

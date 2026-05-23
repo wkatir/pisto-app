@@ -124,14 +124,15 @@ class ForecastResult {
 
   factory ForecastResult.fromJson(Map<String, dynamic> json) {
     return ForecastResult(
-      forecast: (json['forecast'] as List<dynamic>)
+      forecast: ((json['forecast'] as List<dynamic>?) ?? [])
           .map((e) => ForecastDay.fromJson(e as Map<String, dynamic>))
           .toList(),
-      summary:
-          ForecastSummary.fromJson(json['summary'] as Map<String, dynamic>),
-      insights:
-          (json['insights'] as List<dynamic>).map((e) => e as String).toList(),
-      risk: json['risk'] as String,
+      summary: ForecastSummary.fromJson(
+          (json['summary'] as Map<String, dynamic>?) ?? {}),
+      insights: ((json['insights'] as List<dynamic>?) ?? [])
+          .map((e) => e as String)
+          .toList(),
+      risk: json['risk'] as String? ?? 'low',
     );
   }
 }
@@ -170,10 +171,10 @@ class AnomaliesResult {
 
   factory AnomaliesResult.fromJson(Map<String, dynamic> json) {
     return AnomaliesResult(
-      anomalies: (json['anomalies'] as List<dynamic>)
+      anomalies: ((json['anomalies'] as List<dynamic>?) ?? [])
           .map((e) => Anomaly.fromJson(e as Map<String, dynamic>))
           .toList(),
-      summary: json['summary'] as String,
+      summary: json['summary'] as String? ?? '',
     );
   }
 }

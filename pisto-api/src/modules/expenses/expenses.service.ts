@@ -33,7 +33,7 @@ export async function listExpenses(businessId: string, filters: {
   const rows = await db.select().from(expense)
     .where(and(...conditions))
     .orderBy(desc(expense.expenseDate))
-    .offset(offset).fetch(limit)
+    .offset(offset).limit(limit)
 
   return rows
 }

@@ -1,6 +1,6 @@
 import { eq, and, desc, count } from 'drizzle-orm'
 import { db } from '../../config/database'
-import { purchaseOrder, purchaseOrderLine, tax } from '../../db/schema'
+import { purchaseOrder, purchaseOrderLine, tax, warehouse } from '../../db/schema'
 import { generateCorrelative } from '../../shared/utils/correlative'
 import { AppError } from '../../shared/errors/app-error'
 import { paginatedResponse } from '../../shared/utils/pagination'
@@ -14,12 +14,21 @@ export async function createPurchaseOrder(
   businessId: string,
   userId: string,
   data: {
-    supplierId: string; warehouseId: string
+    supplierId: string; warehouseId?: string
     expectedDate?: string; notes?: string
-    lines: POLineInput[]
+    lines?: POLineInput[]
   }
 ) {
   const orderNumber = await generateCorrelative(businessId, 'OC', 'purchase_order')
+
+  let resolvedWarehouseId = data.warehouseId
+  if (!resolvedWarehouseId) {
+    const [firstWh] = await db.select({ id: warehouse.id }).from(warehouse)
+      .where(eq(warehouse.businessId, businessId))
+    if (!firstWh) throw new AppError(400, 'No hay bodegas configuradas para este negocio')
+    resolvedWarehouseId = firstWh.id
+  }
+  const lines = data.lines ?? []
 
   return db.transaction(async (tx) => {
     let subtotal = new Decimal(0)
@@ -30,7 +39,7 @@ export async function createPurchaseOrder(
       taxId?: string; taxAmount: string; lineTotal: string
     }[] = []
 
-    for (const line of data.lines) {
+    for (const line of lines) {
       const qty = new Decimal(line.quantityOrdered)
       const cost = new Decimal(line.unitCost)
       const lineSubtotal = qty.mul(cost)
@@ -57,10 +66,10 @@ export async function createPurchaseOrder(
 
     const total = subtotal.plus(totalTax)
 
-    const [po] = await tx.insert(purchaseOrder).output().values({
+    const [po] = await tx.insert(purchaseOrder).values({
       businessId,
       supplierId: data.supplierId,
-      warehouseId: data.warehouseId,
+      warehouseId: resolvedWarehouseId,
       orderNumber,
       expectedDate: data.expectedDate,
       status: 'approved',
@@ -69,7 +78,7 @@ export async function createPurchaseOrder(
       total: total.toFixed(2),
       notes: data.notes,
       createdBy: userId,
-    } as any)
+    } as any).returning()
 
     for (const line of lineData) {
       await tx.insert(purchaseOrderLine).values({
@@ -93,7 +102,7 @@ export async function listPurchaseOrders(businessId: string, page = 1, limit = 2
     db.select().from(purchaseOrder)
       .where(eq(purchaseOrder.businessId, businessId))
       .orderBy(desc(purchaseOrder.createdAt))
-      .offset(offset).fetch(limit),
+      .offset(offset).limit(limit),
     db.select({ count: count() }).from(purchaseOrder).where(eq(purchaseOrder.businessId, businessId)),
   ])
   return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
@@ -118,7 +127,6 @@ export async function updatePurchaseOrder(businessId: string, id: string, data: 
 
   const [updated] = await db.update(purchaseOrder)
     .set(data as any)
-    .output()
     .where(eq(purchaseOrder.id, id))
   return updated
 }

@@ -58,7 +58,7 @@ export async function listProducts(businessId: string, query: ProductQuery) {
       )
       .orderBy(product.createdAt)
       .offset(offset)
-      .fetch(limit),
+      .limit(limit),
     db.select({ count: count() }).from(product).where(where),
   ])
 
@@ -83,7 +83,7 @@ export async function createProduct(businessId: string, data: {
   minStock?: string; maxStock?: string; isService?: boolean; isTaxable?: boolean
   imageUrl?: string
 }) {
-  const [p] = await db.insert(product).output().values({ businessId, ...data } as any)
+  const [p] = await db.insert(product).values({ businessId, ...data } as any).returning()
   return p
 }
 
@@ -91,7 +91,6 @@ export async function updateProduct(businessId: string, id: string, data: Record
   const [updated] = await db.update(product)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
-    .output()
   if (!updated) throw new AppError(404, 'Producto no encontrado')
   return updated
 }
@@ -100,7 +99,7 @@ export async function deleteProduct(businessId: string, id: string) {
   const [updated] = await db.update(product)
     .set({ isActive: false, updatedAt: new Date() })
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
-    .output()
+    .returning()
   if (!updated) throw new AppError(404, 'Producto no encontrado')
   return updated
 }

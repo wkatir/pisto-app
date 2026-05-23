@@ -1,26 +1,29 @@
-import { drizzle } from 'drizzle-orm/node-mssql'
-import mssql from 'mssql'
+import 'dotenv/config'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import { eq } from 'drizzle-orm'
 import { appUser } from './schema'
 
-const pool = await mssql.connect({
-  server: process.env.DB_SERVER ?? 'localhost',
-  port: Number(process.env.DB_PORT ?? '1433'),
-  database: process.env.DB_NAME ?? 'pisto_app',
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  options: {
-    encrypt: process.env.DB_ENCRYPT !== 'false',
-    trustServerCertificate: process.env.DB_TRUST_SERVER_CERTIFICATE === 'true',
-  },
-})
-const db = drizzle(pool)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(password), 'PBKDF2', false, ['deriveBits'])
+  const hash = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 256)
+  const toHex = (arr: Uint8Array) => Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
+  return `${toHex(salt)}:${toHex(new Uint8Array(hash))}`
+}
+
+const url = process.env.DATABASE_URL_DIRECT
+if (!url) throw new Error('DATABASE_URL_DIRECT no definida en .dev.vars')
+
+const client = postgres(url, { max: 1 })
+const db = drizzle(client)
 
 const email = 'admin@pistoapp.com'
-const newPassword = 'Admin123!'
-const passwordHash = await Bun.password.hash(newPassword)
+const newPassword = 'Pisto2026!'
+const passwordHash = await hashPassword(newPassword)
 
 await db.update(appUser).set({ passwordHash }).where(eq(appUser.email, email))
 console.log(`OK -> ${email} / ${newPassword}`)
-await pool.close()
+await client.end()
 process.exit(0)

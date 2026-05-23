@@ -19,6 +19,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
   List<dynamic> _orders = [];
   List<dynamic> _suppliers = [];
   List<dynamic> _payables = [];
+  List<dynamic> _warehouses = [];
   bool _loading = true;
 
   final _fmt = currencyFmt;
@@ -40,15 +41,18 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
     setState(() => _loading = true);
     try {
       final svc = ref.read(purchasesServiceProvider);
+      final invSvc = ref.read(inventoryServiceProvider);
       final results = await Future.wait([
         svc.listOrders(),
         svc.listSuppliers(),
         svc.listPayables(),
+        invSvc.listWarehouses(),
       ]);
       setState(() {
         _orders = ((results[0] as Map<String, dynamic>)['data'] as List<dynamic>?) ?? [];
         _suppliers = (results[1] as List<dynamic>?) ?? [];
         _payables = ((results[2] as Map<String, dynamic>)['data'] as List<dynamic>?) ?? [];
+        _warehouses = (results[3] as List<dynamic>?) ?? [];
         _loading = false;
       });
     } catch (e) {
@@ -299,7 +303,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Confirmar Recepcion'),
@@ -313,6 +317,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
 
   void _showOrderForm(BuildContext context) {
     String? selectedSupplier;
+    String? selectedWarehouse = _warehouses.isNotEmpty ? _warehouses[0]['id'] as String : null;
     final notesCtrl = TextEditingController();
 
     showDialog(
@@ -334,12 +339,22 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   DropdownButtonFormField<String>(
-                isExpanded: true,
+                    isExpanded: true,
                     initialValue: selectedSupplier,
                     decoration: const InputDecoration(labelText: 'Proveedor', border: OutlineInputBorder()),
                     items: _suppliers.map((s) => DropdownMenuItem(value: s['id'] as String, child: Text(s['companyName'] ?? '', overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) => setDialogState(() => selectedSupplier = v),
                   ),
+                  if (_warehouses.length > 1) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      initialValue: selectedWarehouse,
+                      decoration: const InputDecoration(labelText: 'Bodega', border: OutlineInputBorder()),
+                      items: _warehouses.map((w) => DropdownMenuItem(value: w['id'] as String, child: Text(w['name'] as String? ?? '', overflow: TextOverflow.ellipsis))).toList(),
+                      onChanged: (v) => setDialogState(() => selectedWarehouse = v),
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   TextField(controller: notesCtrl, decoration: const InputDecoration(labelText: 'Notas', border: OutlineInputBorder()), maxLines: 2),
                 ],
@@ -354,12 +369,13 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 try {
                   await ref.read(purchasesServiceProvider).createOrder({
                     'supplierId': selectedSupplier,
+                    if (selectedWarehouse != null) 'warehouseId': selectedWarehouse,
                     if (notesCtrl.text.isNotEmpty) 'notes': notesCtrl.text,
                   });
                   if (ctx.mounted) Navigator.pop(ctx);
                   _loadData();
                 } catch (e) {
-                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
                 }
               },
               child: const Text('Crear'),
@@ -467,7 +483,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Guardar'),
@@ -578,7 +594,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Crear'),
@@ -641,7 +657,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> with SingleTi
                 if (ctx.mounted) Navigator.pop(ctx);
                 _loadData();
               } catch (e) {
-                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text(ApiClient.parseError(e))));
               }
             },
             child: const Text('Pagar'),

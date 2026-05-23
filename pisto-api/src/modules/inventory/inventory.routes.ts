@@ -11,6 +11,7 @@ import * as whService from './warehouse.service'
 import * as prodService from './product.service'
 import * as movService from './movement.service'
 import * as transService from './transfer.service'
+
 import { AppError } from '../../shared/errors/app-error'
 import { unitOfMeasure } from '../../db/schema'
 import { db } from '../../config/database'
@@ -128,6 +129,14 @@ inventory.delete('/products/:id', async (c) => {
     if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
     throw e
   }
+})
+
+inventory.get('/movements', async (c) => {
+  const businessId = c.get('businessId')
+  const limitParam = c.req.query('limit')
+  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : 100
+  const movements = await movService.listMovements(businessId, limit)
+  return c.json(movements)
 })
 
 inventory.get('/products/:id/movements', async (c) => {
