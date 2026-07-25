@@ -7,7 +7,9 @@ import '../../../config/app_theme.dart';
 import '../providers/ai_provider.dart';
 
 class AiChatScreen extends ConsumerStatefulWidget {
-  const AiChatScreen({super.key});
+  /// Question pre-sent from the dashboard's suggestion chips.
+  final String? initialQuestion;
+  const AiChatScreen({super.key, this.initialQuestion});
 
   @override
   ConsumerState<AiChatScreen> createState() => _AiChatScreenState();
@@ -27,6 +29,15 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     super.initState();
     _speech = stt.SpeechToText();
     _initSpeech();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final notifier = ref.read(chatProvider.notifier);
+      notifier.clearError();
+      final question = widget.initialQuestion?.trim();
+      if (question != null && question.isNotEmpty) {
+        notifier.sendMessage(question);
+        _scrollToBottom();
+      }
+    });
   }
 
   Future<void> _initSpeech() async {
@@ -102,7 +113,6 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
     final state = ref.watch(chatProvider);
     final cs = Theme.of(context).colorScheme;
 
-    // Scroll to bottom when new messages arrive.
     ref.listen(chatProvider, (prev, next) {
       if (prev != null && next.messages.length > prev.messages.length) {
         _scrollToBottom();
@@ -129,50 +139,54 @@ class _AiChatScreenState extends ConsumerState<AiChatScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      body: Column(
-        children: [
-          // ── Messages ──────────────────────────────────────────────────
-          Expanded(
-            child: state.messages.isEmpty
-                ? _EmptyState(onSuggestion: _sendSuggestion)
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    itemCount:
-                        state.messages.length + (state.isLoading ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == state.messages.length && state.isLoading) {
-                        return const _TypingIndicator();
-                      }
-                      return _MessageBubble(message: state.messages[index]);
-                    },
-                  ),
-          ),
-
-          // ── Error ─────────────────────────────────────────────────────
-          if (state.error != null)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: cs.errorContainer,
-              child: Text(
-                state.error!,
-                style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+      // Thread centered with a max width: on wide screens the chat shouldn't
+      // stretch edge to edge.
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(
+            children: [
+              // ── Messages ──────────────────────────────────────────────
+              Expanded(
+                child: state.messages.isEmpty
+                    ? _EmptyState(onSuggestion: _sendSuggestion)
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        itemCount: state.messages.length +
+                            (state.isLoading ? 1 : 0) +
+                            (state.error != null ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index < state.messages.length) {
+                            return _MessageBubble(
+                                message: state.messages[index]);
+                          }
+                          if (state.isLoading) {
+                            return const _TypingIndicator();
+                          }
+                          return _ErrorBubble(
+                            onRetry: () => ref
+                                .read(chatProvider.notifier)
+                                .retryLast(),
+                          );
+                        },
+                      ),
               ),
-            ),
 
-          // ── Input bar ─────────────────────────────────────────────────
-          _InputBar(
-            controller: _controller,
-            focusNode: _focusNode,
-            isLoading: state.isLoading,
-            isListening: _isListening,
-            speechAvailable: _speechAvailable,
-            onSend: _send,
-            onMic: _toggleListening,
+              // ── Input bar ─────────────────────────────────────────────
+              _InputBar(
+                controller: _controller,
+                focusNode: _focusNode,
+                isLoading: state.isLoading,
+                isListening: _isListening,
+                speechAvailable: _speechAvailable,
+                onSend: _send,
+                onMic: _toggleListening,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -256,14 +270,14 @@ class _SuggestionChip extends StatelessWidget {
 
     return Material(
       color: cs.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppTheme.borderSubtle(context)),
           ),
           child: Text(
@@ -295,16 +309,17 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
         ),
         decoration: BoxDecoration(
-          color: isUser ? cs.primary : cs.surfaceContainer,
+          color: isUser ? cs.primary : cs.surfaceContainerLow,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
             bottomLeft: Radius.circular(isUser ? 20 : 4),
             bottomRight: Radius.circular(isUser ? 4 : 20),
           ),
+          border: isUser ? null : Border.all(color: AppTheme.borderSubtle(context)),
         ),
         child: isUser
             ? Text(
@@ -354,6 +369,72 @@ class _FormattedText extends StatelessWidget {
   }
 }
 
+// ── Error bubble ────────────────────────────────────────────────────────────
+
+/// The error renders as an assistant bubble (not a red bar) and never
+/// enters the message history.
+class _ErrorBubble extends StatelessWidget {
+  final VoidCallback onRetry;
+  const _ErrorBubble({required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.sizeOf(context).width * 0.78,
+        ),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerLow,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
+          ),
+          border: Border.all(color: AppTheme.borderSubtle(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'El asistente no está disponible en este momento. Reintentá en un rato.',
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: cs.onSurface),
+            ),
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              icon: Icon(LucideIcons.refreshCw, size: 14, color: cs.primary),
+              label: Text(
+                'Reintentar',
+                style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Typing indicator ────────────────────────────────────────────────────────
 
 class _TypingIndicator extends StatefulWidget {
@@ -392,13 +473,14 @@ class _TypingIndicatorState extends State<_TypingIndicator>
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: cs.surfaceContainer,
+          color: cs.surfaceContainerLow,
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(20),
             topRight: Radius.circular(20),
             bottomLeft: Radius.circular(4),
             bottomRight: Radius.circular(20),
           ),
+          border: Border.all(color: AppTheme.borderSubtle(context)),
         ),
         child: AnimatedBuilder(
           animation: _animController,
@@ -473,7 +555,6 @@ class _InputBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Mic button
           if (speechAvailable)
             _CircleButton(
               icon: isListening ? LucideIcons.micOff : LucideIcons.mic,
@@ -482,7 +563,6 @@ class _InputBar extends StatelessWidget {
             ),
           if (speechAvailable) const SizedBox(width: 8),
 
-          // Text field
           Expanded(
             child: TextField(
               controller: controller,
@@ -519,7 +599,6 @@ class _InputBar extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // Send button
           _CircleButton(
             icon: LucideIcons.sendHorizontal,
             color: cs.onPrimary,

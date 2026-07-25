@@ -2,118 +2,72 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
-import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../models/invoice.dart';
+import '../providers/sales_providers.dart';
+import 'create_sale_screen.dart';
 
-class CustomerDetailScreen extends ConsumerStatefulWidget {
+class CustomerDetailScreen extends ConsumerWidget {
   final String customerId;
+
   const CustomerDetailScreen({super.key, required this.customerId});
 
-  @override
-  ConsumerState<CustomerDetailScreen> createState() =>
-      _CustomerDetailScreenState();
-}
-
-class _CustomerDetailScreenState
-    extends ConsumerState<CustomerDetailScreen> {
-  Map<String, dynamic>? _customer;
-  Map<String, dynamic>? _statement;
-  List<Map<String, dynamic>> _invoices = [];
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    try {
-      final salesService = ref.read(salesServiceProvider);
-      final collectionsService = ref.read(collectionsServiceProvider);
-
-      final results = await Future.wait([
-        salesService.getCustomer(widget.customerId),
-        collectionsService.getCustomerStatement(widget.customerId),
-        salesService.listInvoices(customerId: widget.customerId),
-      ]);
-
-      setState(() {
-        _customer = results[0] as Map<String, dynamic>?;
-        _statement = results[1] as Map<String, dynamic>?;
-        final invoiceData = results[2] as Map<String, dynamic>?;
-        _invoices = (invoiceData?['data'] as List? ?? [])
-            .cast<Map<String, dynamic>>();
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-        _error = ApiClient.parseError(e);
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Detalle de cliente')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (_error != null || _customer == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Detalle de cliente')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(LucideIcons.circleAlert, size: 40, color: theme.colorScheme.onSurfaceVariant),
-                const SizedBox(height: 16),
-                Text(
-                  _error ?? 'Cliente no encontrado',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-                ),
-                const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() { _loading = true; _error = null; });
-                    _loadData();
-                  },
-                  icon: const Icon(LucideIcons.refreshCw, size: 16),
-                  label: const Text('Reintentar'),
-                ),
-              ],
-            ),
+  List<DataListColumn<Invoice>> _columns(ThemeData theme, ColorScheme cs) => [
+        DataListColumn<Invoice>(
+          label: 'Nº',
+          flex: 2,
+          cell: (context, inv) => Text(
+            inv.saleNumber,
+            style: AppTheme.mono(fontSize: 13, fontWeight: FontWeight.w500),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
-      );
-    }
+        DataListColumn<Invoice>(
+          label: 'Fecha',
+          flex: 2,
+          cell: (context, inv) => Text(
+            formatDateShortEs(inv.saleDate),
+            style: theme.textTheme.bodySmall
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ),
+        DataListColumn<Invoice>(
+          label: 'Estado',
+          flex: 2,
+          cell: (context, inv) => Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              PaymentChip(status: inv.paymentStatus),
+              if (inv.cancelled)
+                IntentChip(
+                    label: 'Anulada', intent: ChipIntent.danger, small: true),
+            ],
+          ),
+        ),
+        DataListColumn<Invoice>(
+          label: 'Total',
+          flex: 2,
+          isMoney: true,
+          cell: (context, inv) => MoneyValue(
+            formatted: currencyFmt.format(inv.totalValue),
+            size: MoneySize.small,
+            color: inv.cancelled ? AppTheme.danger : null,
+          ),
+        ),
+      ];
 
-    final firstName = _customer!['firstName'] as String? ?? '';
-    final lastName = _customer!['lastName'] as String? ?? '';
-    final customerName = '$firstName $lastName'.trim();
-    final companyName = _customer!['companyName'] as String?;
-    final displayName =
-        companyName?.isNotEmpty == true ? companyName! : customerName;
-
-    final totalPending =
-        double.tryParse(_statement?['totalPending']?.toString() ?? '0') ?? 0;
-    final creditLimit =
-        double.tryParse(_customer!['creditLimit']?.toString() ?? '0') ?? 0;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final overviewAsync = ref.watch(customerOverviewProvider(customerId));
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surfaceContainer,
         surfaceTintColor: theme.colorScheme.surface,
@@ -122,9 +76,9 @@ class _CustomerDetailScreenState
           onPressed: () => context.pop(),
         ),
         title: Text(
-          displayName,
-          style: theme.textTheme.titleMedium
-              ?.copyWith(fontWeight: FontWeight.w600),
+          overviewAsync.value?.customer.displayName ?? '',
+          style:
+              theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         actions: [
           Padding(
@@ -132,194 +86,96 @@ class _CustomerDetailScreenState
             child: TextButton.icon(
               icon: const Icon(LucideIcons.plus, size: 16),
               label: const Text('Nueva venta'),
-              onPressed: () =>
-                  context.go('/sales/create?customerId=${widget.customerId}'),
+              onPressed: () async {
+                await Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (context, _, _) =>
+                        CreateSaleScreen(initialCustomerId: customerId),
+                    transitionDuration: Duration.zero,
+                    reverseTransitionDuration: Duration.zero,
+                  ),
+                );
+                ref.invalidate(customerOverviewProvider(customerId));
+              },
             ),
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // ── Tarjeta de resumen financiero ──────────────────────────
-            Container(
+      body: AsyncValueWidget(
+        value: overviewAsync,
+        onRetry: () => ref.invalidate(customerOverviewProvider(customerId)),
+        data: (overview) {
+          final customer = overview.customer;
+          final totalPending = overview.statement.totalPending;
+          final creditLimit = customer.creditLimitValue;
+          final invoicesPage = overview.invoices;
+
+          return RefreshIndicator(
+            onRefresh: () =>
+                ref.refresh(customerOverviewProvider(customerId).future),
+            child: ListView(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Balance pendiente',
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '\$${totalPending.toStringAsFixed(2)}',
-                    style: AppTheme.mono(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w700,
-                      color: totalPending > 0
-                          ? AppTheme.negative
-                          : AppTheme.positive,
-                    ),
-                  ),
-                  if (creditLimit > 0) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          'Límite de crédito: ',
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(),
-                        ),
-                        Text(
-                          '\$${creditLimit.toStringAsFixed(2)}',
-                          style: AppTheme.mono(
-                              fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (_customer!['phone'] != null) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Icon(LucideIcons.phone,
-                            size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Text(
-                          _customer!['phone'] as String,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (_customer!['email'] != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(LucideIcons.mail,
-                            size: 14, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        const SizedBox(width: 6),
-                        Text(
-                          _customer!['email'] as String,
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // ── Lista de facturas ──────────────────────────────────────
-            Text(
-              'Últimas facturas',
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            if (_invoices.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surfaceContainer,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.borderSubtle(context)),
+              children: [
+                BigFigure(
+                  label: 'Balance pendiente',
+                  value: currencyFmt.format(totalPending),
+                  size: BigFigureSize.l,
+                  valueColor: totalPending > 0
+                      ? context.tokens.dangerText
+                      : context.tokens.successText,
                 ),
-                child: Center(
-                  child: Text(
-                    'Sin facturas aún',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(),
-                  ),
-                ),
-              )
-            else
-              ...(_invoices.take(20).map((inv) {
-                final amount =
-                    double.tryParse(inv['total']?.toString() ?? '0') ?? 0;
-                final status = inv['paymentStatus'] as String? ?? '';
-                final saleNumber = inv['saleNumber'] as String? ??
-                    inv['id'] as String? ??
-                    '';
-                final dateStr = formatDateShortEs(inv['createdAt']?.toString());
-                final isPaid = status == 'paid';
-
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainer,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTheme.borderSubtle(context)),
-                  ),
-                  child: Row(
+                if (creditLimit > 0) ...[
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              saleNumber,
-                              style: theme.textTheme.labelMedium
-                                  ?.copyWith(fontWeight: FontWeight.w600),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              dateStr,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            '\$${amount.toStringAsFixed(2)}',
-                            style: AppTheme.mono(
-                                fontSize: 14, fontWeight: FontWeight.w700),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: AppTheme.tintBg(
-                                context,
-                                isPaid ? AppTheme.success : AppTheme.warning,
-                              ),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              isPaid ? 'Pagado' : 'Pendiente',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: isPaid
-                                    ? AppTheme.positive
-                                    : AppTheme.warning,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
+                      Text('Límite de crédito: ',
+                          style: theme.textTheme.bodySmall),
+                      Text(
+                        currencyFmt.format(creditLimit),
+                        style: AppTheme.mono(
+                            fontSize: 12, fontWeight: FontWeight.w600),
                       ),
                     ],
                   ),
-                );
-              })),
-          ],
-        ),
+                ],
+                if (customer.phone != null) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Icon(LucideIcons.phone,
+                          size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Text(customer.phone!, style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ],
+                if (customer.email != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(LucideIcons.mail,
+                          size: 14, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 6),
+                      Text(customer.email!, style: theme.textTheme.bodySmall),
+                    ],
+                  ),
+                ],
+                const SectionHeading(title: 'Últimas facturas'),
+                InfoCard(
+                  padding: EdgeInsets.zero,
+                  child: DataList<Invoice>(
+                    columns: _columns(theme, theme.colorScheme),
+                    data: invoicesPage,
+                    emptyState: const EmptyState.compact(
+                      title: 'Sin facturas aún',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

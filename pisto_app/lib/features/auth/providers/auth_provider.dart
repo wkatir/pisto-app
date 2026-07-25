@@ -58,9 +58,9 @@ class Auth extends _$Auth {
     authRouterDelegate.setAuthenticated(false);
   }
 
-  /// Refresca el [UserModel] desde el backend (`GET /auth/me`).
-  /// Útil después de actualizar perfil/avatar para que sidebar y AppBar
-  /// reflejen los cambios sin esperar al próximo login.
+  /// Refreshes the [UserModel] from the backend (`GET /auth/me`).
+  /// Useful after updating the profile/avatar so sidebar and AppBar
+  /// reflect the changes without waiting for the next login.
   Future<void> refresh() async {
     if (state.value == null) return;
     try {
@@ -75,7 +75,9 @@ class Auth extends _$Auth {
         roles: (me['roles'] as List?)?.cast<String>() ?? state.value!.roles,
       ));
     } catch (_) {
-      // Si falla, mantenemos el state previo.
+      // Best-effort sync after a profile update that already succeeded —
+      // a failed refresh just leaves the sidebar/AppBar stale until the
+      // next login, so we keep the previous state instead of surfacing it.
     }
   }
 }

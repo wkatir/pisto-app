@@ -1,7 +1,17 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../config/api_client.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/services/ai_service.dart';
+
+part 'ai_provider.g.dart';
+
+// ── Queries ──────────────────────────────────────────────────────────────────
+
+@riverpod
+Future<ForecastResult> forecastResult(Ref ref) {
+  return ref.watch(aiServiceProvider).getForecast();
+}
 
 // ── Models ──────────────────────────────────────────────────────────────────
 
@@ -62,10 +72,20 @@ class ChatNotifier extends Notifier<ChatState> {
       isLoading: true,
       error: null,
     );
+    await _request(text.trim());
+  }
 
+  /// Retries the user's last question without duplicating its bubble.
+  Future<void> retryLast() async {
+    final lastUser = state.messages.lastWhere((m) => m.isUser);
+    state = state.copyWith(isLoading: true, error: null);
+    await _request(lastUser.text);
+  }
+
+  Future<void> _request(String text) async {
     try {
       final response = await _aiService.chat(
-        text.trim(),
+        text,
         conversationId: state.conversationId,
       );
       final aiMsg = ChatMessage(text: response.response, isUser: false);
@@ -75,12 +95,16 @@ class ChatNotifier extends Notifier<ChatState> {
         conversationId: response.conversationId ?? state.conversationId,
       );
     } catch (e) {
-      final errorText = ApiClient.parseError(e);
       state = state.copyWith(
         isLoading: false,
-        error: errorText,
+        error: ApiClient.parseError(e),
       );
     }
+  }
+
+  /// The error is ephemeral: it must not survive a fresh visit to the chat.
+  void clearError() {
+    if (state.error != null) state = state.copyWith(error: null);
   }
 
   void clearChat() {
