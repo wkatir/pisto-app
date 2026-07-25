@@ -1,4 +1,4 @@
-import { eq, and, desc, count, sql } from 'drizzle-orm'
+import { eq, and, desc, count, gt, ne, sql } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { accountReceivable, customer, sale, collectionPayment } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
@@ -6,12 +6,18 @@ import { paginatedResponse } from '../../shared/utils/pagination'
 
 export async function listReceivables(businessId: string, page = 1, limit = 20) {
   const offset = (page - 1) * limit
-  const where = eq(accountReceivable.businessId, businessId)
+  // Only open accounts — same criteria as the dashboard "por cobrar" KPI.
+  const where = and(
+    eq(accountReceivable.businessId, businessId),
+    ne(accountReceivable.status, 'paid'),
+    gt(accountReceivable.balance, '0'),
+  )
 
   const [items, [total]] = await Promise.all([
     db.select({
       receivable: accountReceivable,
       customerName: sql<string>`COALESCE(${customer.companyName}, ${customer.firstName} || ' ' || ${customer.lastName})`,
+      customerPhone: customer.phone,
       saleNumber: sale.saleNumber,
     })
       .from(accountReceivable)
@@ -23,7 +29,7 @@ export async function listReceivables(businessId: string, page = 1, limit = 20) 
     db.select({ count: count() }).from(accountReceivable).where(where),
   ])
 
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function getReceivable(businessId: string, id: string) {
@@ -34,9 +40,9 @@ export async function getReceivable(businessId: string, id: string) {
   return ar
 }
 
-export async function getReceivablePayments(id: string) {
+export async function getReceivablePayments(businessId: string, id: string) {
   return db.select().from(collectionPayment)
-    .where(eq(collectionPayment.accountReceivableId, id))
+    .where(and(eq(collectionPayment.businessId, businessId), eq(collectionPayment.accountReceivableId, id)))
     .orderBy(desc(collectionPayment.createdAt))
 }
 

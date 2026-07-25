@@ -29,7 +29,7 @@ export async function receiveGoods(
       receiptNumber,
       notes: data.notes,
       receivedBy: userId,
-    } as any).returning()
+    }).returning()
 
     let allReceived = true
 
@@ -39,15 +39,15 @@ export async function receiveGoods(
         purchaseOrderLineId: line.purchaseOrderLineId,
         productId: line.productId,
         quantityReceived: line.quantityReceived,
-      } as any)
+      })
 
-      const [poLine] = await (tx.select().from(purchaseOrderLine)
-        .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))) as any[]
+      const [poLine] = await tx.select().from(purchaseOrderLine)
+        .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))
 
       if (poLine) {
         const newReceived = new Decimal(poLine.quantityReceived).plus(new Decimal(line.quantityReceived))
-        await (tx.update(purchaseOrderLine) as any)
-          .set({ quantityReceived: parseFloat(newReceived.toFixed(2)) })
+        await tx.update(purchaseOrderLine)
+          .set({ quantityReceived: newReceived.toFixed(2) })
           .where(eq(purchaseOrderLine.id, line.purchaseOrderLineId))
 
         if (newReceived.lt(new Decimal(poLine.quantityOrdered))) {
@@ -73,12 +73,12 @@ export async function receiveGoods(
 
       await tx.insert(accountPayable).values({
         businessId,
-        supplierId: po.supplierId!,
+        supplierId: po.supplierId,
         purchaseOrderId,
-        originalAmount: po.total!,
-        balance: po.total!,
-        dueDate: dueDate.toISOString().split('T')[0],
-      } as any)
+        originalAmount: po.total,
+        balance: po.total,
+        dueDate: dueDate.toISOString().slice(0, 10),
+      })
     }
 
     return receipt

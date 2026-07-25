@@ -78,7 +78,7 @@ export async function createPurchaseOrder(
       total: total.toFixed(2),
       notes: data.notes,
       createdBy: userId,
-    } as any).returning()
+    }).returning()
 
     for (const line of lineData) {
       await tx.insert(purchaseOrderLine).values({
@@ -89,7 +89,7 @@ export async function createPurchaseOrder(
         taxId: line.taxId,
         taxAmount: line.taxAmount,
         lineTotal: line.lineTotal,
-      } as any)
+      })
     }
 
     return po
@@ -105,7 +105,7 @@ export async function listPurchaseOrders(businessId: string, page = 1, limit = 2
       .offset(offset).limit(limit),
     db.select({ count: count() }).from(purchaseOrder).where(eq(purchaseOrder.businessId, businessId)),
   ])
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function getPurchaseOrder(businessId: string, id: string) {
@@ -126,7 +126,8 @@ export async function updatePurchaseOrder(businessId: string, id: string, data: 
   if (po.status === 'received') throw new AppError(400, 'Orden ya recibida, no se puede editar')
 
   const [updated] = await db.update(purchaseOrder)
-    .set(data as any)
+    .set(data)
     .where(eq(purchaseOrder.id, id))
+    .returning()
   return updated
 }

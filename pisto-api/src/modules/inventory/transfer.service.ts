@@ -33,14 +33,14 @@ export async function createTransfer(
       createdBy: userId,
       status: 'completed',
       completedAt: new Date(),
-    } as any).returning()
+    }).returning()
 
     for (const line of data.lines) {
       await tx.insert(inventoryTransferLine).values({
         transferId: transfer!.id,
         productId: line.productId,
         quantity: line.quantity,
-      } as any)
+      })
 
       const qty = parseFloat(line.quantity)
 

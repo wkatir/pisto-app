@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { optionalFileUrlSchema } from '../../shared/schemas/common'
 
 export const updateBusinessSchema = v.object({
   name: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(150))),
@@ -7,7 +8,7 @@ export const updateBusinessSchema = v.object({
   email: v.optional(v.pipe(v.string(), v.email())),
   address: v.optional(v.pipe(v.string(), v.maxLength(300))),
   currencyCode: v.optional(v.pipe(v.string(), v.length(3))), // USD, GTQ, CRC, etc.
-  logoUrl: v.optional(v.union([v.literal(''), v.pipe(v.string())])),
+  logoUrl: optionalFileUrlSchema,
 })
 
 export const createTaxSchema = v.object({
