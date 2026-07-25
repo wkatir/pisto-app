@@ -124,12 +124,12 @@ class ForecastResult {
 
   factory ForecastResult.fromJson(Map<String, dynamic> json) {
     return ForecastResult(
-      forecast: ((json['forecast'] as List<dynamic>?) ?? [])
+      forecast: (json['forecast'] as List<dynamic>)
           .map((e) => ForecastDay.fromJson(e as Map<String, dynamic>))
           .toList(),
-      summary: ForecastSummary.fromJson(
-          (json['summary'] as Map<String, dynamic>?) ?? {}),
-      insights: ((json['insights'] as List<dynamic>?) ?? [])
+      summary:
+          ForecastSummary.fromJson(json['summary'] as Map<String, dynamic>),
+      insights: (json['insights'] as List<dynamic>)
           .map((e) => e as String)
           .toList(),
       risk: json['risk'] as String? ?? 'low',
@@ -171,7 +171,7 @@ class AnomaliesResult {
 
   factory AnomaliesResult.fromJson(Map<String, dynamic> json) {
     return AnomaliesResult(
-      anomalies: ((json['anomalies'] as List<dynamic>?) ?? [])
+      anomalies: (json['anomalies'] as List<dynamic>)
           .map((e) => Anomaly.fromJson(e as Map<String, dynamic>))
           .toList(),
       summary: json['summary'] as String? ?? '',
@@ -185,7 +185,7 @@ class AiService {
   final ApiClient _api;
   AiService(this._api);
 
-  /// Envia mensaje al chat AI y recibe respuesta con contexto de conversacion.
+  /// Sends a message to the AI chat and receives a response with conversation context.
   Future<AiChatResponse> chat(String message,
       {String? conversationId}) async {
     final response = await _api.dio.post('/ai/chat', data: {
@@ -196,7 +196,7 @@ class AiService {
     return AiChatResponse.fromJson(response.data as Map<String, dynamic>);
   }
 
-  /// Envia imagen en base64 al backend para escaneo OCR + AI.
+  /// Sends a base64-encoded image to the backend for OCR + AI scanning.
   Future<ScanResult> scanReceipt(String base64Image, String mimeType) async {
     final response = await _api.dio.post('/ai/scan-receipt', data: {
       'image': base64Image,
@@ -206,7 +206,7 @@ class AiService {
         response.data['data'] as Map<String, dynamic>);
   }
 
-  /// Obtiene pronostico financiero generado por AI.
+  /// Gets the AI-generated financial forecast.
   Future<ForecastResult> getForecast({int days = 30}) async {
     final response = await _api.dio
         .get('/ai/forecast', queryParameters: {'days': days});
@@ -214,7 +214,7 @@ class AiService {
         response.data['data'] as Map<String, dynamic>);
   }
 
-  /// Detecta anomalias en datos financieros.
+  /// Detects anomalies in financial data.
   Future<AnomaliesResult> getAnomalies() async {
     final response = await _api.dio.get('/ai/anomalies');
     return AnomaliesResult.fromJson(

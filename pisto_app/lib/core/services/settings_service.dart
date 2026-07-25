@@ -16,13 +16,13 @@ class SettingsService {
 
   Future<List<Map<String, dynamic>>> listTaxes() async {
     final resp = await _api.dio.get('/settings/taxes');
-    final list = (resp.data['data'] as List?) ?? [];
+    final list = resp.data['data'] as List;
     return list.cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> createTax(String name, String rate) async {
     final resp = await _api.dio.post('/settings/taxes', data: {'name': name, 'rate': rate});
-    return (resp.data['data'] as Map<String, dynamic>?) ?? {};
+    return resp.data['data'] as Map<String, dynamic>;
   }
 
   Future<void> toggleTax(String id, bool isActive) async {
@@ -31,13 +31,13 @@ class SettingsService {
 
   Future<List<Map<String, dynamic>>> listPaymentMethods() async {
     final resp = await _api.dio.get('/settings/payment-methods');
-    final list = (resp.data['data'] as List?) ?? [];
+    final list = resp.data['data'] as List;
     return list.cast<Map<String, dynamic>>();
   }
 
   Future<Map<String, dynamic>> createPaymentMethod(String name) async {
     final resp = await _api.dio.post('/settings/payment-methods', data: {'name': name});
-    return (resp.data['data'] as Map<String, dynamic>?) ?? {};
+    return resp.data['data'] as Map<String, dynamic>;
   }
 
   Future<void> togglePaymentMethod(String id, bool isActive) async {
