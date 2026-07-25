@@ -5,7 +5,7 @@ import '../widgets/confirm_dialog.dart';
 import 'p_form.dart';
 
 /// Right-side drawer form (480px, full height) hosting `PForm` fields with a
-/// sticky footer — use for forms with more than ~5 fields; `PFormDialog`
+/// sticky footer: use for forms with more than ~5 fields; `PFormDialog`
 /// stays for smaller ones. Usage: `SidePanelForm.show(context, title: 'Nuevo
 /// producto', fields: [PTextField(...), ...], onSubmit: (values) => ...)`.
 /// Barrier tap / back button close the panel, guarded by a discard-changes

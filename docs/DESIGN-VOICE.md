@@ -1,7 +1,7 @@
-# Pisto — Design voice plan (de-slop v2: from "correct" to "custom")
+# Pisto: Design voice plan (de-slop v2: from "correct" to "custom")
 
 Wave 0-2 (REDESIGN-PLAN.md) fixed structure: density, tables, no pastel card fills. The
-app STILL reads AI-generated. This plan targets the second-order tells — the things that
+app STILL reads AI-generated. This plan targets the second-order tells: the things that
 make a UI look templated even when every individual rule is followed. Sized for Sonnet
 subagents; §1 of REDESIGN-PLAN.md remains in force.
 
@@ -16,9 +16,9 @@ subagents; §1 of REDESIGN-PLAN.md remains in force.
 3. **IconBadge-itis.** A pastel icon chip next to every title is itself an AI tell (it's
    what every generated dashboard does). Icons should earn their place.
 4. **Default Material chrome.** Stock TabBar indicator, stock dropdowns, stock dialogs,
-   ink splashes, default focus/hover — framework smell, not product smell.
+   ink splashes, default focus/hover: framework smell, not product smell.
 5. **Flat type hierarchy.** Titles, labels, body all mid-weight mid-size. No editorial
-   confidence. The one thing that already works: big Spline mono figures — that IS the
+   confidence. The one thing that already works: big Spline mono figures. That IS the
    brand voice, underused.
 6. **Default dataviz.** fl_chart out-of-the-box: default grid lines, default tooltips,
    default legend dots.
@@ -50,25 +50,25 @@ paper, confident mono figures, hairline structure, one illustration moment per j
   axis labels `labelSmall` mono, brand palette from tokens, rounded bar caps 4, tooltip =
   small surface card with mono value. Same spec every chart.
 - **Motion**: 120-150ms fades only (already enforced). Hover states subtle
-  (`surfaceContainerHigh`), focus ring 2px `primary` offset 2 — visible, consistent.
+  (`surfaceContainerHigh`), focus ring 2px `primary` offset 2, visible, consistent.
 
 ## 2. Work packages (Sonnet subagents)
 
-### W0 — Voice primitives (ONE agent, blocks the rest)
+### W0: Voice primitives (ONE agent, blocks the rest)
 - `SectionHeading` (label-over-divider pattern: optional tracked quiet label, titleMedium,
   trailing action, hairline divider below, 32px top / 12px bottom rhythm).
 - `BigFigure` (label small quiet + Spline mono figure at headlineMedium/Large + optional
-  delta chip) — the KPI voice. `MoneyValue` stays for inline amounts.
-- `PTabs` — custom tab row: text 600 when active + 2px primary underline (animated
+  delta chip): the KPI voice. `MoneyValue` stays for inline amounts.
+- `PTabs` (custom tab row): text 600 when active + 2px primary underline (animated
   120ms), no stock TabBar indicator, no splash.
 - Row interaction spec applied to `DataList`/`FinancialListRow`: no ink splash; hover
   `surfaceContainerHigh`; pressed slightly deeper; focus ring for keyboard.
 - Chart theme helper `chartSpec(context)` (grid/axis/tooltip/palette constants) in
   `config/` for every fl_chart usage.
 - Demote InfoCard: doc comment with the 3 sanctioned uses; add `FlatSection` variant?
-  NO — flat is just SectionHeading + content, no new wrapper.
+  NO: flat is just SectionHeading + content, no new wrapper.
 
-### W1 — Screen voice passes (parallel; each de-boxes, de-badges, re-types)
+### W1: Screen voice passes (parallel; each de-boxes, de-badges, re-types)
 Acceptance per screen: ≤4 bordered boxes visible; ≤2 IconBadges outside feeds/nav; key
 figure(s) via BigFigure; sections flat with SectionHeading; custom PTabs; charts via
 chartSpec; both themes; analyze clean.
@@ -87,10 +87,10 @@ chartSpec; both themes; analyze clean.
   stock chrome; forecast numbers as BigFigures with accent edges; notifications keep
   IconBadges (feed exemption); profile/settings fully flat (SectionHeading + rows,
   borders only around grouped rows if needed).
-- **V6 Shell**: sidebar refinement — active item = 600 weight + tinted pill (subtle),
+- **V6 Shell**: sidebar refinement, active item = 600 weight + tinted pill (subtle),
   remove any stock hover ink; mobile bottom nav custom heights/weights; bell badge spec.
 
-### W2 — Proof
+### W2: Proof
 build_runner/analyze integration agent (box-count + badge-count grep heuristics, stock
 TabBar audit, splash audit) → release build → browser walkthrough scoring each screen
 against §1 acceptance → follow-ups.

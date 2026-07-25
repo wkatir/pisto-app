@@ -217,7 +217,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
 
   // ── Order detail ───────────────────────────────────────────────────────────
 
-  /// Document-style body: compact line table + subtotal/VAT/total —
+  /// Document-style body: compact line table + subtotal/VAT/total,
   /// same pattern as the sales invoice detail.
   Widget _buildOrderDocument(ThemeData theme, PurchaseOrder detail) {
     final cs = theme.colorScheme;
@@ -594,7 +594,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
       List<Supplier> suppliers, Paginated<PayableRow>? payablesPage) {
     final padX = isWide ? 32.0 : 20.0;
 
-    // Approximated with the already-loaded "por pagar" page — avoids another call.
+    // Approximated with the already-loaded "por pagar" page: avoids another call.
     final balanceBySupplier = <String, double>{};
     for (final row in payablesPage?.data ?? const <PayableRow>[]) {
       if (row.payable.isPaid) continue;
@@ -850,7 +850,7 @@ class _PurchasesScreenState extends ConsumerState<PurchasesScreen> {
 // page, they don't accumulate). This helper keeps the "Cargar más" state on
 // the screen without touching the providers: each new page stacks on top of
 // the previous one and gets passed to `DataList` as if it were a single `Paginated`.
-// Same pattern as `sales_screen.dart` — a product can't be paginated two
+// Same pattern as `sales_screen.dart`: a product can't be paginated two
 // different ways.
 
 class _PagedAccumulator<T> {

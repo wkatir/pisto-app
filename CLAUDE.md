@@ -5,7 +5,7 @@ Sistema de gestión financiera AI-native para PYMES salvadoreñas. Monorepo:
 ```
 pisto_app/    → Flutter app (frontend)
 pisto-api/    → Hono API (backend)
-docs/         → Docs normativos — LEER ANTES DE ESCRIBIR CÓDIGO
+docs/         → Docs normativos: LEER ANTES DE ESCRIBIR CÓDIGO
 ```
 
 **Normativo:** `docs/ARCHITECTURE.md` (estructura de capas y módulos) y
@@ -23,7 +23,7 @@ contradice esos docs, el código está mal. `docs/PLAN.md` tiene la estrategia y
 - **AI:** cliente OpenAI-compatible (`AI_BASE_URL`/`AI_MODEL`); chat con function-calling,
   scan de recibos (visión), forecast, anomalías. JSON del modelo SIEMPRE con structured outputs.
 - **Exports:** pdf-lib, excel-builder-vanilla, fast-csv
-- **Ruta base:** `/api/v1` — módulos: auth (pública), inventory, sales, collections,
+- **Ruta base:** `/api/v1`, módulos: auth (pública), inventory, sales, collections,
   purchases, expenses, reports, exports, settings, uploads, ai
 - **Dinero:** `numeric(12,2)` en DB, `string` en TS, aritmética con decimal.js
 - **Multi-tenant:** todo query filtra por `business_id` del JWT (`c.get('businessId')`)
@@ -48,7 +48,7 @@ bunx tsc --noEmit    # type check
 
 ## Frontend: pisto_app
 
-- **Framework:** Flutter 3.x + Dart 3.x — targets: web + android + ios (desktop pospuesto)
+- **Framework:** Flutter 3.x + Dart 3.x, targets: web + android + ios (desktop pospuesto)
 - **Arquitectura:** feature-first + repository pattern (ver docs/ARCHITECTURE.md):
   screens → providers (Riverpod 3 AsyncNotifier, codegen) → repositories (typed) → ApiClient (Dio)
 - **Modelos:** Freezed + json_serializable. NADA de `Map<String,dynamic>` fuera de repositories.
@@ -57,7 +57,7 @@ bunx tsc --noEmit    # type check
 - **Router:** GoRouter con auth redirect; la app arranca en `/login` (no hay landing en la app)
 - **Theme:** FlexColorScheme light+dark, paleta cálida cream/pastel; Figtree + Spline Sans Mono; Lucide icons (ver docs/DESIGN.md)
 - **Storage:** flutter_secure_storage (tokens + theme)
-- **i18n:** slang — strings de UI en español
+- **i18n:** slang (strings de UI en español)
 
 ### Flujo de auth
 
@@ -76,11 +76,11 @@ flutter run -d chrome
 flutter analyze
 ```
 
-### Convenciones (resumen — el detalle vive en docs/CONVENTIONS.md)
+### Convenciones (resumen, el detalle vive en docs/CONVENTIONS.md)
 
 - Código/commits/identificadores en inglés; UI en español
 - Lean code: fail loud, sin fallbacks que escondan bugs, comentarios solo para WHY no obvio
-- Colores SOLO via `Theme.of(context).colorScheme` / tokens AppTheme — nunca Colors.* ni hex
+- Colores SOLO via `Theme.of(context).colorScheme` / tokens AppTheme: nunca Colors.* ni hex
 - NO AI slop: sin stagger animations, glassmorphism, gradientes, shadows decorativos, emoji en UI
 - Cards radius 18 / chips 20 / buttons 14; dark mode cálido (#1C1916) funcional en TODA pantalla
 - Paquetes via CLI (`flutter pub add` / `bun add`), no editar pubspec.yaml a mano

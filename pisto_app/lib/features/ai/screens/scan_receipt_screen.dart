@@ -226,7 +226,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
           ],
         ),
         const SizedBox(height: 32),
-        // Placeholder illustration — quiet card, icon is the only accent.
+        // Placeholder illustration: quiet card, icon is the only accent.
         InfoCard(
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Center(
@@ -265,7 +265,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
             ),
           ),
         const SizedBox(height: 32),
-        // Transient state — flat, no card.
+        // Transient state: flat, no card.
         Column(
           children: [
             SizedBox(
@@ -356,7 +356,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
             ),
           ),
         ),
-        // Items — flat hairline sections, document-style, no boxed rows.
+        // Items: flat hairline sections, document-style, no boxed rows.
         SectionHeading(title: 'Items'),
         if (_items.isEmpty)
           Padding(
@@ -440,7 +440,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
             );
           }),
 
-        // Totales — Subtotal/IVA quiet, Total as the hero mono figure.
+        // Totales: Subtotal/IVA quiet, Total as the hero mono figure.
         SectionHeading(title: 'Total'),
         _TotalRow(label: 'Subtotal', value: fmt.format(_subtotal)),
         const SizedBox(height: 6),

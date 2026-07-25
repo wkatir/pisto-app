@@ -121,7 +121,7 @@ exports_.get('/invoices/:id/pdf', vValidator('param', idParamSchema), async (c) 
   ]
 
   const rows = (sale.lines as any[]).map((l: any) => ({
-    // sale_line has no product_name column — falls back to the id until the query joins product.
+    // sale_line has no product_name column: falls back to the id until the query joins product.
     productName: l.productName ?? l.productId,
     quantity: l.quantity,
     unitPrice: l.unitPrice,

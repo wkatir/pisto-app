@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
-/// Small header/summary stat — label + mono value on a `surfaceContainerHigh`
+/// Small header/summary stat: label + mono value on a `surfaceContainerHigh`
 /// pill. Usage: `MetricChip(label: 'Facturas', value: '24')`, typically inline
 /// in a `PageHeader` or an `InfoCard` title row. Never used as a card background.
 class MetricChip extends StatelessWidget {

@@ -6,7 +6,7 @@ import { paginatedResponse } from '../../shared/utils/pagination'
 
 export async function listReceivables(businessId: string, page = 1, limit = 20) {
   const offset = (page - 1) * limit
-  // Only open accounts — same criteria as the dashboard "por cobrar" KPI.
+  // Only open accounts: same criteria as the dashboard "por cobrar" KPI.
   const where = and(
     eq(accountReceivable.businessId, businessId),
     ne(accountReceivable.status, 'paid'),

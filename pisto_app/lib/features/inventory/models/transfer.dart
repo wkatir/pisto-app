@@ -3,7 +3,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'transfer.freezed.dart';
 part 'transfer.g.dart';
 
-/// Row from `GET /inventory/transfers` — header only; the lines only come
+/// Row from `GET /inventory/transfers`: header only; the lines only come
 /// from `GET /inventory/transfers/:id`.
 @freezed
 sealed class Transfer with _$Transfer {
@@ -30,7 +30,7 @@ sealed class Transfer with _$Transfer {
       };
 }
 
-/// Line for `POST /inventory/transfers` — quantity in API decimal format.
+/// Line for `POST /inventory/transfers`: quantity in API decimal format.
 class TransferLineInput {
   final String productId;
   final String quantity;

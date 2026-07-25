@@ -26,7 +26,7 @@ class PValidators {
     return ok ? null : 'Teléfono inválido (7-15 dígitos)';
   }
 
-  /// Decimal with up to 2 places — the format the API requires for money.
+  /// Decimal with up to 2 places: the format the API requires for money.
   static String? money(String? v) {
     if (v == null || v.isEmpty) return null;
     if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(v)) return 'Monto inválido';
@@ -94,7 +94,7 @@ class PTextField extends StatelessWidget {
   }
 }
 
-/// Money field — Spline Sans Mono, `$` prefix, decimal with 2 places.
+/// Money field: Spline Sans Mono, `$` prefix, decimal with 2 places.
 /// Stores `String?` in API format (`"12.50"`), null if left empty.
 class PMoneyField extends StatelessWidget {
   final String name;

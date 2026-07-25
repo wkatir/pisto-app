@@ -7,12 +7,12 @@ import '../../config/app_theme.dart';
 ///
 /// M3 reserves display sizes for "short, important text passages, or numerals"
 /// and forbids them on section headings, so `xl` is the screen's single hero
-/// figure — one per screen, never a heading (docs/RATIONALE.md §11).
+/// figure: one per screen, never a heading (docs/RATIONALE.md §11).
 enum BigFigureSize { s, m, l, xl }
 
 /// The KPI voice (docs/DESIGN-VOICE.md §1): small quiet label above a big
 /// Spline Sans Mono figure, optional delta as tinted text (never a filled
-/// chip — see `DeltaBadge` in `money_value.dart` for the boxed variant used
+/// chip: see `DeltaBadge` in `money_value.dart` for the boxed variant used
 /// inline in lists), optional caption below. Usage: `BigFigure(label: 'Ventas
 /// este mes', value: '\$24,500.00', size: BigFigureSize.l, delta: '+12%',
 /// deltaPositive: true)`. For inline amounts in rows/tables keep using
@@ -94,7 +94,7 @@ class BigFigure extends StatelessWidget {
   }
 }
 
-/// Small tinted delta text (success/danger foreground, NOT a filled box) —
+/// Small tinted delta text (success/danger foreground, NOT a filled box):
 /// the voice-primitive alternative to `DeltaBadge` for `BigFigure`.
 class _DeltaText extends StatelessWidget {
   final String text;

@@ -3,16 +3,16 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../config/app_theme.dart';
 
 enum MoneySize {
-  /// 14px — inline in list rows.
+  /// 14px, inline in list rows.
   small,
 
-  /// 18px — compact KPI.
+  /// 18px, compact KPI.
   medium,
 
-  /// 28px — KPI card.
+  /// 28px, KPI card.
   large,
 
-  /// 56px — dashboard hero number.
+  /// 56px, dashboard hero number.
   hero,
 }
 
@@ -31,7 +31,7 @@ class MoneyValue extends StatelessWidget {
   /// Color override. Defaults to cs.onSurface.
   final Color? color;
 
-  /// Optional delta — descriptive text (e.g. "+12% vs abril", "-3 unidades").
+  /// Optional delta: descriptive text (e.g. "+12% vs abril", "-3 unidades").
   final String? delta;
 
   /// Whether [delta] represents a positive change. Controls the chip color.

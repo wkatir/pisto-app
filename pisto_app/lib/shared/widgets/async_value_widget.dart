@@ -36,7 +36,7 @@ class AsyncValueWidget<T> extends StatelessWidget {
   }
 }
 
-/// Sliver variant — wraps loading/error in SliverFillRemaining.
+/// Sliver variant: wraps loading/error in SliverFillRemaining.
 class SliverAsyncValueWidget<T> extends StatelessWidget {
   final AsyncValue<T> value;
   final Widget Function(T data) data;
@@ -65,7 +65,7 @@ class SliverAsyncValueWidget<T> extends StatelessWidget {
   }
 }
 
-/// Error state with retry — same visual language as EmptyState.
+/// Error state with retry: same visual language as EmptyState.
 class AsyncErrorState extends StatelessWidget {
   final Object error;
   final VoidCallback? onRetry;

@@ -8,8 +8,8 @@ import '../../config/app_theme.dart';
 /// actually *invites action*: human headline + description + CTA.
 ///
 /// Variants:
-///  - [EmptyState] — general use inside lists/tabs.
-///  - [EmptyState.compact] — small version for dialogs or cards.
+///  - [EmptyState]: general use inside lists/tabs.
+///  - [EmptyState.compact]: small version for dialogs or cards.
 class EmptyState extends StatelessWidget {
   /// Short, human title. E.g.: "Aún no has facturado".
   final String title;
@@ -25,12 +25,12 @@ class EmptyState extends StatelessWidget {
   /// so the PNG's cream background reads as an intentional card in dark mode.
   final String? image;
 
-  /// Optional primary action — a FilledButton.
+  /// Optional primary action: a FilledButton.
   final String? actionLabel;
   final IconData? actionIcon;
   final VoidCallback? onAction;
 
-  /// Compact variant — no large icon.
+  /// Compact variant: no large icon.
   final bool compact;
 
   const EmptyState({

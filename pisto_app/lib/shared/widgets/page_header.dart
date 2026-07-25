@@ -3,7 +3,7 @@ import '../../config/app_theme.dart';
 
 /// Compact page header: single-line title + inline metric chips + actions.
 /// Usage: `PageHeader(title: 'Tus ventas', metrics: [MetricChip(label: 'Facturas',
-/// value: '24')], actions: [FilledButton(...)])`. Max height ~64px — no kicker,
+/// value: '24')], actions: [FilledButton(...)])`. Max height ~64px, no kicker,
 /// no display titles, no mono subtitle eating vertical space (see docs/DESIGN.md §1).
 class PageHeader extends StatelessWidget {
   /// The screen's single title, `titleLarge` (~22px).
@@ -93,7 +93,7 @@ class PageHeader extends StatelessWidget {
 }
 
 /// Time-of-day greeting. Returns "Buenos días", "Buenas tardes",
-/// "Buenas noches" — used on the dashboard.
+/// "Buenas noches": used on the dashboard.
 String greetingForHour([DateTime? when]) {
   final h = (when ?? DateTime.now()).hour;
   if (h < 6) return 'Buenas noches';

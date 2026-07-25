@@ -119,7 +119,7 @@ export async function getLowStockAlerts(businessId: string) {
       eq(product.businessId, businessId),
       eq(product.isActive, true),
       eq(product.isService, false),
-      // min_stock = 0 means "no minimum configured" — not an alert.
+      // min_stock = 0 means "no minimum configured": not an alert.
       gt(product.minStock, '0'),
     ))
     .groupBy(product.id, product.name, product.sku, product.minStock)

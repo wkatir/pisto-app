@@ -15,7 +15,7 @@ class PForm extends StatefulWidget {
   final String? successMessage;
   final Widget Function(BuildContext context, PFormState form) builder;
 
-  /// Called whenever any inner field changes — used by [SidePanelForm]
+  /// Called whenever any inner field changes: used by [SidePanelForm]
   /// for the unsaved-changes guard.
   final VoidCallback? onChanged;
 

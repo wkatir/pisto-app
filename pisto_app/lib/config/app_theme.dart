@@ -24,10 +24,10 @@ class AppTheme {
 
   // ── Brand ──────────────────────────────────────────────────────────────────
   static const turquoise = Color(0xFF6FCF9A); // soft mint (charts, dark accents)
-  // brandGreen fails AA with white text (3.98:1) — only for large accents
+  // brandGreen fails AA with white text (3.98:1): only for large accents
   // (icons, illustration, strokes), never a button fill with white text.
   static const brandGreen = Color(0xFF2D8F6F);
-  static const _lightPrimary = Color(0xFF237059); // deep green — 4.5:1+ on white
+  static const _lightPrimary = Color(0xFF237059); // deep green, 4.5:1+ on white
   static const _darkPrimary = Color(0xFF3BA57F); // 4.5:1+ on #1C1916
 
   // ── Sidebar ────────────────────────────────────────────────────────────────
@@ -69,7 +69,7 @@ class AppTheme {
 
   /// Subtle background tinted with [color] for icon/avatar/chip containers.
   ///
-  /// BANNED as a full-card background wash (see docs/DESIGN.md §1) — color is
+  /// BANNED as a full-card background wash (see docs/DESIGN.md §1): color is
   /// an accent (chip/badge/icon tile), never a room. Wave 1 removes any
   /// remaining full-card `tintBg`/`tintBgStrong` uses found in screens.
   static Color tintBg(BuildContext c, Color color) {
@@ -80,7 +80,7 @@ class AppTheme {
     return color.withValues(alpha: 0.10);
   }
 
-  /// Stronger tinted background — for selection states.
+  /// Stronger tinted background, for selection states.
   static Color tintBgStrong(BuildContext c, Color color) {
     if (Theme.of(c).brightness == Brightness.dark) {
       final cs = Theme.of(c).colorScheme;
@@ -123,13 +123,13 @@ class AppTheme {
   static const danger = Color(0xFFE35D5D);
   static const info = Color(0xFF5B8DEF);
 
-  // Legacy aliases — deprecated, use success/warning/danger.
+  // Legacy aliases: deprecated, use success/warning/danger.
   static const positive = success;
   static const negative = danger;
 
   // ── Warm tint for non-financial data (customers, updates) ──────────────────
   // accent is ONLY for fills/containers (with #1C1916 text on top). As a text
-  // or icon color over cream it fails AA — use accentText instead.
+  // or icon color over cream it fails AA: use accentText instead.
   static const accent = Color(0xFFE8835A);
   static const accentText = Color(0xFFB4542E); // darkened peach, 4.7:1 on cream
 
@@ -199,7 +199,7 @@ class AppTheme {
         fabAlwaysCircular: false,
         elevatedButtonElevation: 0,
       ),
-      // keep* pins the exact brand colors — the M3 seed would lighten primary
+      // keep* pins the exact brand colors: the M3 seed would lighten primary
       // below the AA ratio that #237059/#3BA57F were chosen for.
       keyColors: const FlexKeyColors(
         useKeyColors: true,
@@ -259,7 +259,7 @@ class AppTheme {
         fabAlwaysCircular: false,
         elevatedButtonElevation: 0,
       ),
-      // keep* pins the exact brand colors — the M3 seed would lighten primary
+      // keep* pins the exact brand colors: the M3 seed would lighten primary
       // below the AA ratio that #237059/#3BA57F were chosen for.
       keyColors: const FlexKeyColors(
         useKeyColors: true,
@@ -299,7 +299,7 @@ class AppTheme {
         height: height ?? 1.2,
       );
 
-  /// Display heading — Figtree w800 for large headings (24px+).
+  /// Display heading: Figtree w800 for large headings (24px+).
   static TextStyle serif({
     double fontSize = 32,
     FontWeight fontWeight = FontWeight.w800,
@@ -317,7 +317,7 @@ class AppTheme {
         fontStyle: fontStyle,
       );
 
-  /// Eyebrow style — small uppercase for contextual labels above headings
+  /// Eyebrow style: small uppercase for contextual labels above headings
   /// ("HOY · 7 MAY", "VENTAS · ESTE MES").
   static TextStyle eyebrow(BuildContext context, {Color? color}) {
     final cs = Theme.of(context).colorScheme;
@@ -330,7 +330,7 @@ class AppTheme {
     );
   }
 
-  /// Quiet tracked label — sentence case (NOT uppercase), `labelMedium` size,
+  /// Quiet tracked label: sentence case (NOT uppercase), `labelMedium` size,
   /// +0.4 tracking. The voice-primitive label used above `SectionHeading`
   /// titles and `BigFigure` values (docs/DESIGN-VOICE.md §1). Distinct from
   /// [eyebrow], which is uppercase/wider-tracked for context chips.
@@ -367,13 +367,13 @@ class AppTheme {
   static ThemeData _applyOverrides(ThemeData base, Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     // outline must reach 3:1 against the surface for input borders to be an
-    // actual visible boundary — the sand #F0E6D9 only gives 1.15:1.
+    // actual visible boundary: the sand #F0E6D9 only gives 1.15:1.
     final outline = isDark ? const Color(0xFF857664) : const Color(0xFF8B7E6B);
     final cs = base.colorScheme.copyWith(
       surfaceTint: Colors.transparent,
       outline: outline,
       outlineVariant: isDark ? const Color(0xFF3A3228) : const Color(0xFFD4C8B8),
-      // peach and lavender never carry white text (fails AA) — dark on-color instead.
+      // peach and lavender never carry white text (fails AA): dark on-color instead.
       onSecondary: isDark ? base.colorScheme.onSecondary : const Color(0xFF1C1916),
       onTertiary: isDark ? base.colorScheme.onTertiary : const Color(0xFF1C1916),
     );
@@ -387,7 +387,7 @@ class AppTheme {
           borderSide: BorderSide(color: outline),
         ),
       ),
-      // FilledButton — taller, more presence, tighter font
+      // FilledButton: taller, more presence, tighter font
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -400,7 +400,7 @@ class AppTheme {
           elevation: 0,
         ),
       ),
-      // OutlinedButton — subtle border, not the thick default
+      // OutlinedButton: subtle border, not the thick default
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
@@ -415,7 +415,7 @@ class AppTheme {
           ),
         ),
       ),
-      // TextButton — more discreet
+      // TextButton: more discreet
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -427,7 +427,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
-      // FAB — not Material's huge round default
+      // FAB: not Material's huge round default
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
@@ -443,13 +443,13 @@ class AppTheme {
           letterSpacing: -0.1,
         ),
       ),
-      // Dialogs — no shadow, subtle border
+      // Dialogs: no shadow, subtle border
       dialogTheme: DialogThemeData(
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
       ),
-      // BottomSheet — softer corners
+      // BottomSheet: softer corners
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
         modalBackgroundColor: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
@@ -459,7 +459,7 @@ class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
       ),
-      // Popup menu — cleaner
+      // Popup menu: cleaner
       popupMenuTheme: PopupMenuThemeData(
         elevation: 0,
         color: isDark ? const Color(0xFF2A2420) : const Color(0xFFFFFAF5),
@@ -470,7 +470,7 @@ class AppTheme {
           ),
         ),
       ),
-      // Divider — more subtle
+      // Divider: more subtle
       dividerTheme: DividerThemeData(
         color: isDark ? const Color(0xFF3A3228) : const Color(0xFFF0E6D9),
         thickness: 1,

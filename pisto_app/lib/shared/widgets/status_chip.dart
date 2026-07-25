@@ -79,7 +79,7 @@ class PaymentChip extends StatelessWidget {
   }
 }
 
-/// Generic chip with semantic intent — use it when no StatusType fits.
+/// Generic chip with semantic intent: use it when no StatusType fits.
 class IntentChip extends StatelessWidget {
   final String label;
   final ChipIntent intent;

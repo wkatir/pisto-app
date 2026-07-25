@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens as a ThemeExtension — single source for spacing, radii,
+/// Design tokens as a ThemeExtension: single source for spacing, radii,
 /// semantic colors, and chart palette. See docs/DESIGN.md (normative).
 ///
 /// Accessed from widgets via `context.tokens` (colors, chart palette) or the
@@ -35,7 +35,7 @@ class PistoTokens extends ThemeExtension<PistoTokens> {
   static const radiusCard = 18.0;
   static const radiusChip = 20.0; // pill
   static const radiusControl = 14.0; // buttons, inputs
-  static const radiusTile = 12.0; // icon tiles / square avatars — single value
+  static const radiusTile = 12.0; // icon tiles / square avatars, single value
 
   // ── Semantic intent ────────────────────────────────────────────────────────
   final Color success;
@@ -49,7 +49,7 @@ class PistoTokens extends ThemeExtension<PistoTokens> {
 
   /// Intent colors as FOREGROUND text on bare surface. The container-intent
   /// colors above are tuned to sit on their own tinted backgrounds and fail
-  /// WCAG on cream (`warning` is 1.9:1, `success` 2.9:1) — same trap that
+  /// WCAG on cream (`warning` is 1.9:1, `success` 2.9:1): same trap that
   /// `AppTheme.accentText` exists for. Use these whenever an intent colors
   /// text; use the plain ones for fills, icons on tint, and chart marks.
   final Color successText;

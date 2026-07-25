@@ -35,7 +35,7 @@ sealed class Receivable with _$Receivable {
   }
 }
 
-/// Item de `GET /collections/receivables` — receivable + datos del join.
+/// Item de `GET /collections/receivables`: receivable + datos del join.
 @freezed
 sealed class ReceivableListItem with _$ReceivableListItem {
   const factory ReceivableListItem({

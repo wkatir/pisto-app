@@ -592,7 +592,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
   // ── Alerts tab ─────────────────────────────────────────────────────────────
   // A real feed (docs/DESIGN-VOICE.md §1 exempts feeds/nav): keeps the
   // RowLeadingIcon as the feed's anchor, but no longer doubles it with an
-  // IntentChip — the accent bar + the number in warning already communicate "low stock".
+  // IntentChip: the accent bar + the number in warning already communicate "low stock".
 
   List<DataListColumn<LowStockAlert>> get _alertSkeletonColumns => [
         DataListColumn<LowStockAlert>(label: '', cell: (_, a) => const SizedBox()),
