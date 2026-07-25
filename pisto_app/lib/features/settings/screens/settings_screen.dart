@@ -17,7 +17,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  // Controllers for editing the business — hydrated only once when
+  // Controllers for editing the business: hydrated only once when
   // the first data arrives (see _hydrateBusiness).
   bool _businessHydrated = false;
   final _nameCtrl = TextEditingController();
@@ -203,11 +203,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               initialValue: _currencyCode,
               decoration: const InputDecoration(labelText: 'Moneda'),
               items: const [
-                DropdownMenuItem(value: 'USD', child: Text('USD — Dólar americano')),
-                DropdownMenuItem(value: 'GTQ', child: Text('GTQ — Quetzal guatemalteco')),
-                DropdownMenuItem(value: 'CRC', child: Text('CRC — Colón costarricense')),
-                DropdownMenuItem(value: 'HNL', child: Text('HNL — Lempira hondureño')),
-                DropdownMenuItem(value: 'SVC', child: Text('SVC — Colón salvadoreño')),
+                DropdownMenuItem(value: 'USD', child: Text('USD · Dólar americano')),
+                DropdownMenuItem(value: 'GTQ', child: Text('GTQ · Quetzal guatemalteco')),
+                DropdownMenuItem(value: 'CRC', child: Text('CRC · Colón costarricense')),
+                DropdownMenuItem(value: 'HNL', child: Text('HNL · Lempira hondureño')),
+                DropdownMenuItem(value: 'SVC', child: Text('SVC · Colón salvadoreño')),
               ],
               onChanged: (v) => setState(() => _currencyCode = v ?? 'USD'),
             ),

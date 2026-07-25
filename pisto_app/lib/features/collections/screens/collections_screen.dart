@@ -535,7 +535,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen>
       );
     }
 
-    // Mapped to a semantic intent by range — more overdue = more severe.
+    // Mapped to a semantic intent by range: more overdue = more severe.
     final tokens = theme.extension<PistoTokens>()!;
     Color colorForRange(String range) => switch (range) {
           'current' => tokens.successText,
@@ -695,7 +695,7 @@ class _CollectionsScreenState extends ConsumerState<CollectionsScreen>
 // page, they don't accumulate). This helper keeps the "Cargar más" state on
 // the screen without touching the providers: each new page stacks on top of
 // the previous one and gets passed to `DataList` as if it were a single `Paginated`.
-// Same pattern as `sales_screen.dart` — a product can't be paginated two
+// Same pattern as `sales_screen.dart`: a product can't be paginated two
 // different ways.
 
 class _PagedAccumulator<T> {
@@ -828,7 +828,7 @@ class _MonoDetailRow extends StatelessWidget {
 }
 
 // ── Aging skeleton ───────────────────────────────────────────────────────────
-// Mirrors the grid layout — DataList's own skeleton doesn't fit the InfoCard
+// Mirrors the grid layout: DataList's own skeleton doesn't fit the InfoCard
 // grid, so this stays a small local mirror per §1 (never fake zeros).
 
 class _AgingSkeleton extends StatelessWidget {

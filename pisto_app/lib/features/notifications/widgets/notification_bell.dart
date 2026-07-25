@@ -5,10 +5,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/notifications_providers.dart';
 import '../../../shared/widgets/focus_ring.dart';
 
-/// Bell with an unread badge — lives in the shell (sidebar and mobile app
+/// Bell with an unread badge: lives in the shell (sidebar and mobile app
 /// bar). The badge hides at 0 and while the counter is loading.
 class NotificationBell extends ConsumerStatefulWidget {
-  /// Icon color — the shell passes it depending on its surface (sidebar/app bar).
+  /// Icon color: the shell passes it depending on its surface (sidebar/app bar).
   final Color? iconColor;
   final Color? hoverColor;
 

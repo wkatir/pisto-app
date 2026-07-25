@@ -94,7 +94,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
     return PageHeader(
       title: '${greetingForHour()}$name',
-      // Sales/invoices are already the hero number below — not repeated
+      // Sales/invoices are already the hero number below: not repeated
       // here as a MetricChip (docs/RATIONALE.md §10, "same size = same group").
       actions: [
         FilledButton.icon(
@@ -124,8 +124,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // The screen's one block of color (docs/RATIONALE.md §12): hero number
   // + assistant summary in a single `primaryContainer` band. The rest of
   // the screen stays flat on `surface`.
-  // No previous-period endpoint loaded — a delta is never invented.
-  // Heuristic summary over dashboard data already loaded — there's no
+  // No previous-period endpoint loaded: a delta is never invented.
+  // Heuristic summary over dashboard data already loaded: there's no
   // insights endpoint yet, so it isn't labeled as AI-generated.
   Widget _buildHeroBand(ThemeData theme, Map<String, dynamic> kpis) {
     final cs = theme.colorScheme;
@@ -244,7 +244,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     ];
 
-    // Flat row of BigFigures — no wrapping InfoCard (calmer than
+    // Flat row of BigFigures, no wrapping InfoCard (calmer than
     // boxing the whole strip, docs/DESIGN-VOICE.md §1).
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -279,7 +279,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   // ── Smart actions ──────────────────────────────────────────────────────────
 
-  // Returns null when there's nothing to act on — the "Lo que necesita tu
+  // Returns null when there's nothing to act on: the "Lo que necesita tu
   // atención" heading must not render without a real action behind it.
   Widget? _buildSmartActions(ThemeData theme, Translations t, Map<String, dynamic> kpis) {
     final receivables = kpis['receivables'] as Map<String, dynamic>? ?? {};
@@ -410,7 +410,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       strokeColor: cs.surface,
                     ),
                   ),
-                  // Sparkline fade — dataviz exemption to the no-gradient rule,
+                  // Sparkline fade: dataviz exemption to the no-gradient rule,
                   // kept subtle (12% → 0% alpha).
                   belowBarData: BarAreaData(
                     show: true,
@@ -478,7 +478,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         color: color,
         radius: 38,
         title: '${pct.toStringAsFixed(0)}%',
-        // Labels outside the slice — some chartPalette colors (amber,
+        // Labels outside the slice: some chartPalette colors (amber,
         // light teal) don't give 3:1 with white text on top (WCAG 2.2 SC 1.4.11).
         // Outside the donut, over `surface`, onSurface carries the contrast.
         titleStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: cs.onSurface),
@@ -521,7 +521,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 // Not migrated to `PTabs` (shared/widgets/p_tabs.dart): elsewhere in the app
 // `PTabs` is always used to switch content VIEWS with counts
 // (Invoices/Clients, Orders/Suppliers) with its underline-tab chrome.
-// Here the toggle is a TIME RANGE selector (7 days/month/quarter/year) —
+// Here the toggle is a TIME RANGE selector (7 days/month/quarter/year):
 // a different use that already lives as a selectable pill in `PageHeader`'s
 // `toolbar`. Forcing `PTabs` here would introduce the only underline-tab
 // use for this semantic and break visual consistency with the rest
@@ -664,7 +664,7 @@ class _LegendItem {
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 // Mirrors the real screen: flat on `surface` except for the hero's color
-// band, no bordered filler boxes (docs/DESIGN-VOICE.md §1) — loading
+// band, no bordered filler boxes (docs/DESIGN-VOICE.md §1): loading
 // must not promise a card-based dashboard that never shows up.
 class _DashboardSkeleton extends StatelessWidget {
   final bool isWide;
@@ -693,7 +693,7 @@ class _DashboardSkeleton extends StatelessWidget {
                 )),
           ),
           const SizedBox(height: 24),
-          // Hero band — the real screen's one block of color, no
+          // Hero band: the real screen's one block of color, no
           // border (docs/RATIONALE.md §12).
           Container(
             width: double.infinity,
@@ -761,7 +761,7 @@ class _DashboardSkeleton extends StatelessWidget {
   }
 }
 
-// Mirrors flat `BigFigure` — no wrapping box or border.
+// Mirrors flat `BigFigure`, no wrapping box or border.
 class _MicroStatSkeleton extends StatelessWidget {
   final double width;
   const _MicroStatSkeleton({required this.width});

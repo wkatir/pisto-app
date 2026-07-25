@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import 'focus_ring.dart';
 
-/// Financial list row — replaces ListTile in lists of invoices, sales,
+/// Financial list row: replaces ListTile in lists of invoices, sales,
 /// collections, customers, etc.
 ///
 /// Visual hierarchy:
@@ -14,7 +14,7 @@ import 'focus_ring.dart';
 /// Differences vs ListTile:
 /// - Trailing is a heavy mono figure, not an IconButton.
 /// - Subtitle supports multiple slots (date + customer + chip).
-/// - Leading is optional — no leading icon by default, cleaner layout.
+/// - Leading is optional: no leading icon by default, cleaner layout.
 /// - Subtle border over outlineVariant (respects the flat rule).
 class FinancialListRow extends StatefulWidget {
   /// Optional leading widget (icon, avatar, checkbox).
@@ -23,7 +23,7 @@ class FinancialListRow extends StatefulWidget {
   /// Main title.
   final String title;
 
-  /// Lines below the title — date, customer, etc.
+  /// Lines below the title: date, customer, etc.
   /// Concatenated with a "·" separator.
   final List<String> subtitleParts;
 
@@ -46,7 +46,7 @@ class FinancialListRow extends StatefulWidget {
   /// Marked as selected (bulk mode).
   final bool selected;
 
-  /// If true, doesn't show the border — useful inside a larger card.
+  /// If true, doesn't show the border: useful inside a larger card.
   final bool dense;
 
   const FinancialListRow({
@@ -214,7 +214,7 @@ class RowLeadingIcon extends StatelessWidget {
   }
 }
 
-/// Initials avatar — for customers/suppliers without an image.
+/// Initials avatar: for customers/suppliers without an image.
 ///
 /// Generates a deterministic color based on the text so each
 /// customer/supplier has a consistent yet varied color.

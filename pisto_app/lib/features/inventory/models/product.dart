@@ -39,7 +39,7 @@ sealed class Product with _$Product {
       : totalStockValue.toStringAsFixed(2);
 }
 
-/// Row from `GET /inventory/alerts` — products with stock below the minimum.
+/// Row from `GET /inventory/alerts`: products with stock below the minimum.
 @freezed
 sealed class LowStockAlert with _$LowStockAlert {
   const LowStockAlert._();

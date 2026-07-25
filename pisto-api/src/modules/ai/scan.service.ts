@@ -97,7 +97,7 @@ export async function scanReceipt(
     })
     return { data }
   } catch (err) {
-    // WHY: the configured AI provider (DeepSeek) is text-only and rejects image content parts —
+    // WHY: the configured AI provider (DeepSeek) is text-only and rejects image content parts:
     // surface a clear, actionable error instead of letting the provider's raw 500 leak through.
     if (err instanceof OpenAI.APIError) {
       throw new AppError(502, 'El proveedor de IA configurado no admite el escaneo de imágenes. Contacta al administrador para habilitar un proveedor con soporte de visión.')

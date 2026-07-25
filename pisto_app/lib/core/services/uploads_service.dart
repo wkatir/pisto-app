@@ -24,7 +24,7 @@ class UploadsService {
   /// [absoluteUrl] or [resolveUrl].
   ///
   /// [bytes] is the file's raw bytes. [filename] is only used to infer a
-  /// readable name — the backend generates a UUID.
+  /// readable name: the backend generates a UUID.
   Future<String> uploadImage({
     required Uint8List bytes,
     required String filename,

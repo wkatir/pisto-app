@@ -7,7 +7,7 @@ type Db = ReturnType<typeof drizzle<typeof schema>>
 
 const dbStorage = new AsyncLocalStorage<Db>()
 
-// New connection per request — Workers can't share I/O across requests.
+// New connection per request: Workers can't share I/O across requests.
 export async function runWithDb<T>(databaseUrl: string, fn: () => Promise<T>): Promise<T> {
   const client = postgres(databaseUrl, {
     max: 5,
@@ -24,7 +24,7 @@ export async function runWithDb<T>(databaseUrl: string, fn: () => Promise<T>): P
   }
 }
 
-// Proxy delegating to the current request's store — services keep importing `db` unchanged.
+// Proxy delegating to the current request's store: services keep importing `db` unchanged.
 export const db = new Proxy({} as Db, {
   get(_, prop: string | symbol) {
     const current = dbStorage.getStore()

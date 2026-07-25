@@ -93,7 +93,7 @@ class AiForecastScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The ONE sanctioned alert card on this screen — 3px accent edge
+        // The ONE sanctioned alert card on this screen: 3px accent edge
         // carries the risk state, not a tinted fill.
         InfoCard(
           accentColor: riskColor,
@@ -130,11 +130,11 @@ class AiForecastScreen extends ConsumerWidget {
           ),
         ),
 
-        // Projected figures — the hero numbers, flat, no card.
+        // Projected figures: the hero numbers, flat, no card.
         SectionHeading(title: 'Proyección a 30 días'),
         _buildStatsRow(context, fmt, isCompact, projectedIncome, projectedExpenses, projectedNet),
 
-        // Cash flow — the one framed chart on this screen.
+        // Cash flow: the one framed chart on this screen.
         if (cashFlowData.isNotEmpty) ...[
           SectionHeading(title: 'Flujo de caja proyectado'),
           InfoCard(
@@ -145,7 +145,7 @@ class AiForecastScreen extends ConsumerWidget {
           ),
         ],
 
-        // Insights — flat list, no card.
+        // Insights: flat list, no card.
         if (insights.isNotEmpty) ...[
           SectionHeading(title: 'Análisis'),
           Column(

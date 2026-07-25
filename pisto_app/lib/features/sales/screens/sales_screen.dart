@@ -261,7 +261,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen>
   }
 
   /// The sum only covers invoices already loaded (pagination via "Cargar más"),
-  /// not the historical total — hence the label doesn't promise more than it shows.
+  /// not the historical total, hence the label doesn't promise more than it shows.
   Widget _invoiceRevenueFigure() {
     final view = _invoiceAcc.view;
     if (view == null) return const SizedBox.shrink();
@@ -420,7 +420,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen>
   }
 
   // ── Invoice detail ─────────────────────────────────────────────────────────
-  // Detalle tipo documento — ya alineado a los tokens de InfoCard (cs.*,
+  // Detalle tipo documento: ya alineado a los tokens de InfoCard (cs.*,
   // AppTheme.mono, PistoTokens.radiusCard); se mantiene tal cual.
 
   Future<void> _showInvoiceDetail(BuildContext context, Invoice invoice) {

@@ -92,7 +92,7 @@ sealed class SalePayment with _$SalePayment {
       _$SalePaymentFromJson(json);
 }
 
-/// Line for `POST /sales/invoices` — amounts in API format (2 decimals).
+/// Line for `POST /sales/invoices`: amounts in API format (2 decimals).
 class SaleLineInput {
   final String productId;
   final double quantity;

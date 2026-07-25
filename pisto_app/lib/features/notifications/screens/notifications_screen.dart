@@ -103,7 +103,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         image: 'assets/illustrations/empty_notifications.png',
         title: 'Sin notificaciones',
         description:
-            'Cuando haya algo que atender —stock bajo, cobros o pagos por vencer— te avisamos acá.',
+            'Cuando haya algo que atender (stock bajo, cobros o pagos por vencer) te avisamos acá.',
       );
     }
 
@@ -146,7 +146,7 @@ class _NotificationRow extends StatelessWidget {
     final cs = theme.colorScheme;
     final n = notification;
 
-    // Flat row: unread state reads via a bolder title + accent dot only —
+    // Flat row: unread state reads via a bolder title + accent dot only,
     // no card background, no border (see docs/DESIGN-VOICE.md §1). Hairline
     // dividers between rows come from the parent ListView.separated.
     final rowContent = Row(

@@ -57,8 +57,8 @@ class ReportsScreen extends ConsumerWidget {
   }
 
   /// Hero section: gross profit is the reason this screen exists, so it's
-  /// the single `xl` figure; revenue/cost support it at `s`; tax/discount —
-  /// figures nobody opens reports for — drop to a secondary text line.
+  /// the single `xl` figure; revenue/cost support it at `s`; tax/discount,
+  /// figures nobody opens reports for, drop to a secondary text line.
   Widget _buildFinancialSummary(
     BuildContext context,
     ThemeData theme,

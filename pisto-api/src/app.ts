@@ -26,7 +26,7 @@ import { initEnv } from './config/env'
 
 export const app = new Hono<AppEnv>().basePath('/api/v1')
 
-// New DB connection per request — Workers can't share sockets across requests.
+// New DB connection per request: Workers can't share sockets across requests.
 app.use('*', async (c, next) => {
   initEnv(c.env)
   await runWithDb(c.env.HYPERDRIVE.connectionString, () => next())
@@ -112,7 +112,7 @@ app.onError((err, c) => {
   return c.json({ error: 'Error interno del servidor' }, 500)
 })
 
-// SQLSTATE class 23 (integrity constraint violation) — see https://www.postgresql.org/docs/current/errcodes-appendix.html
+// SQLSTATE class 23 (integrity constraint violation): see https://www.postgresql.org/docs/current/errcodes-appendix.html
 function pgIntegrityErrorMessage(code: string): string {
   switch (code) {
     case '23505':

@@ -6,7 +6,7 @@ import '../../../config/app_theme.dart';
 part 'notification_item.freezed.dart';
 part 'notification_item.g.dart';
 
-/// Contract: GET /notifications — types: low_stock, receivable_due,
+/// Contract: GET /notifications. Types: low_stock, receivable_due,
 /// payable_due, ai_suggestion.
 @freezed
 sealed class NotificationItem with _$NotificationItem {
@@ -47,7 +47,7 @@ sealed class NotificationItem with _$NotificationItem {
       };
 
   /// Severity color for the row's [IconBadge]. Overdue money types (receivables
-  /// and payables due) get the danger tint — everything else stays plain so
+  /// and payables due) get the danger tint: everything else stays plain so
   /// urgency doesn't get diluted by decoration.
   bool get isOverdue => type == 'receivable_due' || type == 'payable_due';
 

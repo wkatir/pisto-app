@@ -333,7 +333,7 @@ class _NavItemState extends State<_NavItem> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Material(
         // Extended: this Material paints the selection pill (full row).
-        // Collapsed: the inner Container (icon box) below paints it instead —
+        // Collapsed: the inner Container (icon box) below paints it instead,
         // painting it here too would duplicate the same color twice.
         color: isExtended ? bg : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
@@ -659,7 +659,7 @@ class _MobileAppBar extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-/// Account avatar (photo or initials) — a single widget shared between the
+/// Account avatar (photo or initials): a single widget shared between the
 /// mobile appbar and the account sheet header, previously duplicated with
 /// different radii (circle 20 vs corner 14 for the same box size).
 class _AccountAvatar extends StatelessWidget {
@@ -970,7 +970,7 @@ class _SheetTileState extends State<_SheetTile> {
 
 /// Minimalist Notion/Linear-style bottom tab bar.
 ///
-/// Doesn't use visible labels — just icons with a pill indicator below the
+/// Doesn't use visible labels, just icons with a pill indicator below the
 /// active one. Cleaner than Material's NavigationBar, which screams "Flutter app".
 class _BottomTabBar extends StatelessWidget {
   final List<_NavDest> destinations;

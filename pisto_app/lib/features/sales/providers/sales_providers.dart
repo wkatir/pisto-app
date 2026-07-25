@@ -42,7 +42,7 @@ Future<Paginated<Invoice>> invoicesList(
 }
 
 /// Subtitle for the "Tus ventas" header. The billed amount is computed over
-/// the visible page of the historical list, so the scope is labeled —
+/// the visible page of the historical list, so the scope is labeled:
 /// without the label it reads as a monthly figure and contradicts the dashboard.
 String salesHeaderMeta(Paginated<Invoice> invoices) {
   final total = invoices.meta.total;
@@ -72,7 +72,7 @@ Future<CustomerStatement> customerStatement(Ref ref, String customerId) {
   return ref.watch(salesRepositoryProvider).getCustomerStatement(customerId);
 }
 
-/// Product catalog for the sales flow — shared by the new-sale form and the
+/// Product catalog for the sales flow: shared by the new-sale form and the
 /// invoice detail (to resolve names by productId).
 @riverpod
 Future<List<ProductRef>> saleProducts(Ref ref) {

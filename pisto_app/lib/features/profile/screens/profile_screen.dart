@@ -22,7 +22,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _avatarUrl;
 
   // The controllers hydrate only once when the first data arrives
-  // (see _hydrateMe) — avoids stomping what the user is editing when
+  // (see _hydrateMe): avoids stomping what the user is editing when
   // the provider refreshes after saving.
   bool _hydrated = false;
 
@@ -228,7 +228,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 28),
-            // ── Identity — flat, no card ──
+            // ── Identity (flat, no card) ──
             Row(
                 children: [
                   // Editable avatar: shows the photo if there is one, else
@@ -452,7 +452,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            // ── Session ── the ONE sanctioned alert card — accent edge signals
+            // ── Session ── the ONE sanctioned alert card: accent edge signals
             // the destructive action.
             InfoCard(
               title: 'Sesión',

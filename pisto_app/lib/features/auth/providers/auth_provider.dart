@@ -75,7 +75,7 @@ class Auth extends _$Auth {
         roles: (me['roles'] as List?)?.cast<String>() ?? state.value!.roles,
       ));
     } catch (_) {
-      // Best-effort sync after a profile update that already succeeded —
+      // Best-effort sync after a profile update that already succeeded:
       // a failed refresh just leaves the sidebar/AppBar stale until the
       // next login, so we keep the previous state instead of surfacing it.
     }

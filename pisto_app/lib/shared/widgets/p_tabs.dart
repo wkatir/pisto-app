@@ -11,7 +11,7 @@ class PTabItem {
 /// Custom tab row replacing stock `TabBar` chrome (docs/DESIGN-VOICE.md §1):
 /// active = w600 `onSurface` text + animated 2px primary underline (120ms),
 /// inactive = w500 `onSurfaceVariant`, no ink splash. Driven by an external
-/// `index`/`onChanged` — works whether the screen owns a `TabController` (call
+/// `index`/`onChanged`: works whether the screen owns a `TabController` (call
 /// `onChanged: (i) => tabController.animateTo(i)`) or plain `int` state.
 /// Usage: `PTabs(tabs: [PTabItem('Todas', count: 12), PTabItem('Vencidas')],
 /// index: tab, onChanged: (i) => setState(() => tab = i))`.

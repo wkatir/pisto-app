@@ -24,7 +24,7 @@ export interface ListQuery {
 }
 
 // Standard CRUD for simple aggregates: list (search + pagination), listAll,
-// get, create, update, soft-delete — always scoped by businessId. Tables with
+// get, create, update, soft-delete: always scoped by businessId. Tables with
 // an isActive column are filtered to active rows on list/listAll and
 // soft-deleted; deletion on tables without isActive is not offered here.
 export function crudService<T extends CrudTable>(table: T, opts: CrudOptions) {

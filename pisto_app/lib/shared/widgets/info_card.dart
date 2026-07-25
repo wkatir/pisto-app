@@ -5,10 +5,10 @@ import '../../config/app_theme.dart';
 /// radius 18. Optional title row with a trailing action, optional 3px left
 /// accent bar for state (overdue/warning). Usage: `InfoCard(title: 'Vencidas',
 /// accentColor: cs.error, child: ...)`. NO tinted full-card fills, shadows or
-/// gradients — see docs/DESIGN.md §1 (color is an accent, never a room).
+/// gradients: see docs/DESIGN.md §1 (color is an accent, never a room).
 ///
 /// DEMOTED (docs/DESIGN-VOICE.md §1): `InfoCard` is sanctioned for exactly
-/// three uses — (a) KPI/stat blocks, (b) tables/lists that need a visible
+/// three uses: (a) KPI/stat blocks, (b) tables/lists that need a visible
 /// frame, (c) alerts with an accent edge. Everything else is flat: compose
 /// `SectionHeading` + content directly on `surface`, no wrapper card. If a
 /// screen shows more than 4 bordered boxes at once, it's wrong.
@@ -17,7 +17,7 @@ class InfoCard extends StatelessWidget {
   final Widget? trailing;
   final Widget child;
 
-  /// 3px left bar for state (overdue/warning) — not a background wash.
+  /// 3px left bar for state (overdue/warning), not a background wash.
   final Color? accentColor;
   final EdgeInsetsGeometry padding;
   final Color? background;

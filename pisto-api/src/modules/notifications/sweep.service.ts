@@ -103,8 +103,8 @@ export async function sweepNotifications(businessId: string): Promise<number> {
       type: 'receivable_due',
       title: overdue ? 'Cobro vencido' : 'Cobro por vencer',
       body: overdue
-        ? `${r.customerName} te debe ${fmtMoney(r.balance)} — venció el ${fmtDateEs(r.dueDate)}`
-        : `${r.customerName} te debe ${fmtMoney(r.balance)} — vence el ${fmtDateEs(r.dueDate)}`,
+        ? `${r.customerName} te debe ${fmtMoney(r.balance)}. Venció el ${fmtDateEs(r.dueDate)}`
+        : `${r.customerName} te debe ${fmtMoney(r.balance)}. Vence el ${fmtDateEs(r.dueDate)}`,
       entityType: 'account_receivable',
       entityId: r.id,
     })
@@ -117,8 +117,8 @@ export async function sweepNotifications(businessId: string): Promise<number> {
       type: 'payable_due',
       title: overdue ? 'Pago vencido' : 'Pago por vencer',
       body: overdue
-        ? `Debés ${fmtMoney(p.balance)} a ${p.supplierName} — venció el ${fmtDateEs(p.dueDate)}`
-        : `Debés ${fmtMoney(p.balance)} a ${p.supplierName} — vence el ${fmtDateEs(p.dueDate)}`,
+        ? `Debés ${fmtMoney(p.balance)} a ${p.supplierName}. Venció el ${fmtDateEs(p.dueDate)}`
+        : `Debés ${fmtMoney(p.balance)} a ${p.supplierName}. Vence el ${fmtDateEs(p.dueDate)}`,
       entityType: 'account_payable',
       entityId: p.id,
     })

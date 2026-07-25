@@ -41,7 +41,7 @@ class DataList<T> extends StatelessWidget {
   final bool loadingMore;
   final int skeletonRows;
 
-  /// Optional 3px left accent bar per row (state matters, e.g. overdue) —
+  /// Optional 3px left accent bar per row (state matters, e.g. overdue),
   /// same convention as `InfoCard.accentColor`. Never a row background wash.
   final Color? Function(T item)? rowAccentColor;
 
@@ -200,7 +200,7 @@ class _TableRowState<T> extends State<_TableRow<T>> {
 }
 
 /// Narrow layout (<900px): lead column as title, middle columns wrapped
-/// below it, the last money column (if any) promoted to the trailing slot —
+/// below it, the last money column (if any) promoted to the trailing slot:
 /// same data density as the table, no separate "card" variant.
 class _CompactRow<T> extends StatefulWidget {
   final List<DataListColumn<T>> columns;
@@ -333,7 +333,7 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Skeleton mirroring the table layout — never fake zeros.
+/// Skeleton mirroring the table layout: never fake zeros.
 class _Skeleton extends StatelessWidget {
   final int columns;
   final int rows;

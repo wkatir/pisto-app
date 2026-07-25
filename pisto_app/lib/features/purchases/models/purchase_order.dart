@@ -68,7 +68,7 @@ sealed class PurchaseOrderItem with _$PurchaseOrderItem {
   double get quantityPending => quantityOrderedValue - quantityReceivedValue;
 }
 
-/// Line for `POST /purchases/orders` — amounts in API format (2 decimals).
+/// Line for `POST /purchases/orders`: amounts in API format (2 decimals).
 class PurchaseLineInput {
   final String productId;
   final double quantity;

@@ -3,7 +3,7 @@ import '../../../core/providers/service_providers.dart';
 
 part 'dashboard_providers.g.dart';
 
-/// Dashboard date range — local UI state in the screen,
+/// Dashboard date range: local UI state in the screen,
 /// passed as a param to the provider (not async state).
 enum DashboardPeriod { week, month, quarter, year }
 
