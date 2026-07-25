@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../providers/auth_provider.dart';
 import '../../../config/app_theme.dart';
 import '../../../i18n/translations.g.dart';
+import '../../../shared/widgets/app_toast.dart';
 import '_auth_panel.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
@@ -47,18 +49,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           businessName: _businessCtrl.text.trim(),
           phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
         );
-    if (mounted) {
-      final authState = ref.read(authProvider);
-      if (authState.hasError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${authState.error}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      } else if (authState.hasValue && authState.value != null) {
-        context.go('/dashboard');
-      }
+    if (!mounted) return;
+    final authState = ref.read(authProvider);
+    if (authState.hasError) {
+      AppToast.error(context, authState.error.toString());
+    } else if (authState.hasValue && authState.value != null) {
+      TextInput.finishAutofillContext();
+      context.go('/dashboard');
     }
   }
 
@@ -73,165 +70,176 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return AuthSplitLayout(
       form: Form(
         key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Creá tu cuenta',
-              style: AppTheme.serif(
-                fontSize: 32,
-                fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurface,
-                letterSpacing: -0.5,
-                height: 1.1,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Empezá gratis, sin tarjeta de crédito.',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.75),
-                height: 1.4,
-              ),
-            ),
-            const SizedBox(height: 28),
-            Row(
-              children: [
-                Expanded(
-                  child: TextFormField(
-                    controller: _firstNameCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Nombre'),
-                    validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _lastNameCtrl,
-                    textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(labelText: 'Apellido'),
-                    validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _businessCtrl,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Nombre de empresa',
-                prefixIcon: Icon(LucideIcons.building2, size: 18),
-              ),
-              validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: t.email,
-                prefixIcon: const Icon(LucideIcons.mail, size: 18),
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return t.emailRequired;
-                if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v)) return t.invalidEmail;
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _phoneCtrl,
-              keyboardType: TextInputType.phone,
-              textInputAction: TextInputAction.next,
-              decoration: const InputDecoration(
-                labelText: 'Teléfono (opcional)',
-                prefixIcon: Icon(LucideIcons.phone, size: 18),
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return null; // opcional
-                if (!RegExp(r'^\+?[\d\s\-]{7,15}$').hasMatch(v)) return 'Teléfono inválido (7-15 dígitos)';
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _passwordCtrl,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.next,
-              decoration: InputDecoration(
-                labelText: t.password,
-                prefixIcon: const Icon(LucideIcons.lock, size: 18),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff,
-                    size: 18,
-                  ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+        child: AutofillGroup(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Creá tu cuenta',
+                style: AppTheme.serif(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  color: cs.onSurface,
                 ),
               ),
-              validator: (v) {
-                if (v == null || v.length < 6) return t.minChars(count: 6);
-                return null;
-              },
-            ),
-            const SizedBox(height: 14),
-            TextFormField(
-              controller: _confirmPasswordCtrl,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              onFieldSubmitted: (_) => _submit(),
-              decoration: const InputDecoration(
-                labelText: 'Confirmar contraseña',
-                prefixIcon: Icon(LucideIcons.lockKeyhole, size: 18),
-              ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Requerido';
-                if (v != _passwordCtrl.text) return 'Las contraseñas no coinciden';
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: isLoading ? null : _submit,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 15),
-              ),
-              child: isLoading
-                  ? SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
-                    )
-                  : const Text(
-                      'Crear cuenta gratis',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-                    ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  '¿Ya tienes cuenta? ',
-                  style: theme.textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(height: 8),
+              Text(
+                'Empezá gratis, sin tarjeta de crédito.',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.4,
                 ),
-                GestureDetector(
-                  onTap: () => context.go('/login'),
-                  child: Text(
-                    'Iniciar sesión',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.primary,
-                      fontWeight: FontWeight.w600,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _firstNameCtrl,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.givenName],
+                      decoration: const InputDecoration(labelText: 'Nombre'),
+                      validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
                     ),
                   ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _lastNameCtrl,
+                      textInputAction: TextInputAction.next,
+                      autofillHints: const [AutofillHints.familyName],
+                      decoration: const InputDecoration(labelText: 'Apellido'),
+                      validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _businessCtrl,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.organizationName],
+                decoration: const InputDecoration(
+                  labelText: 'Nombre de tu negocio',
+                  prefixIcon: Icon(LucideIcons.store, size: 18),
                 ),
-              ],
-            ),
-          ],
+                validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                decoration: InputDecoration(
+                  labelText: t.email,
+                  prefixIcon: const Icon(LucideIcons.mail, size: 18),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return t.emailRequired;
+                  if (!RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$').hasMatch(v)) {
+                    return t.invalidEmail;
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _phoneCtrl,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.telephoneNumber],
+                decoration: const InputDecoration(
+                  labelText: 'Teléfono (opcional)',
+                  prefixIcon: Icon(LucideIcons.phone, size: 18),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return null;
+                  if (!RegExp(r'^\+?[\d\s\-]{7,15}$').hasMatch(v)) {
+                    return 'Teléfono inválido (7-15 dígitos)';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _passwordCtrl,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: InputDecoration(
+                  labelText: t.password,
+                  prefixIcon: const Icon(LucideIcons.lock, size: 18),
+                  suffixIcon: IconButton(
+                    tooltip: _obscurePassword ? 'Mostrar contraseña' : 'Ocultar contraseña',
+                    icon: Icon(
+                      _obscurePassword ? LucideIcons.eye : LucideIcons.eyeOff,
+                      size: 18,
+                    ),
+                    onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.length < 6) return t.minChars(count: 6);
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+              TextFormField(
+                controller: _confirmPasswordCtrl,
+                obscureText: _obscurePassword,
+                textInputAction: TextInputAction.done,
+                onFieldSubmitted: (_) => _submit(),
+                decoration: const InputDecoration(
+                  labelText: 'Confirmar contraseña',
+                  prefixIcon: Icon(LucideIcons.lockKeyhole, size: 18),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Requerido';
+                  if (v != _passwordCtrl.text) return 'Las contraseñas no coinciden';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: isLoading ? null : _submit,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+                child: isLoading
+                    ? SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                      )
+                    : const Text(
+                        'Crear cuenta',
+                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '¿Ya tenés cuenta? ',
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  TextButton(
+                    onPressed: () => context.go('/login'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text('Iniciar sesión'),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
