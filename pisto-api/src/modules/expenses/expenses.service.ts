@@ -1,6 +1,6 @@
 import { db } from '../../config/database'
 import { expense, expenseCategory } from '../../db/schema'
-import { eq, and, gte, lte, desc } from 'drizzle-orm'
+import { eq, and, gte, lte, desc, getTableColumns } from 'drizzle-orm'
 
 export async function listCategories(businessId: string) {
   return db.select().from(expenseCategory)
@@ -30,7 +30,12 @@ export async function listExpenses(businessId: string, filters: {
   if (filters.endDate) conditions.push(lte(expense.expenseDate, filters.endDate))
   if (filters.categoryId) conditions.push(eq(expense.categoryId, filters.categoryId))
 
-  const rows = await db.select().from(expense)
+  const rows = await db.select({
+    ...getTableColumns(expense),
+    categoryName: expenseCategory.name,
+  })
+    .from(expense)
+    .leftJoin(expenseCategory, eq(expense.categoryId, expenseCategory.id))
     .where(and(...conditions))
     .orderBy(desc(expense.expenseDate))
     .offset(offset).limit(limit)

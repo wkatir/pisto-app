@@ -6,7 +6,7 @@ import { appUser, business, role, userRole, refreshToken } from '../../db/schema
 import { env } from '../../config/env'
 import { AppError } from '../../shared/errors/app-error'
 
-// Hash de password con PBKDF2 (WebCrypto, compatible con Cloudflare Workers)
+// Password hashing with PBKDF2 (WebCrypto, works on Cloudflare Workers)
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder();
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -24,6 +24,7 @@ async function hashPassword(password: string): Promise<string> {
 
 async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const [saltHex, hashHex] = stored.split(':');
+  if (!saltHex || !hashHex) throw new Error('Malformed stored password hash');
   const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(b => parseInt(b, 16)));
   const encoder = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -124,35 +125,35 @@ export async function registerUser(data: {
 }
 
 export async function refreshTokens(refreshTokenStr: string) {
+  let payload: Awaited<ReturnType<typeof verify>>
   try {
-    const payload = await verify(refreshTokenStr, env.JWT_REFRESH_SECRET, 'HS256')
-
-    const tokens = await db.select().from(refreshToken)
-      .where(and(
-        eq(refreshToken.tokenHash, hashToken(refreshTokenStr)),
-        isNull(refreshToken.revokedAt),
-      ))
-
-    const storedToken = tokens[0]
-    if (!storedToken) throw new AppError(401, 'Token inválido o revocado')
-    if (new Date() > storedToken.expiresAt) throw new AppError(401, 'Token expirado')
-
-    const users = await db.select().from(appUser)
-      .where(eq(appUser.id, payload.sub as string))
-
-    const user = users[0]
-    if (!user || !user.isActive) throw new AppError(401, 'Usuario no válido o inactivo')
-
-    await revokeRefreshToken(refreshTokenStr)
-    const roles = await getUserRoles(user.id)
-    const newTokens = await generateTokens(user.id, user.businessId, roles)
-    await createRefreshToken(user.id, newTokens.refreshToken)
-
-    return { accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken }
-  } catch (e) {
-    if (e instanceof AppError) throw e
+    payload = await verify(refreshTokenStr, env.JWT_REFRESH_SECRET, 'HS256')
+  } catch {
     throw new AppError(401, 'Token expirado o inválido')
   }
+
+  const tokens = await db.select().from(refreshToken)
+    .where(and(
+      eq(refreshToken.tokenHash, hashToken(refreshTokenStr)),
+      isNull(refreshToken.revokedAt),
+    ))
+
+  const storedToken = tokens[0]
+  if (!storedToken) throw new AppError(401, 'Token inválido o revocado')
+  if (new Date() > storedToken.expiresAt) throw new AppError(401, 'Token expirado')
+
+  const users = await db.select().from(appUser)
+    .where(eq(appUser.id, payload.sub as string))
+
+  const user = users[0]
+  if (!user || !user.isActive) throw new AppError(401, 'Usuario no válido o inactivo')
+
+  await revokeRefreshToken(refreshTokenStr)
+  const roles = await getUserRoles(user.id)
+  const newTokens = await generateTokens(user.id, user.businessId, roles)
+  await createRefreshToken(user.id, newTokens.refreshToken)
+
+  return { accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken }
 }
 
 export async function logout(refreshTokenStr: string) {

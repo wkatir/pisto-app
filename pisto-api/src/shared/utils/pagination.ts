@@ -1,25 +1,30 @@
 import * as v from 'valibot'
 
-export const paginationSchema = v.object({
-  page: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1)), '1'),
-  limit: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(100)), '20'),
+export const intParam = (min: number, max: number) =>
+  v.pipe(
+    v.string(),
+    v.transform((s) => Number.parseInt(s, 10)),
+    v.number('debe ser numérico'),
+    v.integer(),
+    v.minValue(min),
+    v.maxValue(max),
+  )
+
+export const paginationQuerySchema = v.object({
+  page: v.optional(intParam(1, 10000), '1'),
+  limit: v.optional(intParam(1, 200), '20'),
   search: v.optional(v.string()),
-  sortBy: v.optional(v.string()),
-  sortOrder: v.optional(v.picklist(['asc', 'desc']), 'desc'),
 })
 
-export type PaginationParams = v.InferOutput<typeof paginationSchema>
+export const dateRangeQuerySchema = v.object({
+  from: v.optional(v.pipe(v.string(), v.isoDate('from debe ser YYYY-MM-DD'))),
+  to: v.optional(v.pipe(v.string(), v.isoDate('to debe ser YYYY-MM-DD'))),
+})
 
-export function paginate(params: PaginationParams) {
-  const { page, limit } = params
-  return {
-    skip: (page - 1) * limit,
-    take: limit,
-  }
-}
+export type PaginationQuery = v.InferOutput<typeof paginationQuerySchema>
+export type DateRangeQuery = v.InferOutput<typeof dateRangeQuerySchema>
 
-export function paginatedResponse<T>(data: T[], total: number, params: PaginationParams) {
-  const { page, limit } = params
+export function paginatedResponse<T>(data: T[], total: number, page: number, limit: number) {
   return {
     data,
     meta: {

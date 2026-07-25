@@ -1,5 +1,5 @@
 import type OpenAI from 'openai'
-import { client, getAiModel } from './ai-client'
+import { getAiClient, getAiModel } from './ai-client'
 import { sql } from 'drizzle-orm'
 import { db } from '../../config/database'
 
@@ -141,15 +141,16 @@ async function queryCashFlow(businessId: string, params: { from?: string; to?: s
       AND order_date <= ${toDate}
   `)
 
-  const totalIncome = (income[0]?.total ?? 0)
-  const totalExpenses = (expenses[0]?.total ?? 0) + (purchases[0]?.total ?? 0)
+  // Bare aggregate queries (no GROUP BY) always return exactly one row; COALESCE guarantees total is never null.
+  const totalIncome = income[0]!.total
+  const totalExpenses = expenses[0]!.total + purchases[0]!.total
 
   return {
     period: { from: fromDate, to: toDate },
     income: totalIncome,
     expenses: totalExpenses,
-    purchases: purchases[0]?.total ?? 0,
-    operating_expenses: expenses[0]?.total ?? 0,
+    purchases: purchases[0]!.total,
+    operating_expenses: expenses[0]!.total,
     net_cash_flow: totalIncome - totalExpenses,
   }
 }
@@ -254,7 +255,7 @@ export async function chat(
   ]
 
   for (let i = 0; i < 10; i++) {
-    const response = await client.chat.completions.create({
+    const response = await getAiClient().chat.completions.create({
       model: getAiModel(),
       max_tokens: 1024,
       tools,

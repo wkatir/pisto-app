@@ -1,31 +1,11 @@
-import { eq, and } from 'drizzle-orm'
-import { db } from '../../config/database'
 import { warehouse } from '../../db/schema'
-import { AppError } from '../../shared/errors/app-error'
+import { crudService } from '../../shared/crud'
 
-export async function listWarehouses(businessId: string) {
-  return db.select().from(warehouse)
-    .where(and(eq(warehouse.businessId, businessId), eq(warehouse.isActive, true)))
-}
+const warehouses = crudService(warehouse, {
+  notFoundMessage: 'Bodega no encontrada',
+})
 
-export async function createWarehouse(businessId: string, data: { name: string; address?: string }) {
-  const [wh] = await db.insert(warehouse).values({ businessId, ...data }).returning()
-  return wh
-}
-
-export async function updateWarehouse(businessId: string, id: string, data: { name?: string; address?: string }) {
-  const [updated] = await db.update(warehouse)
-    .set(data)
-    .where(and(eq(warehouse.id, id), eq(warehouse.businessId, businessId)))
-  if (!updated) throw new AppError(404, 'Bodega no encontrada')
-  return updated
-}
-
-export async function deleteWarehouse(businessId: string, id: string) {
-  const [updated] = await db.update(warehouse)
-    .set({ isActive: false })
-    .where(and(eq(warehouse.id, id), eq(warehouse.businessId, businessId)))
-    .returning()
-  if (!updated) throw new AppError(404, 'Bodega no encontrada')
-  return updated
-}
+export const listWarehouses = warehouses.listAll
+export const createWarehouse = warehouses.create
+export const updateWarehouse = warehouses.update
+export const deleteWarehouse = warehouses.softDelete

@@ -8,7 +8,8 @@ import {
   expenseQuerySchema,
 } from './expenses.schemas'
 import * as expenseService from './expenses.service'
-import { dateRangeQuerySchema } from '../../shared/schemas/pagination'
+import { dateRangeQuerySchema } from '../../shared/utils/pagination'
+import { idParamSchema } from '../../shared/schemas/common'
 
 const expenses = new Hono<AppEnv>()
 
@@ -35,19 +36,13 @@ expenses.get('/summary', vValidator('query', dateRangeQuerySchema), async (c) =>
 expenses.get('/', vValidator('query', expenseQuerySchema), async (c) => {
   const businessId = c.get('businessId')
   const query = c.req.valid('query')
-  const data = await expenseService.listExpenses(businessId, {
-    startDate: query.startDate,
-    endDate: query.endDate,
-    categoryId: query.categoryId,
-    page: query.page as number | undefined,
-    limit: query.limit as number | undefined,
-  })
+  const data = await expenseService.listExpenses(businessId, query)
   return c.json({ data })
 })
 
-expenses.get('/:id', async (c) => {
+expenses.get('/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const data = await expenseService.getExpense(businessId, id)
   if (!data) return c.json({ error: 'Gasto no encontrado' }, 404)
   return c.json({ data })
@@ -61,17 +56,17 @@ expenses.post('/', vValidator('json', createExpenseSchema), async (c) => {
   return c.json({ data }, 201)
 })
 
-expenses.put('/:id', vValidator('json', updateExpenseSchema), async (c) => {
+expenses.put('/:id', vValidator('param', idParamSchema), vValidator('json', updateExpenseSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const body = c.req.valid('json')
-  const data = await expenseService.updateExpense(id, businessId, body as any)
+  const data = await expenseService.updateExpense(id, businessId, body)
   return c.json({ data })
 })
 
-expenses.delete('/:id', async (c) => {
+expenses.delete('/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   await expenseService.deleteExpense(id, businessId)
   return c.json({ message: 'Gasto eliminado' })
 })

@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
+import * as v from 'valibot'
 import {
   createCategorySchema, updateCategorySchema,
   createWarehouseSchema, updateWarehouseSchema,
@@ -11,23 +12,25 @@ import * as whService from './warehouse.service'
 import * as prodService from './product.service'
 import * as movService from './movement.service'
 import * as transService from './transfer.service'
-
-import { AppError } from '../../shared/errors/app-error'
+import { intParam } from '../../shared/utils/pagination'
+import { idParamSchema } from '../../shared/schemas/common'
 import { unitOfMeasure } from '../../db/schema'
 import { db } from '../../config/database'
 import type { AppEnv } from '../../types/app-env'
 
 const inventory = new Hono<AppEnv>()
 
+const movementsQuerySchema = v.object({ limit: v.optional(intParam(1, 500), '100') })
+
 inventory.get('/units', async (c) => {
   const units = await db.select().from(unitOfMeasure)
-  return c.json(units)
+  return c.json({ data: units })
 })
 
 inventory.get('/categories', async (c) => {
   const businessId = c.get('businessId')
   const categories = await catService.listCategories(businessId)
-  return c.json(categories)
+  return c.json({ data: categories })
 })
 
 inventory.post('/categories', vValidator('json', createCategorySchema), async (c) => {
@@ -37,17 +40,17 @@ inventory.post('/categories', vValidator('json', createCategorySchema), async (c
   return c.json(cat, 201)
 })
 
-inventory.put('/categories/:id', vValidator('json', updateCategorySchema), async (c) => {
+inventory.put('/categories/:id', vValidator('param', idParamSchema), vValidator('json', updateCategorySchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const body = c.req.valid('json')
   const cat = await catService.updateCategory(businessId, id, body)
   return c.json(cat)
 })
 
-inventory.delete('/categories/:id', async (c) => {
+inventory.delete('/categories/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   await catService.deleteCategory(businessId, id)
   return c.json({ message: 'Categoría eliminada' })
 })
@@ -55,7 +58,7 @@ inventory.delete('/categories/:id', async (c) => {
 inventory.get('/warehouses', async (c) => {
   const businessId = c.get('businessId')
   const warehouses = await whService.listWarehouses(businessId)
-  return c.json(warehouses)
+  return c.json({ data: warehouses })
 })
 
 inventory.post('/warehouses', vValidator('json', createWarehouseSchema), async (c) => {
@@ -65,17 +68,17 @@ inventory.post('/warehouses', vValidator('json', createWarehouseSchema), async (
   return c.json(wh, 201)
 })
 
-inventory.put('/warehouses/:id', vValidator('json', updateWarehouseSchema), async (c) => {
+inventory.put('/warehouses/:id', vValidator('param', idParamSchema), vValidator('json', updateWarehouseSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const body = c.req.valid('json')
   const wh = await whService.updateWarehouse(businessId, id, body)
   return c.json(wh)
 })
 
-inventory.delete('/warehouses/:id', async (c) => {
+inventory.delete('/warehouses/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   await whService.deleteWarehouse(businessId, id)
   return c.json({ message: 'Bodega eliminada' })
 })
@@ -87,16 +90,11 @@ inventory.get('/products', vValidator('query', productQuerySchema), async (c) =>
   return c.json(result)
 })
 
-inventory.get('/products/:id', async (c) => {
+inventory.get('/products/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
-  try {
-    const p = await prodService.getProduct(businessId, id)
-    return c.json(p)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const { id } = c.req.valid('param')
+  const p = await prodService.getProduct(businessId, id)
+  return c.json(p)
 })
 
 inventory.post('/products', vValidator('json', createProductSchema), async (c) => {
@@ -106,42 +104,31 @@ inventory.post('/products', vValidator('json', createProductSchema), async (c) =
   return c.json(p, 201)
 })
 
-inventory.put('/products/:id', vValidator('json', updateProductSchema), async (c) => {
+inventory.put('/products/:id', vValidator('param', idParamSchema), vValidator('json', updateProductSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const body = c.req.valid('json')
-  try {
-    const p = await prodService.updateProduct(businessId, id, body)
-    return c.json(p)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const p = await prodService.updateProduct(businessId, id, body)
+  return c.json(p)
 })
 
-inventory.delete('/products/:id', async (c) => {
+inventory.delete('/products/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
-  try {
-    await prodService.deleteProduct(businessId, id)
-    return c.json({ message: 'Producto eliminado' })
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const { id } = c.req.valid('param')
+  await prodService.deleteProduct(businessId, id)
+  return c.json({ message: 'Producto eliminado' })
 })
 
-inventory.get('/movements', async (c) => {
+inventory.get('/movements', vValidator('query', movementsQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const limitParam = c.req.query('limit')
-  const limit = limitParam ? Math.min(parseInt(limitParam, 10) || 100, 500) : 100
+  const { limit } = c.req.valid('query')
   const movements = await movService.listMovements(businessId, limit)
   return c.json(movements)
 })
 
-inventory.get('/products/:id/movements', async (c) => {
+inventory.get('/products/:id/movements', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
   const movements = await movService.getProductMovements(id, businessId)
   return c.json(movements)
 })
@@ -150,13 +137,8 @@ inventory.post('/adjustments', vValidator('json', adjustmentSchema), async (c) =
   const businessId = c.get('businessId')
   const userId = c.get('userId')
   const body = c.req.valid('json')
-  try {
-    const movement = await movService.createAdjustment(businessId, userId, body)
-    return c.json(movement, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const movement = await movService.createAdjustment(businessId, userId, body)
+  return c.json(movement, 201)
 })
 
 inventory.get('/transfers', async (c) => {
@@ -169,25 +151,15 @@ inventory.post('/transfers', vValidator('json', createTransferSchema), async (c)
   const businessId = c.get('businessId')
   const userId = c.get('userId')
   const body = c.req.valid('json')
-  try {
-    const transfer = await transService.createTransfer(businessId, userId, body)
-    return c.json(transfer, 201)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 400)
-    throw e
-  }
+  const transfer = await transService.createTransfer(businessId, userId, body)
+  return c.json(transfer, 201)
 })
 
-inventory.get('/transfers/:id', async (c) => {
+inventory.get('/transfers/:id', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const id = c.req.param('id')
-  try {
-    const transfer = await transService.getTransfer(businessId, id)
-    return c.json(transfer)
-  } catch (e) {
-    if (e instanceof AppError) return c.json({ error: e.message }, e.statusCode as 404)
-    throw e
-  }
+  const { id } = c.req.valid('param')
+  const transfer = await transService.getTransfer(businessId, id)
+  return c.json(transfer)
 })
 
 inventory.get('/alerts', async (c) => {

@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { decimalString, optionalFileUrlSchema } from '../../shared/schemas/common'
 
 export const createCategorySchema = v.object({
   name: v.pipe(v.string(), v.minLength(1, 'Nombre requerido')),
@@ -22,13 +23,13 @@ export const createProductSchema = v.object({
   barcode: v.optional(v.string()),
   name: v.pipe(v.string(), v.minLength(1, 'Nombre requerido')),
   description: v.optional(v.string()),
-  costPrice: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/, 'Precio inválido')), '0'),
-  salePrice: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/, 'Precio inválido')),
-  minStock: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)), '0'),
-  maxStock: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/))),
+  costPrice: v.optional(decimalString, '0'),
+  salePrice: decimalString,
+  minStock: v.optional(decimalString, '0'),
+  maxStock: v.optional(decimalString),
   isService: v.optional(v.boolean(), false),
   isTaxable: v.optional(v.boolean(), true),
-  imageUrl: v.optional(v.pipe(v.string(), v.url())),
+  imageUrl: optionalFileUrlSchema,
 })
 
 export const updateProductSchema = v.partial(createProductSchema)
@@ -46,8 +47,8 @@ export const adjustmentSchema = v.object({
   productId: v.pipe(v.string(), v.uuid()),
   warehouseId: v.pipe(v.string(), v.uuid()),
   type: v.picklist(['adjustment_in', 'adjustment_out']),
-  quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-  unitCost: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/))),
+  quantity: decimalString,
+  unitCost: v.optional(decimalString),
   notes: v.optional(v.string()),
 })
 
@@ -58,7 +59,7 @@ export const createTransferSchema = v.object({
   lines: v.pipe(
     v.array(v.object({
       productId: v.pipe(v.string(), v.uuid()),
-      quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+      quantity: decimalString,
     })),
     v.minLength(1, 'Al menos un producto'),
   ),
