@@ -2,7 +2,9 @@
 
 > Financial management and sales ERP for small and medium businesses (SMBs).
 
-Monorepo with a Flutter mobile/web frontend and a Hono + Bun REST API backed by SQL Server 2022.
+Monorepo with a Flutter mobile/web frontend and a Hono REST API on Cloudflare
+Workers, backed by PostgreSQL. Includes an AI assistant that answers questions
+about your own books in plain Spanish.
 
 ---
 
@@ -14,12 +16,13 @@ Monorepo with a Flutter mobile/web frontend and a Hono + Bun REST API backed by 
 | State management | Riverpod 3 (code generation) |
 | Router | GoRouter |
 | HTTP client | Dio + JWT interceptor (auto-refresh) |
-| Backend | Hono 4 on Bun |
-| Database | SQL Server 2022 (Docker) |
-| ORM | Drizzle ORM (mssql experimental branch) |
+| Backend | Hono 4 on Cloudflare Workers |
+| Database | PostgreSQL (Supabase) |
+| ORM | Drizzle ORM + postgres-js |
 | Validation | Valibot |
-| Auth | JWT — access token 15 min + refresh token 7 d |
-| Exports | pdf-lib · excel-builder-vanilla · fast-csv |
+| Auth | JWT, access token 15 min + refresh token 7 d |
+| AI | OpenAI-compatible API, configurable model |
+| Exports | pdf-lib, excel-builder-vanilla, fast-csv |
 
 ---
 
@@ -27,15 +30,16 @@ Monorepo with a Flutter mobile/web frontend and a Hono + Bun REST API backed by 
 
 ```
 pisto-app/
-├── pisto-api/        # Hono + Bun REST API
+├── pisto-api/        # Hono REST API on Cloudflare Workers
 │   ├── src/
 │   │   ├── config/       # Database connection, env vars
 │   │   ├── db/
 │   │   │   ├── schema/   # Drizzle table definitions
-│   │   │   ├── setup.ts  # CREATE TABLE script (run once)
 │   │   │   └── seed.ts   # Demo data
-│   │   ├── modules/      # auth · inventory · sales · collections · purchases · reports · exports
+│   │   ├── modules/      # auth · inventory · sales · collections · purchases
+│   │   │                 # reports · exports · expenses · ai · settings · uploads
 │   │   └── shared/       # Errors, pagination, correlatives, utils
+│   ├── migrate.ts
 │   ├── .env.example
 │   └── package.json
 │
@@ -60,6 +64,10 @@ pisto-app/
 | Purchases | `/api/v1/purchases` | Suppliers, purchase orders, goods receipt, accounts payable |
 | Reports | `/api/v1/reports` | Dashboard KPIs, sales summary, top products, gross profit, inventory valuation |
 | Exports | `/api/v1/exports` | Download data as Excel, CSV, or PDF |
+| Expenses | `/api/v1/expenses` | Operating expenses and categories |
+| AI | `/api/v1/ai` | Chat over your own books, receipt scanning, expense categorization, sales forecast, anomaly detection |
+| Settings | `/api/v1/settings` | Business profile and preferences |
+| Uploads | `/api/v1/uploads` | File and receipt uploads |
 
 ---
 
@@ -68,59 +76,56 @@ pisto-app/
 ### Prerequisites
 
 - [Bun](https://bun.sh) ≥ 1.1
-- [Docker](https://www.docker.com) (for SQL Server)
+- A PostgreSQL database. Any will do; the project is developed against
+  [Supabase](https://supabase.com).
 - [Flutter](https://flutter.dev) ≥ 3.x
 
-### 1 — Start SQL Server
-
-```bash
-docker run -d --name pisto-mssql \
-  -e ACCEPT_EULA=Y \
-  -e MSSQL_SA_PASSWORD=YourPassword123! \
-  -p 1433:1433 \
-  mcr.microsoft.com/mssql/server:2022-latest
-```
-
-### 2 — Configure the API
+### 1 — Configure the API
 
 ```bash
 cd pisto-api
+bun install
 cp .env.example .env   # fill in your secrets
 ```
 
 `.env` variables:
 
 ```env
-DB_SERVER=localhost
-DB_PORT=1433
-DB_NAME=pisto_app
-DB_USER=sa
-DB_PASSWORD=YourPassword123!
-DB_ENCRYPT=false
-DB_TRUST_SERVER_CERTIFICATE=true
+DATABASE_URL=postgresql://user:password@host:6543/postgres
+DATABASE_URL_DIRECT=postgresql://user:password@host:5432/postgres
 
-JWT_ACCESS_SECRET=change_me_at_least_10_chars
-JWT_REFRESH_SECRET=change_me_at_least_10_chars
+JWT_ACCESS_SECRET=at_least_32_characters
+JWT_REFRESH_SECRET=at_least_32_characters
 
-PORT=3000
+NODE_ENV=development
 CORS_ORIGIN=*
 RATE_LIMIT_ENABLED=false
+
+# Optional: enables the /api/v1/ai module
+AI_API_KEY=
+AI_BASE_URL=
+AI_MODEL=gpt-4o
 ```
 
-### 3 — Create tables and seed demo data
+`DATABASE_URL` uses the pooled connection (port 6543) for the Worker runtime;
+`DATABASE_URL_DIRECT` uses the direct one (port 5432) for migrations.
+
+### 2 — Run migrations and seed demo data
 
 ```bash
-bun run src/db/setup.ts   # creates all tables
-bun run db:seed           # inserts demo business + products
+bun run db:migrate   # applies Drizzle migrations
+bun run db:seed      # inserts demo business + products
 ```
 
-### 4 — Run the API
+### 3 — Run the API
 
 ```bash
-bun run dev   # hot reload at http://localhost:3000
+bun run dev   # wrangler dev, at http://localhost:8787
 ```
 
-### 5 — Run the Flutter app
+To deploy it: `bun run deploy`.
+
+### 4 — Run the Flutter app
 
 ```bash
 cd pisto_app
