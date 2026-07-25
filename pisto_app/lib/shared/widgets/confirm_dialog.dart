@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../config/app_theme.dart';
 
-/// Diálogo de confirmación que reemplaza showDialog genérico.
+/// Confirmation dialog that replaces the generic showDialog.
 ///
-/// Diseñado para acciones destructivas o irreversibles (cancelar venta,
-/// eliminar producto, etc.) con un diseño que hace sentir el peso de la acción.
+/// Designed for destructive or irreversible actions (cancel a sale,
+/// delete a product, etc.) with a design that conveys the weight of the action.
 class ConfirmDialog extends StatelessWidget {
   final String title;
   final String description;
@@ -24,7 +24,7 @@ class ConfirmDialog extends StatelessWidget {
     this.destructive = true,
   });
 
-  /// Muestra el diálogo y retorna true si el usuario confirma.
+  /// Shows the dialog and returns true if the user confirms.
   static Future<bool> show(
     BuildContext context, {
     required String title,

@@ -1,44 +1,27 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
-/// Header consistente para todas las pantallas internas.
-///
-/// Reemplaza el patrón repetido `Icon + headlineMedium + Wrap de botones` que
-/// hacía cada pantalla sentirse a "panel administrativo CRUD".
-///
-/// Layout:
-///   [EYEBROW · OPCIONAL]
-///   Título grande (serif Lora)
-///   Subtítulo/meta opcional         [acción primaria]
-///                                   [acciones secundarias]
+/// Compact page header: single-line title + inline metric chips + actions.
+/// Usage: `PageHeader(title: 'Tus ventas', metrics: [MetricChip(label: 'Facturas',
+/// value: '24')], actions: [FilledButton(...)])`. Max height ~64px — no kicker,
+/// no display titles, no mono subtitle eating vertical space (see docs/DESIGN.md §1).
 class PageHeader extends StatelessWidget {
-  /// Texto pequeño en mono uppercase encima del título — contexto rápido.
-  /// Ej: "VENTAS · ESTE MES", "INVENTARIO".
-  final String? eyebrow;
-
-  /// Título principal — usa serif Lora para personality editorial.
+  /// The screen's single title, `titleLarge` (~22px).
   final String title;
 
-  /// Subtítulo o meta dato debajo del título. Renderiza en mono si es numérico
-  /// y en sans si es texto descriptivo (controlado por [metaIsMono]).
-  final String? meta;
+  /// `MetricChip`s inline next to the title (e.g. count · total).
+  final List<Widget> metrics;
 
-  /// Si true, [meta] se renderiza con DM Mono (útil para "122 productos · 14 alertas").
-  final bool metaIsMono;
-
-  /// Acciones a la derecha (ej. botones primario + secundario).
+  /// Actions on the right (primary button + secondary ones).
   final List<Widget> actions;
 
-  /// Acciones secundarias en una segunda fila (ej. filtros, períodos).
-  /// Se renderizan debajo del header en un Wrap con spacing 8.
+  /// Optional secondary row below the header (filters, periods).
   final List<Widget>? toolbar;
 
   const PageHeader({
     super.key,
-    this.eyebrow,
     required this.title,
-    this.meta,
-    this.metaIsMono = false,
+    this.metrics = const [],
     this.actions = const [],
     this.toolbar,
   });
@@ -50,44 +33,22 @@ class PageHeader extends StatelessWidget {
     final width = MediaQuery.sizeOf(context).width;
     final isCompact = width < Breakpoints.compact;
 
-    final titleStyle = AppTheme.serif(
-      fontSize: isCompact ? 26 : 30,
-      fontWeight: FontWeight.w600,
-      color: cs.onSurface,
-      letterSpacing: -0.6,
-      height: 1.1,
-    );
-
-    final titleColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    final titleAndMetrics = Wrap(
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: 10,
+      runSpacing: 8,
       children: [
-        if (eyebrow != null) ...[
-          Text(
-            eyebrow!.toUpperCase(),
-            style: AppTheme.eyebrow(context, color: cs.primary),
+        Text(
+          title,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: cs.onSurface,
+            letterSpacing: -0.2,
           ),
-          const SizedBox(height: 8),
-        ],
-        Text(title, style: titleStyle, maxLines: 2, overflow: TextOverflow.ellipsis),
-        if (meta != null && meta!.isNotEmpty) ...[
-          const SizedBox(height: 6),
-          Text(
-            meta!,
-            style: metaIsMono
-                ? AppTheme.mono(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: cs.onSurfaceVariant,
-                  )
-                : theme.textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        ...metrics,
       ],
     );
 
@@ -96,30 +57,23 @@ class PageHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              titleColumn,
+              titleAndMetrics,
               if (actions.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: actions,
-                ),
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 8, children: actions),
               ],
             ],
           )
         : Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Expanded(child: titleColumn),
+              Expanded(child: titleAndMetrics),
               const SizedBox(width: 16),
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.end,
-                  children: actions,
-                ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.end,
+                children: actions,
               ),
             ],
           );
@@ -130,7 +84,7 @@ class PageHeader extends StatelessWidget {
       children: [
         headerRow,
         if (toolbar != null && toolbar!.isNotEmpty) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Wrap(spacing: 8, runSpacing: 8, children: toolbar!),
         ],
       ],
@@ -138,8 +92,8 @@ class PageHeader extends StatelessWidget {
   }
 }
 
-/// Saludo dinámico por hora del día. Devuelve "Buenos días", "Buenas tardes",
-/// "Buenas noches" — útil para el dashboard.
+/// Time-of-day greeting. Returns "Buenos días", "Buenas tardes",
+/// "Buenas noches" — used on the dashboard.
 String greetingForHour([DateTime? when]) {
   final h = (when ?? DateTime.now()).hour;
   if (h < 6) return 'Buenas noches';
@@ -148,7 +102,7 @@ String greetingForHour([DateTime? when]) {
   return 'Buenas noches';
 }
 
-/// Formato de fecha corto en español: "Lunes 7 de mayo".
+/// Short Spanish date format: "Lunes 7 de mayo".
 String formatLongDateEs(DateTime d) {
   const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const months = [

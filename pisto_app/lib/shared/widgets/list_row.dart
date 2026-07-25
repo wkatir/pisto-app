@@ -1,51 +1,52 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import 'focus_ring.dart';
 
-/// Fila de lista financiera — reemplaza ListTile en listas de facturas, ventas,
-/// cobros, clientes, etc.
+/// Financial list row — replaces ListTile in lists of invoices, sales,
+/// collections, customers, etc.
 ///
-/// Jerarquía visual:
+/// Visual hierarchy:
 ///   ┌──────────────────────────────────────────────────────┐
 ///   │ [leading]  Título principal               $24,500.00 │
 ///   │            subtítulo · meta · chip                   │
 ///   └──────────────────────────────────────────────────────┘
 ///
-/// Diferencias vs ListTile:
-/// - Trailing es una cifra pesada en mono, no un IconButton.
-/// - Subtítulo soporta múltiples slots (fecha + cliente + chip).
-/// - Leading es opcional — sin leading icono por defecto, layout más limpio.
-/// - Borde sutil sobre outlineVariant (respeta regla flat).
-class FinancialListRow extends StatelessWidget {
-  /// Widget leading opcional (ícono, avatar, checkbox).
+/// Differences vs ListTile:
+/// - Trailing is a heavy mono figure, not an IconButton.
+/// - Subtitle supports multiple slots (date + customer + chip).
+/// - Leading is optional — no leading icon by default, cleaner layout.
+/// - Subtle border over outlineVariant (respects the flat rule).
+class FinancialListRow extends StatefulWidget {
+  /// Optional leading widget (icon, avatar, checkbox).
   final Widget? leading;
 
-  /// Título principal.
+  /// Main title.
   final String title;
 
-  /// Líneas debajo del título — fecha, cliente, etc.
-  /// Se concatenan con separador "·".
+  /// Lines below the title — date, customer, etc.
+  /// Concatenated with a "·" separator.
   final List<String> subtitleParts;
 
-  /// Chips/badges en la línea inferior (debajo del subtítulo).
+  /// Chips/badges on the bottom line (below the subtitle).
   final List<Widget> chips;
 
-  /// Cifra principal a la derecha (en mono).
+  /// Main figure on the right (in mono).
   final String? trailingValue;
 
-  /// Color del trailing (ej. danger para notas de crédito).
+  /// Trailing color (e.g. danger for credit notes).
   final Color? trailingColor;
 
-  /// Texto pequeño debajo del trailing (ej. "vence en 3 días").
+  /// Small text below the trailing value (e.g. "vence en 3 días").
   final String? trailingSubtitle;
 
-  /// Acción al tocar.
+  /// Action on tap.
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
-  /// Marcado como seleccionado (modo bulk).
+  /// Marked as selected (bulk mode).
   final bool selected;
 
-  /// Si true, no muestra el borde — útil dentro de un card más grande.
+  /// If true, doesn't show the border — useful inside a larger card.
   final bool dense;
 
   const FinancialListRow({
@@ -64,105 +65,119 @@ class FinancialListRow extends StatelessWidget {
   });
 
   @override
+  State<FinancialListRow> createState() => _FinancialListRowState();
+}
+
+class _FinancialListRowState extends State<FinancialListRow> {
+  bool _focused = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    final subtitleText = subtitleParts.where((s) => s.isNotEmpty).join(' · ');
+    final subtitleText = widget.subtitleParts.where((s) => s.isNotEmpty).join(' · ');
 
     return Padding(
-      padding: EdgeInsets.only(bottom: dense ? 0 : 8),
+      padding: EdgeInsets.only(bottom: widget.dense ? 0 : 8),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          onTap: onTap,
-          onLongPress: onLongPress,
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: selected
-                  ? cs.primary.withValues(alpha: 0.05)
-                  : cs.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (leading != null) ...[
-                  leading!,
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        title,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurface,
-                          height: 1.3,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (subtitleText.isNotEmpty) ...[
-                        const SizedBox(height: 3),
+          onTap: widget.onTap,
+          onLongPress: widget.onLongPress,
+          onFocusChange: (v) => setState(() => _focused = v),
+          borderRadius: BorderRadius.circular(14),
+          splashFactory: NoSplash.splashFactory,
+          hoverColor: cs.surfaceContainerHigh,
+          child: FocusRing(
+            focused: _focused,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              decoration: BoxDecoration(
+                color: widget.selected
+                    ? cs.primary.withValues(alpha: 0.05)
+                    : cs.surfaceContainerLowest,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (widget.leading != null) ...[
+                    widget.leading!,
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          subtitleText,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          widget.title,
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: cs.onSurface,
                             height: 1.3,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (subtitleText.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitleText,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              height: 1.3,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        if (widget.chips.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: widget.chips,
+                          ),
+                        ],
                       ],
-                      if (chips.isNotEmpty) ...[
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: chips,
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-                if (trailingValue != null) ...[
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        trailingValue!,
-                        style: AppTheme.mono(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: trailingColor ?? cs.onSurface,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (trailingSubtitle != null) ...[
-                        const SizedBox(height: 2),
+                  if (widget.trailingValue != null) ...[
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                         Text(
-                          trailingSubtitle!,
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: cs.onSurfaceVariant,
+                          widget.trailingValue!,
+                          style: AppTheme.mono(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: widget.trailingColor ?? cs.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (widget.trailingSubtitle != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            widget.trailingSubtitle!,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ],
-                    ],
-                  ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
@@ -171,8 +186,8 @@ class FinancialListRow extends StatelessWidget {
   }
 }
 
-/// Avatar/icono leading consistente para FinancialListRow.
-/// Usa color de intent + bg tintado al 10% (M3 estándar, no glow).
+/// Consistent leading avatar/icon for FinancialListRow.
+/// Uses intent color + 10%-tinted background (M3 standard, no glow).
 class RowLeadingIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
@@ -199,10 +214,10 @@ class RowLeadingIcon extends StatelessWidget {
   }
 }
 
-/// Avatar inicial — para clientes/proveedores sin imagen.
+/// Initials avatar — for customers/suppliers without an image.
 ///
-/// Genera un color determinístico basado en el texto para que cada
-/// cliente/proveedor tenga un color consistente pero variado.
+/// Generates a deterministic color based on the text so each
+/// customer/supplier has a consistent yet varied color.
 class RowAvatar extends StatelessWidget {
   final String text;
   final Color? color;
@@ -215,24 +230,10 @@ class RowAvatar extends StatelessWidget {
     this.size = 38,
   });
 
-  /// Paleta de colores para avatares — variados pero todos en el mismo
-  /// rango de luminosidad para que se vean bien en light y dark.
-  static const _avatarColors = [
-    Color(0xFF2D8F6F), // forest green
-    Color(0xFF7E6BBF), // soft violet
-    Color(0xFF8B7EC8), // lavender
-    Color(0xFFE35D5D), // warm red
-    Color(0xFFE8835A), // terracotta
-    Color(0xFF34A853), // warm green
-    Color(0xFF5B8DEF), // soft blue
-    Color(0xFFA78BDB), // soft purple
-    Color(0xFF2D8F6F), // forest green
-    Color(0xFFF0A07C), // peach coral
-  ];
-
   @override
   Widget build(BuildContext context) {
-    final c = color ?? _avatarColors[text.hashCode.abs() % _avatarColors.length];
+    final c = color ??
+        AppTheme.avatarPalette[text.hashCode.abs() % AppTheme.avatarPalette.length];
     final initial = text.isEmpty ? '?' : text.trim()[0].toUpperCase();
 
     return Container(

@@ -5,13 +5,13 @@ import '../features/auth/screens/register_screen.dart';
 import '../features/auth/screens/forgot_password_screen.dart';
 import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/inventory/screens/inventory_screen.dart';
-import '../features/landing/screens/landing_screen.dart';
 import '../features/sales/screens/sales_screen.dart';
 import '../features/sales/screens/customer_detail_screen.dart';
 import '../features/collections/screens/collections_screen.dart';
 import '../features/purchases/screens/purchases_screen.dart';
 import '../features/reports/screens/reports_screen.dart';
 import '../features/expenses/screens/expenses_screen.dart';
+import '../features/notifications/screens/notifications_screen.dart';
 import '../features/profile/screens/profile_screen.dart';
 import '../features/settings/screens/settings_screen.dart';
 import '../features/ai/screens/ai_chat_screen.dart';
@@ -31,8 +31,8 @@ class AuthRouterDelegate extends ChangeNotifier {
 
 final authRouterDelegate = AuthRouterDelegate();
 
-/// Página con crossfade sutil (150ms). Reemplaza NoTransitionPage para que la
-/// navegación se sienta fluida sin animaciones llamativas.
+/// Page with a subtle crossfade (150ms). Replaces NoTransitionPage so
+/// navigation feels smooth without flashy animations.
 class _FadePage<T> extends CustomTransitionPage<T> {
   _FadePage({required super.child, super.key})
       : super(
@@ -45,22 +45,25 @@ class _FadePage<T> extends CustomTransitionPage<T> {
 }
 
 final appRouter = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/login',
   refreshListenable: authRouterDelegate,
   redirect: (context, state) {
     final loggedIn = authRouterDelegate.authenticated;
     final path = state.matchedLocation;
-    final isPublic = path == '/' || path == '/login' || path == '/register' || path == '/forgot-password';
+    final isPublic = path == '/login' || path == '/register' || path == '/forgot-password';
 
-    if (!loggedIn && !isPublic) return '/login';
-    if (loggedIn && isPublic) return '/dashboard';
+    if (path == '/') return loggedIn ? '/dashboard' : '/login';
+    // Preserves the deep link: /reports without a session → /login?from=/reports → /reports.
+    if (!loggedIn && !isPublic) {
+      return '/login?from=${Uri.encodeComponent(state.uri.toString())}';
+    }
+    if (loggedIn && isPublic) {
+      final from = state.uri.queryParameters['from'];
+      return (from != null && from.startsWith('/')) ? from : '/dashboard';
+    }
     return null;
   },
   routes: [
-    GoRoute(
-      path: '/',
-      pageBuilder: (context, state) => _FadePage(child: const LandingScreen()),
-    ),
     GoRoute(
       path: '/login',
       pageBuilder: (context, state) => _FadePage(child: const LoginScreen()),
@@ -113,6 +116,10 @@ final appRouter = GoRouter(
           pageBuilder: (context, state) => _FadePage(child: const ExpensesScreen()),
         ),
         GoRoute(
+          path: '/notifications',
+          pageBuilder: (context, state) => _FadePage(child: const NotificationsScreen()),
+        ),
+        GoRoute(
           path: '/profile',
           pageBuilder: (context, state) => _FadePage(child: const ProfileScreen()),
         ),
@@ -122,7 +129,9 @@ final appRouter = GoRouter(
         ),
         GoRoute(
           path: '/ai-chat',
-          pageBuilder: (context, state) => _FadePage(child: const AiChatScreen()),
+          pageBuilder: (context, state) => _FadePage(
+            child: AiChatScreen(initialQuestion: state.extra as String?),
+          ),
         ),
         GoRoute(
           path: '/ai-scan',

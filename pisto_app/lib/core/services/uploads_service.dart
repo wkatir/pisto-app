@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/api_client.dart';
 import '../../config/constants.dart';
 
-/// Carpetas válidas en el backend (`ALLOWED_FOLDERS`).
+/// Valid folders on the backend (`ALLOWED_FOLDERS`).
 enum UploadFolder { products, expenses, avatars, logos }
 
 extension UploadFolderName on UploadFolder {
@@ -19,12 +19,12 @@ class UploadsService {
   final ApiClient _api;
   UploadsService(this._api);
 
-  /// Sube una imagen y devuelve la URL relativa devuelta por el backend
-  /// (ej: `/uploads/products/abc.jpg`). Para mostrarla, concatená con
-  /// [absoluteUrl] o [resolveUrl].
+  /// Uploads an image and returns the relative URL returned by the backend
+  /// (e.g. `/uploads/products/abc.jpg`). To display it, concatenate with
+  /// [absoluteUrl] or [resolveUrl].
   ///
-  /// [bytes] son los bytes del archivo. [filename] sólo se usa para inferir
-  /// nombre legible — el backend genera un UUID.
+  /// [bytes] is the file's raw bytes. [filename] is only used to infer a
+  /// readable name — the backend generates a UUID.
   Future<String> uploadImage({
     required Uint8List bytes,
     required String filename,
@@ -54,13 +54,14 @@ class UploadsService {
   }
 }
 
-/// Convierte una URL relativa (`/uploads/...`) en una URL absoluta usando el
-/// origin correcto según plataforma. Si la URL ya es absoluta (http/https),
-/// la devuelve tal cual.
+/// Converts a relative URL (`/uploads/...`) into an absolute URL. The download
+/// route lives under the same basePath `/api/v1` as the rest of the API (and
+/// requires the same Bearer token), so it resolves against [apiBaseUrl],
+/// not the bare origin.
 String resolveUrl(String? url) {
   if (url == null || url.isEmpty) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  final origin = kIsWeb ? AppConstants.apiOriginWeb : AppConstants.apiOrigin;
-  if (url.startsWith('/')) return '$origin$url';
-  return '$origin/$url';
+  final base = kIsWeb ? AppConstants.apiBaseUrlWeb : AppConstants.apiBaseUrl;
+  if (url.startsWith('/')) return '$base$url';
+  return '$base/$url';
 }
