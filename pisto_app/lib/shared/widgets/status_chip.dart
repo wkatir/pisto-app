@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 
-/// Intent semántico de un chip / estado.
-/// Reemplaza el uso indiscriminado de cs.primary/secondary/tertiary para estados,
-/// que en pantalla colapsan visualmente en el mismo tono teal.
+/// Semantic intent of a chip / status.
+/// Replaces the indiscriminate use of cs.primary/secondary/tertiary for
+/// statuses, which visually collapse into the same teal tone on screen.
 enum ChipIntent { success, warning, danger, info, neutral, brand }
 
-/// Categoría de estado (mantiene compatibilidad con el resto del app).
+/// Status category (keeps compatibility with the rest of the app).
 enum StatusType { sale, payment, order, transfer, receivable }
 
 class StatusChip extends StatelessWidget {
@@ -79,7 +79,7 @@ class PaymentChip extends StatelessWidget {
   }
 }
 
-/// Chip genérico con intent semántico — usalo cuando ningún StatusType encaje.
+/// Generic chip with semantic intent: use it when no StatusType fits.
 class IntentChip extends StatelessWidget {
   final String label;
   final ChipIntent intent;
@@ -126,6 +126,9 @@ class _ChipBase extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = _intentColor(intent, cs);
+    // The tinted fill is derived from the plain intent, but the label must not
+    // be: plain intents sit at 1.8-2.9:1 on their own containers (docs/DESIGN.md).
+    final fg = _intentTextColor(intent, context, cs);
 
     final hPad = size == _ChipSize.small ? 10.0 : 14.0;
     final vPad = size == _ChipSize.small ? 4.0 : 6.0;
@@ -143,14 +146,14 @@ class _ChipBase extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: iconSize, color: color),
+            Icon(icon, size: iconSize, color: fg),
             const SizedBox(width: 4),
           ],
           Text(
             label,
             style: TextStyle(
               fontSize: fontSize,
-              color: color,
+              color: fg,
               fontWeight: FontWeight.w500,
               height: 1.2,
             ),
@@ -165,6 +168,17 @@ class _ChipBase extends StatelessWidget {
         ChipIntent.warning => AppTheme.warning,
         ChipIntent.danger => AppTheme.danger,
         ChipIntent.info => AppTheme.info,
+        ChipIntent.brand => cs.primary,
+        ChipIntent.neutral => cs.onSurfaceVariant,
+      };
+
+  static Color _intentTextColor(
+          ChipIntent intent, BuildContext context, ColorScheme cs) =>
+      switch (intent) {
+        ChipIntent.success => context.tokens.successText,
+        ChipIntent.warning => context.tokens.warningText,
+        ChipIntent.danger => context.tokens.dangerText,
+        ChipIntent.info => context.tokens.infoText,
         ChipIntent.brand => cs.primary,
         ChipIntent.neutral => cs.onSurfaceVariant,
       };

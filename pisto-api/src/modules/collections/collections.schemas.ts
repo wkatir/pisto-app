@@ -1,8 +1,9 @@
 import * as v from 'valibot'
+import { decimalString } from '../../shared/schemas/common'
 
 export const createPaymentSchema = v.object({
   paymentMethodId: v.pipe(v.string(), v.uuid()),
-  amount: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+  amount: decimalString,
   reference: v.optional(v.string()),
   notes: v.optional(v.string()),
 })

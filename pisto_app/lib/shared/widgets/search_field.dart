@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 
-/// Campo de búsqueda consistente para listas.
+/// Consistent search field for lists.
 ///
-/// Incluye debounce de 300ms, ícono de lupa, botón de limpiar, y un diseño
-/// que se integra con el lenguaje visual de la app sin parecer un
-/// TextFormField genérico.
+/// Includes a 300ms debounce, magnifier icon, clear button, and a design
+/// that fits the app's visual language instead of looking like a
+/// generic TextFormField.
 class SearchField extends StatefulWidget {
   final String hint;
   final ValueChanged<String> onChanged;

@@ -1,4 +1,5 @@
 import * as v from 'valibot'
+import { decimalString, optionalFileUrlSchema } from '../../shared/schemas/common'
 
 export const createExpenseCategorySchema = v.object({
   name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)),
@@ -8,11 +9,11 @@ export const createExpenseCategorySchema = v.object({
 export const createExpenseSchema = v.object({
   categoryId: v.optional(v.string()),
   description: v.pipe(v.string(), v.minLength(1), v.maxLength(200)),
-  amount: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+  amount: decimalString,
   expenseDate: v.pipe(v.string(), v.minLength(1)),
   paymentMethodId: v.optional(v.string()),
   notes: v.optional(v.string()),
-  receiptUrl: v.optional(v.union([v.literal(''), v.pipe(v.string())])),
+  receiptUrl: optionalFileUrlSchema,
 })
 
 export const updateExpenseSchema = v.partial(createExpenseSchema)

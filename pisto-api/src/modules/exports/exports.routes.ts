@@ -1,13 +1,21 @@
 import { Hono } from 'hono'
+import { vValidator } from '@hono/valibot-validator'
+import * as v from 'valibot'
 import * as reportService from '../reports/report.service'
 import * as invoiceService from '../sales/invoice.service'
 import { generateExcel } from './generators/excel.generator'
 import { generatePDF } from './generators/pdf.generator'
 import { generateCSV } from './generators/csv.generator'
-import { AppError } from '../../shared/errors/app-error'
+import { dateRangeQuerySchema } from '../../shared/utils/pagination'
+import { idParamSchema } from '../../shared/schemas/common'
 import type { AppEnv } from '../../types/app-env'
 
 const exports_ = new Hono<AppEnv>()
+
+const reportParamSchema = v.object({
+  report: v.picklist(['top-products', 'inventory-valuation', 'receivables-aging', 'purchases-by-supplier'], 'Reporte no encontrado'),
+  format: v.picklist(['excel', 'pdf', 'csv'], 'Formato no soportado'),
+})
 
 function safeFilename(name: string): string {
   return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) || 'export'
@@ -60,60 +68,46 @@ const reportConfigs: Record<string, {
   },
 }
 
-exports_.get('/:report/excel', async (c) => {
+const formatConfigs: Record<string, {
+  contentType: string
+  extension: string
+  generate: (config: (typeof reportConfigs)[string], data: any[]) => Promise<Uint8Array | ArrayBuffer | string>
+}> = {
+  excel: {
+    contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    extension: 'xlsx',
+    generate: async (config, data) => new Uint8Array(await generateExcel(config.title, config.columns, data)),
+  },
+  pdf: {
+    contentType: 'application/pdf',
+    extension: 'pdf',
+    generate: (config, data) => generatePDF(config.title, config.columns, data) as unknown as Promise<ArrayBuffer>,
+  },
+  csv: {
+    contentType: 'text/csv',
+    extension: 'csv',
+    generate: (config, data) => generateCSV(config.columns, data),
+  },
+}
+
+exports_.get('/:report/:format', vValidator('param', reportParamSchema), vValidator('query', dateRangeQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const report = c.req.param('report')
-  const from = c.req.query('from')
-  const to = c.req.query('to')
+  const { report, format } = c.req.valid('param')
+  const { from, to } = c.req.valid('query')
 
-  const config = reportConfigs[report]
-  if (!config) throw new AppError(404, 'Reporte no encontrado')
-
+  const config = reportConfigs[report]!
+  const formatConfig = formatConfigs[format]!
   const data = await config.getData(businessId, from, to)
-  const buffer = await generateExcel(config.title, config.columns, data)
+  const body = await formatConfig.generate(config, data)
 
-  c.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.xlsx"`)
-  return c.body(new Uint8Array(buffer))
+  c.header('Content-Type', formatConfig.contentType)
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.${formatConfig.extension}"`)
+  return c.body(body as unknown as ArrayBuffer)
 })
 
-exports_.get('/:report/pdf', async (c) => {
+exports_.get('/invoices/:id/pdf', vValidator('param', idParamSchema), async (c) => {
   const businessId = c.get('businessId')
-  const report = c.req.param('report')
-  const from = c.req.query('from')
-  const to = c.req.query('to')
-
-  const config = reportConfigs[report]
-  if (!config) throw new AppError(404, 'Reporte no encontrado')
-
-  const data = await config.getData(businessId, from, to)
-  const buffer = await generatePDF(config.title, config.columns, data)
-
-  c.header('Content-Type', 'application/pdf')
-  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.pdf"`)
-  return c.body(buffer as unknown as ArrayBuffer)
-})
-
-exports_.get('/:report/csv', async (c) => {
-  const businessId = c.get('businessId')
-  const report = c.req.param('report')
-  const from = c.req.query('from')
-  const to = c.req.query('to')
-
-  const config = reportConfigs[report]
-  if (!config) throw new AppError(404, 'Reporte no encontrado')
-
-  const data = await config.getData(businessId, from, to)
-  const csv = await generateCSV(config.columns, data)
-
-  c.header('Content-Type', 'text/csv')
-  c.header('Content-Disposition', `attachment; filename="${safeFilename(report)}.csv"`)
-  return c.body(csv)
-})
-
-exports_.get('/invoices/:id/pdf', async (c) => {
-  const businessId = c.get('businessId')
-  const id = c.req.param('id')
+  const { id } = c.req.valid('param')
 
   const sale = await invoiceService.getSale(businessId, id)
 
@@ -127,26 +121,27 @@ exports_.get('/invoices/:id/pdf', async (c) => {
   ]
 
   const rows = (sale.lines as any[]).map((l: any) => ({
+    // sale_line has no product_name column: falls back to the id until the query joins product.
     productName: l.productName ?? l.productId,
     quantity: l.quantity,
     unitPrice: l.unitPrice,
-    discountAmount: l.discountAmount ?? '0.00',
-    taxAmount: l.taxAmount ?? '0.00',
+    discountAmount: l.discountAmount,
+    taxAmount: l.taxAmount,
     lineTotal: l.lineTotal,
   }))
 
   rows.push(
     { productName: '', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: '' },
-    { productName: 'Subtotal', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.subtotal ?? '') },
-    { productName: 'Impuestos', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.taxAmount ?? '') },
-    { productName: 'TOTAL', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.total ?? '') },
+    { productName: 'Subtotal', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.subtotal) },
+    { productName: 'Impuestos', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.taxAmount) },
+    { productName: 'TOTAL', quantity: '', unitPrice: '', discountAmount: '', taxAmount: '', lineTotal: String(sale.total) },
   )
 
-  const title = `Factura ${sale.saleNumber ?? id}`
+  const title = `Factura ${sale.saleNumber}`
   const buffer = await generatePDF(title, columns, rows)
 
   c.header('Content-Type', 'application/pdf')
-  c.header('Content-Disposition', `attachment; filename="${safeFilename(`factura-${sale.saleNumber ?? id}`)}.pdf"`)
+  c.header('Content-Disposition', `attachment; filename="${safeFilename(`factura-${sale.saleNumber}`)}.pdf"`)
   return c.body(buffer as unknown as ArrayBuffer)
 })
 

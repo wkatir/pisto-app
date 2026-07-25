@@ -27,7 +27,7 @@ export const collectionPayment = pgTable('collection_payment', {
   paymentMethodId: varchar('payment_method_id', { length: 36 }).notNull().references(() => paymentMethod.id),
   receiptNumber: varchar('receipt_number', { length: 30 }),
   amount: numeric('amount', { precision: 12, scale: 2 }).notNull(),
-  paymentDate: date('payment_date').$defaultFn(() => new Date()).notNull(),
+  paymentDate: date('payment_date').$defaultFn(() => new Date().toISOString().slice(0, 10)).notNull(),
   reference: varchar('reference', { length: 100 }),
   notes: text('notes'),
   collectedBy: varchar('collected_by', { length: 36 }).references(() => appUser.id),

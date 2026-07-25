@@ -182,19 +182,27 @@ export async function getDashboardKPIs(businessId: string, startDate?: string, e
       WHERE business_id = ${businessId} AND status != 'cancelled'
         AND sale_date >= ${monthStart} AND sale_date <= ${today}
     `),
+    // Same criteria as the collections list: open balance and not paid.
     execRows(sql`
       SELECT
         CAST(COUNT(*) AS INT) AS pending_count,
         CAST(COALESCE(SUM(balance), 0) AS TEXT) AS total_pending
       FROM account_receivable
-      WHERE business_id = ${businessId} AND status != 'paid'
+      WHERE business_id = ${businessId} AND status != 'paid' AND balance > 0
     `),
+    // Same criteria as inventory getLowStockAlerts and the notification sweep:
+    // total stock across warehouses <= min_stock, min_stock configured, active good.
     execRows(sql`
       SELECT CAST(COUNT(*) AS INT) AS low_stock_count
-      FROM product p
-      JOIN product_stock ps ON ps.product_id = p.id
-      WHERE p.business_id = ${businessId} AND p.is_active = true
-        AND ps.quantity <= p.min_stock AND p.min_stock > 0
+      FROM (
+        SELECT p.id
+        FROM product p
+        LEFT JOIN product_stock ps ON ps.product_id = p.id
+        WHERE p.business_id = ${businessId} AND p.is_active = true
+          AND p.is_service = false AND p.min_stock > 0
+        GROUP BY p.id, p.min_stock
+        HAVING COALESCE(SUM(ps.quantity), 0) <= p.min_stock
+      ) low
     `),
   ])
 

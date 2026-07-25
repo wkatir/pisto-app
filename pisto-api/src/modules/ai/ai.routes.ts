@@ -16,7 +16,6 @@ ai.post('/chat', vValidator('json', chatMessageSchema), async (c) => {
 
   const conversationId = existingId || crypto.randomUUID()
 
-  // Build conversation history
   const history = conversations.get(conversationId)
   const conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
 

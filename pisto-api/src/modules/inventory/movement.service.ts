@@ -54,11 +54,11 @@ export async function createAdjustment(
         productId: data.productId,
         warehouseId: data.warehouseId,
         movementType: data.type,
-        quantity: parseFloat(data.quantity),
-        unitCost: data.unitCost !== undefined ? parseFloat(data.unitCost) : undefined,
+        quantity: data.quantity,
+        unitCost: data.unitCost,
         notes: data.notes,
         createdBy: userId,
-      } as any)
+      })
       .returning()
 
     await upsertStock(tx, data.productId, data.warehouseId, delta)
@@ -82,12 +82,12 @@ export async function updateStock(
     productId,
     warehouseId,
     movementType,
-    quantity: Math.abs(delta),
-    unitCost: unitCost !== undefined ? parseFloat(unitCost) : undefined,
+    quantity: Math.abs(delta).toFixed(2),
+    unitCost,
     referenceType,
     referenceId,
     createdBy: userId,
-  } as any)
+  })
 
   await upsertStock(tx, productId, warehouseId, delta)
 }
@@ -119,7 +119,7 @@ async function upsertStock(
     await tx.insert(productStock).values({
       productId,
       warehouseId,
-      quantity: delta,
-    } as any)
+      quantity: delta.toFixed(2),
+    })
   }
 }

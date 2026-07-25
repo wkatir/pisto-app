@@ -1,140 +1,87 @@
 # Pisto App
 
-Sistema de gestion financiera y ventas para PYMES. Monorepo con dos proyectos:
+Sistema de gestión financiera AI-native para PYMES salvadoreñas. Monorepo:
 
 ```
 pisto_app/    → Flutter app (frontend)
-pisto-api/    → Hono + Bun API (backend)
+pisto-api/    → Hono API (backend)
+docs/         → Docs normativos: LEER ANTES DE ESCRIBIR CÓDIGO
 ```
+
+**Normativo:** `docs/ARCHITECTURE.md` (estructura de capas y módulos) y
+`docs/CONVENTIONS.md` (lean code, idioma, design system). Si el código que vas a generar
+contradice esos docs, el código está mal. `docs/PLAN.md` tiene la estrategia y roadmap.
 
 ## Backend: pisto-api
 
-- **Runtime:** Bun
-- **Framework:** Hono (con AppEnv type en src/types/app-env.ts)
-- **DB:** SQL Server 2022 (Docker, puerto 1433)
-- **ORM:** Drizzle ORM + mssql driver (branch experimental mssql)
-- **Validacion:** Valibot + @hono/valibot-validator
-- **Auth:** JWT (hono/jwt) con access token (15min) + refresh token (7d)
-- **Exports:** pdf-lib (PDF), excel-builder-vanilla (Excel), fast-csv (CSV)
-- **Ruta base:** `/api/v1`
-- **CORS:** Configurable via env CORS_ORIGIN (default '*')
-
-### Modulos
-
-| Modulo | Ruta | Descripcion |
-|--------|------|-------------|
-| auth | `/auth` | Login, register, refresh (publica) |
-| inventory | `/inventory` | Productos, categorias, bodegas, unidades, movimientos, transferencias, alertas |
-| sales | `/sales` | Clientes, facturas, notas de credito |
-| collections | `/collections` | Cuentas por cobrar, pagos, antiguedad |
-| purchases | `/purchases` | Proveedores, ordenes de compra, recepcion, cuentas por pagar |
-| reports | `/reports` | Dashboard KPIs, resumen ventas, top productos, utilidad bruta, valuacion inventario |
-| exports | `/exports` | Generadores Excel, CSV, PDF |
-| ai | `/ai` | Chat financiero, escaneo facturas, forecast, anomalias (OpenAI-compatible) |
+- **Runtime:** Cloudflare Workers (`wrangler dev`/`deploy`); migración a Bun en VPS planeada (PLAN F0)
+- **Framework:** Hono 4 (AppEnv en src/types/app-env.ts)
+- **DB:** PostgreSQL (Supabase) via Hyperdrive · Drizzle ORM (`pg-core`) · postgres.js
+- **Storage:** R2 (`UPLOADS_BUCKET`) para imágenes
+- **Validación:** Valibot + @hono/valibot-validator en el borde de rutas
+- **Auth:** JWT (hono/jwt) access 15min + refresh 7d; passwords PBKDF2 (WebCrypto)
+- **AI:** cliente OpenAI-compatible (`AI_BASE_URL`/`AI_MODEL`); chat con function-calling,
+  scan de recibos (visión), forecast, anomalías. JSON del modelo SIEMPRE con structured outputs.
+- **Exports:** pdf-lib, excel-builder-vanilla, fast-csv
+- **Ruta base:** `/api/v1`, módulos: auth (pública), inventory, sales, collections,
+  purchases, expenses, reports, exports, settings, uploads, ai
+- **Dinero:** `numeric(12,2)` en DB, `string` en TS, aritmética con decimal.js
+- **Multi-tenant:** todo query filtra por `business_id` del JWT (`c.get('businessId')`)
+- CRUD estándar via factory en `shared/crud.ts`; paginación única en `shared/utils/pagination.ts`
 
 ### Comandos
 
 ```bash
 cd pisto-api
-bun run dev          # Servidor con hot reload
-bun run db:seed      # Seed datos demo
-bun run db:studio    # Drizzle Studio
+bun run dev          # wrangler dev
+bun run db:generate  # drizzle-kit generate
+bun run db:migrate   # tsx migrate.ts (DATABASE_URL_DIRECT en .dev.vars)
+bun run db:seed
+bunx tsc --noEmit    # type check
 ```
 
-### Variables de entorno (.env)
+### Env (.dev.vars + bindings en wrangler.toml)
 
-```
-DB_SERVER=localhost
-DB_PORT=1433
-DB_NAME=pisto_app
-DB_USER=sa
-DB_PASSWORD=YourPassword123!
-DB_ENCRYPT=false
-DB_TRUST_SERVER_CERTIFICATE=true
-JWT_ACCESS_SECRET=...
-JWT_REFRESH_SECRET=...
-CORS_ORIGIN=*
-PORT=3000
-RATE_LIMIT_ENABLED=false
-AI_API_KEY=...
-AI_BASE_URL=              # OpenAI-compatible endpoint (dejar vacio para OpenAI)
-AI_MODEL=gpt-4o           # o qwen-plus, deepseek-chat, moonshot-v1-8k, etc.
-```
-
-### Docker (SQL Server)
-
-```bash
-docker run -d --name pisto-mssql \
-  -e ACCEPT_EULA=Y \
-  -e MSSQL_SA_PASSWORD=YourPassword123! \
-  -p 1433:1433 \
-  mcr.microsoft.com/mssql/server:2022-latest
-```
+`DATABASE_URL` / `DATABASE_URL_DIRECT` (Supabase), `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`,
+`AI_API_KEY`, `AI_BASE_URL`, `AI_MODEL`, `CORS_ORIGIN`, `RATE_LIMIT_ENABLED`; bindings
+`HYPERDRIVE`, `UPLOADS_BUCKET`.
 
 ## Frontend: pisto_app
 
-- **Framework:** Flutter 3.x + Dart 3.x
-- **State:** Riverpod 3 con code generation (@riverpod)
-- **Router:** GoRouter con auth redirect
-- **HTTP:** Dio con interceptor JWT (auto-refresh con anti-race condition)
-- **Theme:** FlexColorScheme (light + dark + toggle), paleta calida (cream/pastel), colores chart en AppTheme
-- **Fonts:** Google Fonts (Nunito body, DM Mono numeros)
-- **Icons:** Lucide Icons
-- **Storage:** flutter_secure_storage (tokens + theme preference)
-- **Models:** Freezed + json_serializable (sealed class, Dart 3)
-
-### Arquitectura
-
-```
-lib/
-  config/         → api_client, app_router, app_theme, constants
-  core/
-    models/       → user_model (freezed)
-    providers/    → core_providers (apiClient, authService), service_providers, theme_provider
-    services/     → auth, inventory, sales, collections, purchases, reports
-  features/
-    auth/         → login_screen, register_screen, auth_provider
-    dashboard/    → dashboard_screen (KPIs)
-    inventory/    → inventory_screen (productos, categorias, bodegas)
-    sales/        → sales_screen, create_sale_screen, customer_form_screen
-    collections/  → collections_screen (cuentas por cobrar, antiguedad)
-    purchases/    → purchases_screen (ordenes, proveedores, cuentas por pagar)
-    reports/      → reports_screen (resumen, top productos, margen)
-    landing/      → landing_screen (pagina publica)
-  shared/
-    layouts/      → shell_layout (sidebar responsive + theme toggle)
-```
+- **Framework:** Flutter 3.x + Dart 3.x, targets: web + android + ios (desktop pospuesto)
+- **Arquitectura:** feature-first + repository pattern (ver docs/ARCHITECTURE.md):
+  screens → providers (Riverpod 3 AsyncNotifier, codegen) → repositories (typed) → ApiClient (Dio)
+- **Modelos:** Freezed + json_serializable. NADA de `Map<String,dynamic>` fuera de repositories.
+- **Async UI:** `AsyncValueWidget` compartido; el patrón `bool _loading` + setState está prohibido
+- **Forms:** form kit en `shared/forms/` (schema-driven); no TextEditingController a mano
+- **Router:** GoRouter con auth redirect; la app arranca en `/login` (no hay landing en la app)
+- **Theme:** FlexColorScheme light+dark, paleta cálida cream/pastel; Figtree + Spline Sans Mono; Lucide icons (ver docs/DESIGN.md)
+- **Storage:** flutter_secure_storage (tokens + theme)
+- **i18n:** slang (strings de UI en español)
 
 ### Flujo de auth
 
-1. Login/Register → API retorna `{ accessToken, refreshToken, user }`
-2. Tokens se guardan en memoria (ApiClient) + flutter_secure_storage
-3. Interceptor Dio agrega `Authorization: Bearer` a cada request
-4. En 401, intenta refresh automatico; si falla, redirige a login
-5. Al iniciar app, restaura tokens de storage y marca sesion activa
+1. Login/Register → `{ accessToken, refreshToken, user }`
+2. Tokens en memoria (ApiClient) + flutter_secure_storage
+3. Interceptor Dio agrega Bearer; en 401 refresh automático (anti-race); si falla → login
+4. Al iniciar, restaura tokens de storage
 
 ### Comandos
 
 ```bash
 cd pisto_app
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs  # Code gen (riverpod, freezed)
-flutter run -d chrome    # Web
-flutter run              # Mobile
-flutter analyze          # Lint
+dart run build_runner build --delete-conflicting-outputs
+flutter run -d chrome
+flutter analyze
 ```
 
-### Convenciones
+### Convenciones (resumen, el detalle vive en docs/CONVENTIONS.md)
 
-- ConsumerWidget/ConsumerStatefulWidget para widgets con state
-- Theme colors via `Theme.of(context).colorScheme` o AppTheme constants (nunca hardcodear colores)
-- Errores de API se parsean con `ApiClient.parseError()` para mostrar mensajes amigables
-- Idioma de UI: Espanol
-- Providers generados: archivos `.g.dart` (no editar manualmente)
-- NO AI slop: sin stagger animations, glassmorphism, over-engineering, shadows decorativos, emoji en UI
-- Estilo: Calido, amigable, profesional. Paleta cream/pastel (mint, peach, lavender). Inspirado en Shopify admin + Notion
-- Colores: NUNCA hardcodear Colors.white/black/grey ni hex. SIEMPRE usar cs.* tokens (onSurface, surface, etc.)
-- Cards: fondos pastel solidos (sin gradientes), bordes sutiles calidos, sin elevation/shadow
-- Radii: redondeados y amigables (cards 18, chips pill 20, buttons 14)
-- Dark mode: calido (brown-charcoal #1C1916, no blue-black), DEBE funcionar en todas las pantallas
-- Instalar paquetes via CLI, no editar pubspec.yaml manualmente
+- Código/commits/identificadores en inglés; UI en español
+- Lean code: fail loud, sin fallbacks que escondan bugs, comentarios solo para WHY no obvio
+- Colores SOLO via `Theme.of(context).colorScheme` / tokens AppTheme: nunca Colors.* ni hex
+- NO AI slop: sin stagger animations, glassmorphism, gradientes, shadows decorativos, emoji en UI
+- Cards radius 18 / chips 20 / buttons 14; dark mode cálido (#1C1916) funcional en TODA pantalla
+- Paquetes via CLI (`flutter pub add` / `bun add`), no editar pubspec.yaml a mano
+- Providers generados `.g.dart` / `.freezed.dart`: no editar manualmente

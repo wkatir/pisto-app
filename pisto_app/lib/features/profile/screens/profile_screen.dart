@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
-import '../../../core/providers/core_providers.dart';
 import '../../../core/services/uploads_service.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../providers/profile_providers.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -18,21 +18,19 @@ class ProfileScreen extends ConsumerStatefulWidget {
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic>? _me;
-  bool _loading = true;
   bool _saving = false;
   String? _avatarUrl;
+
+  // The controllers hydrate only once when the first data arrives
+  // (see _hydrateMe): avoids stomping what the user is editing when
+  // the provider refreshes after saving.
+  bool _hydrated = false;
 
   final _formKey = GlobalKey<FormState>();
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
 
   @override
   void dispose() {
@@ -43,35 +41,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    try {
-      final authSvc = ref.read(authServiceProvider);
-      final me = await authSvc.getMe();
-      if (!mounted) return;
-      setState(() {
-        _me = me;
-        _firstNameCtrl.text = me['firstName']?.toString() ?? '';
-        _lastNameCtrl.text = me['lastName']?.toString() ?? '';
-        _emailCtrl.text = me['email']?.toString() ?? '';
-        _phoneCtrl.text = me['phone']?.toString() ?? '';
-        _avatarUrl = me['avatarUrl'] as String?;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ApiClient.parseError(e))),
-      );
-    }
+  void _hydrateMe(Map<String, dynamic> me) {
+    if (_hydrated) return;
+    _hydrated = true;
+    _me = me;
+    _firstNameCtrl.text = me['firstName']?.toString() ?? '';
+    _lastNameCtrl.text = me['lastName']?.toString() ?? '';
+    _emailCtrl.text = me['email']?.toString() ?? '';
+    _phoneCtrl.text = me['phone']?.toString() ?? '';
+    _avatarUrl = me['avatarUrl'] as String?;
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
     try {
-      final authSvc = ref.read(authServiceProvider);
-      final updated = await authSvc.updateProfile(
+      final updated = await ref.read(profileMutationsProvider.notifier).update(
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
         email: _emailCtrl.text.trim(),
@@ -83,8 +68,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         _me = updated;
         _saving = false;
       });
-      // Refresca el UserModel global para que sidebar/AppBar muestren el
-      // avatar y nombre actualizados sin esperar al próximo login.
+      // Refreshes the global UserModel so sidebar/AppBar show the
+      // updated avatar and name without waiting for the next login.
       await ref.read(authProvider.notifier).refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -178,7 +163,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   if (!formKey.currentState!.validate()) return;
                   final messenger = ScaffoldMessenger.of(context);
                   try {
-                    await ref.read(authServiceProvider).changePassword(
+                    await ref.read(profileMutationsProvider.notifier).changePassword(
                           currentPassword: currentCtrl.text,
                           newPassword: newCtrl.text,
                         );
@@ -208,41 +193,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width > Breakpoints.gridDense;
 
-    if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
+    final meAsync = ref.watch(profileMeProvider);
+    if (meAsync.hasValue) _hydrateMe(meAsync.value!);
 
+    return Scaffold(
+      body: AsyncValueWidget(
+        value: meAsync,
+        onRetry: () => ref.invalidate(profileMeProvider),
+        data: (_) => _buildContent(context, theme, cs, isWide),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme cs,
+    bool isWide,
+  ) {
     final initials = _initials(
       _firstNameCtrl.text.trim(),
       _lastNameCtrl.text.trim(),
     );
 
-    return Scaffold(
-      body: SingleChildScrollView(
+    return SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 32),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            PageHeader(
-              eyebrow: 'CUENTA',
-              title: 'Tu perfil',
-              meta: 'Editá tu información personal y la contraseña.',
+            const PageHeader(title: 'Tu perfil'),
+            const SizedBox(height: 4),
+            Text(
+              'Editá tu información personal y la contraseña.',
+              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 28),
-            // ── Identidad card ──
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              child: Row(
+            // ── Identity (flat, no card) ──
+            Row(
                 children: [
-                  // Avatar editable: si hay foto, la muestra. Si no, muestra
-                  // las iniciales con tap-to-upload encima.
+                  // Editable avatar: shows the photo if there is one, else
+                  // the initials with tap-to-upload on top.
                   Stack(
                     children: [
                       _avatarUrl?.isNotEmpty == true
@@ -369,19 +359,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 24),
-            // ── Form datos personales ──
-            _SectionTitle(title: 'Información personal', icon: LucideIcons.user),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              child: Form(
+            const SizedBox(height: 32),
+            SectionHeading(title: 'Información personal'),
+            Form(
                 key: _formKey,
                 child: Column(
                   children: [
@@ -440,80 +420,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   ],
                 ),
               ),
+            const SizedBox(height: 32),
+            SectionHeading(title: 'Seguridad'),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Contraseña',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                      Text(
+                        'Cambia tu contraseña por una nueva.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: _changePassword,
+                  icon: const Icon(LucideIcons.pencil, size: 14),
+                  label: const Text('Cambiar'),
+                ),
+              ],
             ),
-            const SizedBox(height: 24),
-            // ── Seguridad ──
-            _SectionTitle(title: 'Seguridad', icon: LucideIcons.shield),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
+            const SizedBox(height: 32),
+            // ── Session ── the ONE sanctioned alert card: accent edge signals
+            // the destructive action.
+            InfoCard(
+              title: 'Sesión',
+              accentColor: AppTheme.danger,
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.tintBg(context, cs.primary),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(LucideIcons.keyRound, size: 18, color: cs.primary),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Contraseña',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                        Text(
-                          'Cambia tu contraseña por una nueva.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurface.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _changePassword,
-                    icon: const Icon(LucideIcons.pencil, size: 14),
-                    label: const Text('Cambiar'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            // ── Sesión ──
-            _SectionTitle(title: 'Sesión', icon: LucideIcons.logOut),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.tintBg(context, AppTheme.danger),
-                      borderRadius: BorderRadius.circular(11),
-                    ),
-                    child: Icon(LucideIcons.logOut, size: 18, color: AppTheme.danger),
-                  ),
+                  IconBadge(icon: LucideIcons.logOut, color: AppTheme.danger),
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
@@ -521,7 +467,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       children: [
                         Text(
                           'Cerrar sesión',
-                          style: theme.textTheme.titleSmall?.copyWith(
+                          style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: cs.onSurface,
                           ),
@@ -529,7 +475,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         Text(
                           'Saldrás de tu cuenta en este dispositivo.',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurface.withValues(alpha: 0.7),
+                            color: cs.onSurfaceVariant,
                           ),
                         ),
                       ],
@@ -553,8 +499,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   String _initials(String first, String last) {
@@ -587,32 +532,6 @@ class _AvatarInitials extends StatelessWidget {
           letterSpacing: -0.5,
         ),
       ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _SectionTitle({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: cs.onSurface.withValues(alpha: 0.6)),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: theme.textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: cs.onSurface,
-            letterSpacing: -0.1,
-          ),
-        ),
-      ],
     );
   }
 }

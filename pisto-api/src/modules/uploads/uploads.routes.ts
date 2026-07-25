@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { vValidator } from '@hono/valibot-validator'
+import * as v from 'valibot'
 import { randomUUID } from 'crypto'
 import { authGuard } from '../../middleware/auth.middleware'
 import type { AppEnv } from '../../types/app-env'
@@ -12,28 +14,31 @@ const ALLOWED_MIME: Record<string, string> = {
   'image/png': 'png',
   'image/webp': 'webp',
 }
-const ALLOWED_FOLDERS = new Set(['products', 'expenses', 'avatars', 'logos'])
+const FOLDERS = ['products', 'expenses', 'avatars', 'logos', 'misc'] as const
 
-// Upload imagen a Cloudflare R2
-uploads.post('/image', authGuard, async (c) => {
-  const body = await c.req.parseBody()
-  const file = body.file
-  const folderRaw = (body.folder as string | undefined) ?? 'misc'
+const uploadFormSchema = v.object({
+  file: v.pipe(
+    v.instance(File, 'Archivo no recibido (campo "file")'),
+    v.check((f) => Boolean(ALLOWED_MIME[f.type]), 'Formato no soportado. Usá JPG, PNG o WebP.'),
+    v.check((f) => f.size <= MAX_SIZE, 'Archivo demasiado grande. Máximo 5 MB.'),
+  ),
+  folder: v.optional(v.picklist(FOLDERS), 'misc'),
+})
 
-  if (!(file instanceof File)) {
-    return c.json({ error: 'Archivo no recibido (campo "file")' }, 400)
-  }
-  if (!ALLOWED_MIME[file.type]) {
-    return c.json({ error: `Formato no soportado. Usá JPG, PNG o WebP.` }, 400)
-  }
-  if (file.size > MAX_SIZE) {
-    return c.json({ error: `Archivo demasiado grande. Máximo 5 MB.` }, 400)
-  }
+const fileParamSchema = v.object({
+  folder: v.picklist(FOLDERS),
+  filename: v.pipe(v.string(), v.regex(/^[0-9a-f-]{36}\.(jpg|png|webp)$/i, 'Nombre de archivo inválido')),
+})
 
-  const folder = ALLOWED_FOLDERS.has(folderRaw) ? folderRaw : 'misc'
+uploads.post('/image', authGuard, vValidator('form', uploadFormSchema), async (c) => {
+  const { file, folder } = c.req.valid('form')
+  const businessId = c.get('businessId')
+
   const ext = ALLOWED_MIME[file.type]!
   const filename = `${randomUUID()}.${ext}`
-  const key = `uploads/${folder}/${filename}`
+  // The key includes businessId so a tenant can never read another one's files,
+  // even by knowing/guessing the other business's UUID.
+  const key = `uploads/${businessId}/${folder}/${filename}`
 
   await c.env.UPLOADS_BUCKET.put(key, file.stream(), {
     httpMetadata: { contentType: file.type },
@@ -43,11 +48,11 @@ uploads.post('/image', authGuard, async (c) => {
   return c.json({ url, filename, size: file.size, mimeType: file.type })
 })
 
-// Servir archivo desde R2
-uploads.get('/uploads/:folder/:filename', async (c) => {
-  const folder = c.req.param('folder')
-  const filename = c.req.param('filename')
-  const key = `uploads/${folder}/${filename}`
+// Mounted at '/uploads' (see app.ts) → real public URL: /api/v1/uploads/:folder/:filename.
+uploads.get('/:folder/:filename', authGuard, vValidator('param', fileParamSchema), async (c) => {
+  const { folder, filename } = c.req.valid('param')
+  const businessId = c.get('businessId')
+  const key = `uploads/${businessId}/${folder}/${filename}`
 
   const object = await c.env.UPLOADS_BUCKET.get(key)
   if (!object) return c.json({ error: 'Archivo no encontrado' }, 404)

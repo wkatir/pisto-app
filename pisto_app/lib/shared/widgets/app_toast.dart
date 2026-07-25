@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import '../../config/api_client.dart';
 import '../../config/app_theme.dart';
 
-/// Intent visual del toast.
+/// Toast's visual intent.
 enum ToastType { success, error, warning, info }
 
-/// Toast flotante que reemplaza el SnackBar genérico de Material.
+/// Floating toast that replaces Material's generic SnackBar.
 ///
-/// Se muestra en la parte superior de la pantalla con un diseño compacto,
-/// borde lateral de color por intent, y dismiss automático.
+/// Shown at the top of the screen with a compact design, a colored side
+/// border per intent, and automatic dismiss.
 class AppToast {
   AppToast._();
 
@@ -85,13 +86,33 @@ class AppToast {
     });
   }
 
-  /// Shorthand para errores de API.
+  /// Shorthand for API errors.
   static void error(BuildContext context, String message) =>
       show(context, message: message, type: ToastType.error);
 
-  /// Shorthand para confirmaciones.
+  /// Shorthand for confirmations.
   static void success(BuildContext context, String message) =>
       show(context, message: message, type: ToastType.success);
+
+  /// Runs a mutation: on failure shows the parsed API error; on success
+  /// shows [successMessage] if one was passed. Returns true if it succeeded.
+  /// Only place (besides AsyncErrorState) where ApiClient.parseError is called.
+  static Future<bool> guard(
+    BuildContext context,
+    Future<void> Function() action, {
+    String? successMessage,
+  }) async {
+    try {
+      await action();
+    } catch (e) {
+      if (context.mounted) error(context, ApiClient.parseError(e));
+      return false;
+    }
+    if (successMessage != null && context.mounted) {
+      success(context, successMessage);
+    }
+    return true;
+  }
 }
 
 class _ToastCard extends StatelessWidget {
@@ -127,13 +148,13 @@ class _ToastCard extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 480),
         decoration: BoxDecoration(
           color: cs.surfaceContainer,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppTheme.borderSubtle(context)),
         ),
         child: IntrinsicHeight(
           child: Row(
             children: [
-              // Barra lateral de color
+              // Colored side bar
               Container(
                 width: 4,
                 decoration: BoxDecoration(

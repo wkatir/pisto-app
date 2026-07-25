@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
-import '../../../core/providers/service_providers.dart';
 import '../../../core/services/uploads_service.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -16,12 +16,10 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  Map<String, dynamic>? _business;
-  List<Map<String, dynamic>> _taxes = [];
-  List<Map<String, dynamic>> _paymentMethods = [];
-  bool _loading = true;
 
-  // Controladores para editar negocio
+  // Controllers for editing the business: hydrated only once when
+  // the first data arrives (see _hydrateBusiness).
+  bool _businessHydrated = false;
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -32,8 +30,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadData();
+    _tabController = TabController(length: 3, vsync: this)
+      ..addListener(() {
+        if (mounted) setState(() {});
+      });
   }
 
   @override
@@ -45,41 +45,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    try {
-      final service = ref.read(settingsServiceProvider);
-      final results = await Future.wait([
-        service.getBusiness(),
-        service.listTaxes(),
-        service.listPaymentMethods(),
-      ]);
-      setState(() {
-        _business = results[0] as Map<String, dynamic>?;
-        _taxes = results[1] as List<Map<String, dynamic>>;
-        _paymentMethods = results[2] as List<Map<String, dynamic>>;
-        if (_business != null) {
-          _nameCtrl.text = _business!['name'] as String? ?? '';
-          _phoneCtrl.text = _business!['phone'] as String? ?? '';
-          _emailCtrl.text = _business!['email'] as String? ?? '';
-          _currencyCode = _business!['currencyCode'] as String? ?? 'USD';
-          _logoUrl = _business!['logoUrl'] as String?;
-        }
-        _loading = false;
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() => _loading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(ApiClient.parseError(e))),
-        );
-      }
-    }
+  void _hydrateBusiness(Map<String, dynamic>? business) {
+    if (_businessHydrated || business == null) return;
+    _businessHydrated = true;
+    _nameCtrl.text = business['name'] as String? ?? '';
+    _phoneCtrl.text = business['phone'] as String? ?? '';
+    _emailCtrl.text = business['email'] as String? ?? '';
+    _currencyCode = business['currencyCode'] as String? ?? 'USD';
+    _logoUrl = business['logoUrl'] as String?;
   }
 
   Future<void> _saveBusiness() async {
     setState(() => _savingBusiness = true);
     try {
-      await ref.read(settingsServiceProvider).updateBusiness({
+      await ref.read(settingsMutationsProvider.notifier).updateBusiness({
         'name': _nameCtrl.text,
         if (_phoneCtrl.text.isNotEmpty) 'phone': _phoneCtrl.text,
         if (_emailCtrl.text.isNotEmpty) 'email': _emailCtrl.text,
@@ -98,7 +77,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
         );
       }
     }
-    setState(() => _savingBusiness = false);
+    if (mounted) setState(() => _savingBusiness = false);
   }
 
   @override
@@ -108,43 +87,51 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     final width = MediaQuery.sizeOf(context).width;
     final isWide = width > Breakpoints.gridDense;
 
+    final overviewAsync = ref.watch(settingsOverviewProvider);
+    _hydrateBusiness(overviewAsync.value?.business);
+
     return Scaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 28, isWide ? 32 : 20, 0),
-            child: const PageHeader(
-              eyebrow: 'CUENTA',
-              title: 'Configuración',
-              meta: 'Ajustá los datos de tu negocio, impuestos y métodos de pago.',
-            ),
+            child: const PageHeader(title: 'Configuración'),
           ),
           const SizedBox(height: 20),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: isWide ? 32 : 20),
-            child: TabBar(
-              controller: _tabController,
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
+            child: PTabs(
               tabs: const [
-                Tab(text: 'Negocio'),
-                Tab(text: 'Impuestos'),
-                Tab(text: 'Pagos'),
+                PTabItem('Negocio'),
+                PTabItem('Impuestos'),
+                PTabItem('Pagos'),
               ],
+              index: _tabController.index,
+              onChanged: (i) => setState(() => _tabController.index = i),
             ),
           ),
+          const SizedBox(height: 8),
           Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildBusinessTab(theme, cs, isWide),
-                      _buildTaxesTab(theme, cs, isWide),
-                      _buildPaymentMethodsTab(theme, cs, isWide),
-                    ],
+            child: AsyncValueWidget(
+              value: overviewAsync,
+              onRetry: () => ref.invalidate(settingsOverviewProvider),
+              data: (overview) {
+                final tabContent = switch (_tabController.index) {
+                  0 => _buildBusinessTab(theme, cs, isWide),
+                  1 => _buildTaxesTab(theme, cs, isWide, overview.taxes),
+                  2 => _buildPaymentMethodsTab(theme, cs, isWide, overview.paymentMethods),
+                  _ => const SizedBox.shrink(),
+                };
+                return AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 150),
+                  child: KeyedSubtree(
+                    key: ValueKey(_tabController.index),
+                    child: tabContent,
                   ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -153,18 +140,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   Widget _buildBusinessTab(ThemeData theme, ColorScheme cs, bool isWide) {
     return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainer,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.borderSubtle(context)),
-        ),
-        child: Column(
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 4, isWide ? 32 : 20, 24),
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Logo del negocio (cuadrado redondeado, alineado a la izquierda).
+            SectionHeading(title: 'Negocio', spaceBefore: 12),
+            // Business logo (rounded square, left-aligned).
             Row(
               children: [
                 ImagePickerField(
@@ -222,11 +203,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               initialValue: _currencyCode,
               decoration: const InputDecoration(labelText: 'Moneda'),
               items: const [
-                DropdownMenuItem(value: 'USD', child: Text('USD — Dólar americano')),
-                DropdownMenuItem(value: 'GTQ', child: Text('GTQ — Quetzal guatemalteco')),
-                DropdownMenuItem(value: 'CRC', child: Text('CRC — Colón costarricense')),
-                DropdownMenuItem(value: 'HNL', child: Text('HNL — Lempira hondureño')),
-                DropdownMenuItem(value: 'SVC', child: Text('SVC — Colón salvadoreño')),
+                DropdownMenuItem(value: 'USD', child: Text('USD · Dólar americano')),
+                DropdownMenuItem(value: 'GTQ', child: Text('GTQ · Quetzal guatemalteco')),
+                DropdownMenuItem(value: 'CRC', child: Text('CRC · Colón costarricense')),
+                DropdownMenuItem(value: 'HNL', child: Text('HNL · Lempira hondureño')),
+                DropdownMenuItem(value: 'SVC', child: Text('SVC · Colón salvadoreño')),
               ],
               onChanged: (v) => setState(() => _currencyCode = v ?? 'USD'),
             ),
@@ -249,54 +230,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             ),
           ],
         ),
-      ),
     );
   }
 
-  Widget _buildTaxesTab(ThemeData theme, ColorScheme cs, bool isWide) {
+  Widget _buildTaxesTab(
+    ThemeData theme,
+    ColorScheme cs,
+    bool isWide,
+    List<Map<String, dynamic>> taxes,
+  ) {
     return ListView(
-      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 4, isWide ? 32 : 20, 24),
       children: [
-        ..._taxes.map((t) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          t['name'] as String? ?? '',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          '${t['rate']}%',
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(),
-                        ),
-                      ],
-                    ),
+        SectionHeading(title: 'Impuestos', spaceBefore: 12),
+        for (final t in taxes) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t['name'] as String? ?? '',
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        '${t['rate']}%',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
                   ),
-                  Switch(
-                    value: t['isActive'] as bool? ?? true,
-                    onChanged: (v) async {
-                      await ref
-                          .read(settingsServiceProvider)
-                          .toggleTax(t['id'] as String, v);
-                      _loadData();
-                    },
-                  ),
-                ],
-              ),
-            )),
-        const SizedBox(height: 8),
+                ),
+                Switch(
+                  value: t['isActive'] as bool? ?? true,
+                  onChanged: (v) => ref
+                      .read(settingsMutationsProvider.notifier)
+                      .toggleTax(t['id'] as String, v),
+                ),
+              ],
+            ),
+          ),
+          if (t != taxes.last) Divider(height: 1, color: cs.outlineVariant),
+        ],
+        const SizedBox(height: 16),
         OutlinedButton.icon(
           icon: const Icon(LucideIcons.plus, size: 16),
           label: const Text('Agregar impuesto'),
@@ -306,40 +286,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 
-  Widget _buildPaymentMethodsTab(ThemeData theme, ColorScheme cs, bool isWide) {
+  Widget _buildPaymentMethodsTab(
+    ThemeData theme,
+    ColorScheme cs,
+    bool isWide,
+    List<Map<String, dynamic>> paymentMethods,
+  ) {
     return ListView(
-      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 16, isWide ? 32 : 20, 24),
+      padding: EdgeInsets.fromLTRB(isWide ? 32 : 20, 4, isWide ? 32 : 20, 24),
       children: [
-        ..._paymentMethods.map((pm) => Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      pm['name'] as String? ?? '',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(fontWeight: FontWeight.w500),
-                    ),
+        SectionHeading(title: 'Métodos de pago', spaceBefore: 12),
+        for (final pm in paymentMethods) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    pm['name'] as String? ?? '',
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w500),
                   ),
-                  Switch(
-                    value: pm['isActive'] as bool? ?? true,
-                    onChanged: (v) async {
-                      await ref
-                          .read(settingsServiceProvider)
-                          .togglePaymentMethod(pm['id'] as String, v);
-                      _loadData();
-                    },
-                  ),
-                ],
-              ),
-            )),
-        const SizedBox(height: 8),
+                ),
+                Switch(
+                  value: pm['isActive'] as bool? ?? true,
+                  onChanged: (v) => ref
+                      .read(settingsMutationsProvider.notifier)
+                      .togglePaymentMethod(pm['id'] as String, v),
+                ),
+              ],
+            ),
+          ),
+          if (pm != paymentMethods.last) Divider(height: 1, color: cs.outlineVariant),
+        ],
+        const SizedBox(height: 16),
         OutlinedButton.icon(
           icon: const Icon(LucideIcons.plus, size: 16),
           label: const Text('Agregar método de pago'),
@@ -385,9 +365,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             onPressed: () async {
               Navigator.pop(ctx);
               await ref
-                  .read(settingsServiceProvider)
+                  .read(settingsMutationsProvider.notifier)
                   .createTax(nameCtrl.text, rateCtrl.text);
-              _loadData();
             },
             child: const Text('Agregar'),
           ),
@@ -417,9 +396,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
             onPressed: () async {
               Navigator.pop(ctx);
               await ref
-                  .read(settingsServiceProvider)
+                  .read(settingsMutationsProvider.notifier)
                   .createPaymentMethod(nameCtrl.text);
-              _loadData();
             },
             child: const Text('Agregar'),
           ),

@@ -1,7 +1,9 @@
-import { client, getAiModel } from './ai-client'
+import OpenAI from 'openai'
+import { structuredCompletion } from './ai-client'
 import { db } from '../../config/database'
 import { expenseCategory } from '../../db/schema'
 import { eq } from 'drizzle-orm'
+import { AppError } from '../../shared/errors/app-error'
 
 interface ReceiptItem {
   description: string | null
@@ -21,56 +23,86 @@ interface ReceiptData {
   nit: string | null
 }
 
+const receiptJsonSchema = {
+  type: 'object',
+  properties: {
+    vendor: { type: ['string', 'null'] },
+    date: { type: ['string', 'null'] },
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          description: { type: ['string', 'null'] },
+          quantity: { type: ['number', 'null'] },
+          unitPrice: { type: ['number', 'null'] },
+          total: { type: ['number', 'null'] },
+        },
+        required: ['description', 'quantity', 'unitPrice', 'total'],
+        additionalProperties: false,
+      },
+    },
+    subtotal: { type: ['number', 'null'] },
+    tax: { type: ['number', 'null'] },
+    total: { type: ['number', 'null'] },
+    invoiceNumber: { type: ['string', 'null'] },
+    nit: { type: ['string', 'null'] },
+  },
+  required: ['vendor', 'date', 'items', 'subtotal', 'tax', 'total', 'invoiceNumber', 'nit'],
+  additionalProperties: false,
+} as const
+
+const categorizationJsonSchema = {
+  type: 'object',
+  properties: {
+    category: { type: 'string' },
+    confidence: { type: 'string', enum: ['alta', 'media', 'baja'] },
+  },
+  required: ['category', 'confidence'],
+  additionalProperties: false,
+} as const
+
 const MAX_BASE64_SIZE = 5 * 1024 * 1024 * 1.37 // ~5MB file -> base64 is ~37% larger
 
 export async function scanReceipt(
   imageBase64: string,
   mimeType: string,
-): Promise<{ data: ReceiptData; message?: string }> {
+): Promise<{ data: ReceiptData }> {
   if (imageBase64.length > MAX_BASE64_SIZE) {
-    throw new Error('La imagen excede el limite de 5MB')
+    throw new AppError(413, 'La imagen excede el limite de 5MB')
   }
 
-  const response = await client.chat.completions.create({
-    model: getAiModel(),
-    max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image_url',
-            image_url: {
-              url: `data:${mimeType};base64,${imageBase64}`,
-            },
-          },
-          {
-            type: 'text',
-            text: `Analiza esta imagen de una factura o recibo. Extrae los siguientes datos en formato JSON:
-- vendor (nombre del proveedor/vendedor)
-- date (fecha en formato YYYY-MM-DD)
-- items (array de { description, quantity, unitPrice, total })
-- subtotal
-- tax (IVA u otros impuestos)
-- total
-- invoiceNumber (numero de factura si es visible)
-- nit (NIT del proveedor si es visible)
-Si algun campo no es visible, ponlo como null. Responde SOLO con el JSON, sin explicacion.`,
-          },
-        ],
-      },
-    ],
-  })
-
-  const raw = response.choices[0]?.message?.content
-  if (!raw) throw new Error('AI returned empty response for receipt scan')
-
-  const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
   try {
-    const parsed: ReceiptData = JSON.parse(cleaned)
-    return { data: parsed }
-  } catch (e) {
-    throw new Error(`Failed to parse receipt JSON: ${(e as Error).message}\nRaw: ${cleaned.slice(0, 500)}`)
+    const data = await structuredCompletion<ReceiptData>({
+      name: 'receipt_data',
+      schema: receiptJsonSchema,
+      maxTokens: 2048,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType};base64,${imageBase64}`,
+              },
+            },
+            {
+              type: 'text',
+              text: `Analiza esta imagen de una factura o recibo y extrae los datos: vendor (nombre del proveedor/vendedor), date (fecha en formato YYYY-MM-DD), items, subtotal, tax (IVA u otros impuestos), total, invoiceNumber (numero de factura si es visible), nit (NIT del proveedor si es visible). Si algun campo no es visible, ponlo como null.`,
+            },
+          ],
+        },
+      ],
+    })
+    return { data }
+  } catch (err) {
+    // WHY: the configured AI provider (DeepSeek) is text-only and rejects image content parts:
+    // surface a clear, actionable error instead of letting the provider's raw 500 leak through.
+    if (err instanceof OpenAI.APIError) {
+      throw new AppError(502, 'El proveedor de IA configurado no admite el escaneo de imágenes. Contacta al administrador para habilitar un proveedor con soporte de visión.')
+    }
+    throw err
   }
 }
 
@@ -92,31 +124,22 @@ export async function categorizeExpense(
   const categoryNames = categories.map((c) => c.name)
   const vendorPart = vendor ? ` de ${vendor}` : ''
 
-  const response = await client.chat.completions.create({
-    model: getAiModel(),
-    max_tokens: 256,
+  const parsed = await structuredCompletion<{ category: string; confidence: string }>({
+    name: 'expense_categorization',
+    schema: categorizationJsonSchema,
+    maxTokens: 256,
     messages: [
       {
         role: 'user',
-        content: `Categoriza este gasto: '${description}'${vendorPart} por Q${amount.toFixed(2)}. Categorias disponibles: ${categoryNames.join(', ')}. Responde SOLO con un JSON asi: {"category":"nombre exacto","confidence":"alta|media|baja"}. Usa el nombre exacto de la lista.`,
+        content: `Categoriza este gasto: '${description}'${vendorPart} por $${amount.toFixed(2)}. Categorias disponibles: ${categoryNames.join(', ')}. Usa el nombre exacto de la lista.`,
       },
     ],
   })
-
-  const raw = response.choices[0]?.message?.content
-  if (!raw) throw new Error('AI returned empty response for categorization')
-
-  const cleaned = raw.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
-  try {
-    const parsed = JSON.parse(cleaned) as { category: string; confidence: string }
-    const match = categoryNames.find(
-      (name) => name.toLowerCase() === parsed.category.toLowerCase(),
-    )
-    return {
-      category: match ?? parsed.category,
-      confidence: match ? parsed.confidence : 'baja',
-    }
-  } catch (e) {
-    throw new Error(`Failed to parse categorization JSON: ${(e as Error).message}\nRaw: ${cleaned.slice(0, 500)}`)
+  const match = categoryNames.find(
+    (name) => name.toLowerCase() === parsed.category.toLowerCase(),
+  )
+  return {
+    category: match ?? parsed.category,
+    confidence: match ? parsed.confidence : 'baja',
   }
 }

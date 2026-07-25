@@ -2,31 +2,35 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../config/app_theme.dart';
 
-/// Empty state con jerarquía clara y CTA opcional.
+/// Empty state with clear hierarchy and optional CTA.
 ///
-/// Reemplaza el patrón "icon de 48px + texto descriptivo" por algo que
-/// efectivamente *invita a la acción*: titular humano + descripción + CTA.
+/// Replaces the "48px icon + descriptive text" pattern with something that
+/// actually *invites action*: human headline + description + CTA.
 ///
-/// Variantes:
-///  - [EmptyState] — uso general dentro de listas/tabs.
-///  - [EmptyState.compact] — versión chica para diálogos o cards.
+/// Variants:
+///  - [EmptyState]: general use inside lists/tabs.
+///  - [EmptyState.compact]: small version for dialogs or cards.
 class EmptyState extends StatelessWidget {
-  /// Título corto y humano. Ej: "Aún no has facturado".
+  /// Short, human title. E.g.: "Aún no has facturado".
   final String title;
 
-  /// Descripción opcional con CTA implícita en texto.
-  /// Ej: "Crea tu primera venta y empieza a cobrar."
+  /// Optional description with an implicit CTA in the copy.
+  /// E.g.: "Crea tu primera venta y empieza a cobrar."
   final String? description;
 
-  /// Ícono ilustrativo. Defaults a inbox.
+  /// Illustrative icon. Defaults to inbox. Ignored if [image] is set.
   final IconData icon;
 
-  /// Acción primaria opcional — un FilledButton.
+  /// Brand illustration (asset). Replaces the icon; clipped to radius 18
+  /// so the PNG's cream background reads as an intentional card in dark mode.
+  final String? image;
+
+  /// Optional primary action: a FilledButton.
   final String? actionLabel;
   final IconData? actionIcon;
   final VoidCallback? onAction;
 
-  /// Variante compacta — sin ícono grande.
+  /// Compact variant: no large icon.
   final bool compact;
 
   const EmptyState({
@@ -34,6 +38,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     this.description,
     this.icon = LucideIcons.inbox,
+    this.image,
     this.actionLabel,
     this.actionIcon,
     this.onAction,
@@ -47,7 +52,8 @@ class EmptyState extends StatelessWidget {
     this.actionLabel,
     this.actionIcon,
     this.onAction,
-  }) : compact = true;
+  })  : image = null,
+        compact = true;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +62,18 @@ class EmptyState extends StatelessWidget {
 
     final iconBlock = compact
         ? const SizedBox.shrink()
-        : Container(
+        : image != null
+            ? Container(
+                width: 168,
+                height: 168,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppTheme.borderSubtle(context)),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Image.asset(image!, fit: BoxFit.cover),
+              )
+            : Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(

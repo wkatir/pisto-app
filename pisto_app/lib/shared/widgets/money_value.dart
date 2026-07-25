@@ -3,41 +3,41 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../config/app_theme.dart';
 
 enum MoneySize {
-  /// 14px — inline en filas de lista.
+  /// 14px, inline in list rows.
   small,
 
-  /// 18px — KPI compacto.
+  /// 18px, compact KPI.
   medium,
 
-  /// 28px — card de KPI.
+  /// 28px, KPI card.
   large,
 
-  /// 56px — hero number del dashboard.
+  /// 56px, dashboard hero number.
   hero,
 }
 
-/// Cifra monetaria con jerarquía financiera consistente.
+/// Monetary figure with consistent financial hierarchy.
 ///
-/// Renderiza el valor con DM Mono y opcionalmente un delta (% o absoluto)
-/// debajo o al lado, coloreado por intent (success/danger).
+/// Renders the value with Spline Sans Mono and optionally a delta (% or
+/// absolute) below or beside it, colored by intent (success/danger).
 class MoneyValue extends StatelessWidget {
-  /// Texto pre-formateado de la cifra (ej. "$24,500.00"). Quien llama formatea
-  /// con `currencyFmt` para mantener la moneda configurable.
+  /// Pre-formatted figure text (e.g. "$24,500.00"). The caller formats with
+  /// `currencyFmt` to keep the currency configurable.
   final String formatted;
 
-  /// Tamaño visual.
+  /// Visual size.
   final MoneySize size;
 
-  /// Color override. Por defecto usa cs.onSurface.
+  /// Color override. Defaults to cs.onSurface.
   final Color? color;
 
-  /// Delta opcional — texto descriptivo (ej. "+12% vs abril", "-3 unidades").
+  /// Optional delta: descriptive text (e.g. "+12% vs abril", "-3 unidades").
   final String? delta;
 
-  /// Si [delta] representa un cambio positivo. Controla color del chip.
+  /// Whether [delta] represents a positive change. Controls the chip color.
   final bool? deltaPositive;
 
-  /// Label opcional debajo de la cifra (ej. "Ventas este mes").
+  /// Optional label below the figure (e.g. "Ventas este mes").
   final String? label;
 
   const MoneyValue({
@@ -62,10 +62,10 @@ class MoneyValue extends StatelessWidget {
       MoneySize.hero => 56.0,
     };
 
+    // Spline Sans Mono: Medium for inline, SemiBold for totals/KPIs.
     final weight = switch (size) {
-      MoneySize.small || MoneySize.medium => FontWeight.w600,
-      MoneySize.large => FontWeight.w700,
-      MoneySize.hero => FontWeight.w700,
+      MoneySize.small || MoneySize.medium => FontWeight.w500,
+      MoneySize.large || MoneySize.hero => FontWeight.w600,
     };
 
     final valueWidget = Text(
@@ -112,8 +112,8 @@ class MoneyValue extends StatelessWidget {
   }
 }
 
-/// Badge pequeño para mostrar deltas: "+12%", "-3 unidades", etc.
-/// Color se decide por [positive]: null → neutral, true → success, false → danger.
+/// Small badge for showing deltas: "+12%", "-3 unidades", etc.
+/// Color is decided by [positive]: null → neutral, true → success, false → danger.
 class DeltaBadge extends StatelessWidget {
   final String text;
   final bool? positive;
@@ -129,11 +129,12 @@ class DeltaBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final tokens = context.tokens;
     final color = positive == null
         ? cs.onSurfaceVariant
         : positive!
-            ? AppTheme.success
-            : AppTheme.danger;
+            ? tokens.successText
+            : tokens.dangerText;
 
     final arrow = positive == null
         ? null

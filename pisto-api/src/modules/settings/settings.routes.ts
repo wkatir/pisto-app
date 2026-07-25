@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
 import type { AppEnv } from '../../types/app-env'
 import { updateBusinessSchema, createTaxSchema, createPaymentMethodSchema, toggleActiveSchema } from './settings.schemas'
+import { idParamSchema } from '../../shared/schemas/common'
 import * as settingsService from './settings.service'
 
 const settings = new Hono<AppEnv>()
@@ -32,9 +33,9 @@ settings.post('/taxes', vValidator('json', createTaxSchema), async (c) => {
   return c.json({ data }, 201)
 })
 
-settings.put('/taxes/:id/toggle', vValidator('json', toggleActiveSchema), async (c) => {
+settings.put('/taxes/:id/toggle', vValidator('param', idParamSchema), vValidator('json', toggleActiveSchema), async (c) => {
   const businessId = c.get('businessId')
-  const { id } = c.req.param()
+  const { id } = c.req.valid('param')
   const { isActive } = c.req.valid('json')
   const data = await settingsService.toggleTax(id, businessId, isActive)
   return c.json({ data })
@@ -53,9 +54,9 @@ settings.post('/payment-methods', vValidator('json', createPaymentMethodSchema),
   return c.json({ data }, 201)
 })
 
-settings.put('/payment-methods/:id/toggle', vValidator('json', toggleActiveSchema), async (c) => {
+settings.put('/payment-methods/:id/toggle', vValidator('param', idParamSchema), vValidator('json', toggleActiveSchema), async (c) => {
   const businessId = c.get('businessId')
-  const { id } = c.req.param()
+  const { id } = c.req.valid('param')
   const { isActive } = c.req.valid('json')
   const data = await settingsService.togglePaymentMethod(id, businessId, isActive)
   return c.json({ data })

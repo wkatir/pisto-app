@@ -8,7 +8,9 @@ config({ path: '.dev.vars' });
 const url = process.env.DATABASE_URL_DIRECT;
 if (!url) throw new Error('DATABASE_URL_DIRECT no está definida en .dev.vars');
 
-const client = postgres(url, { max: 1, ssl: 'require' });
+// Local dev Postgres has no TLS; Supabase requires it.
+const ssl = new URL(url).hostname === 'localhost' ? false : ('require' as const);
+const client = postgres(url, { max: 1, ssl });
 const db = drizzle(client);
 
 console.log('Aplicando migraciones...');

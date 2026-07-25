@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
 import { secureHeaders } from 'hono/secure-headers'
+import { HTTPException } from 'hono/http-exception'
 import { rateLimitMiddleware, authRateLimitMiddleware } from './middleware/rate-limit'
 import { auth } from './modules/auth/auth.routes'
 import { inventory } from './modules/inventory/inventory.routes'
@@ -13,6 +14,7 @@ import { exports } from './modules/exports/exports.routes'
 import { settings } from './modules/settings/settings.routes'
 import { expenses } from './modules/expenses/expenses.routes'
 import { uploads } from './modules/uploads/uploads.routes'
+import { notifications } from './modules/notifications/notifications.routes'
 import { aiScan } from './modules/ai/ai-scan.routes'
 import { ai } from './modules/ai/ai.routes'
 import { aiInsights } from './modules/ai/ai-insights.routes'
@@ -24,16 +26,14 @@ import { initEnv } from './config/env'
 
 export const app = new Hono<AppEnv>().basePath('/api/v1')
 
-// Crear conexión DB por request (Workers no permite compartir sockets entre requests)
+// New DB connection per request: Workers can't share sockets across requests.
 app.use('*', async (c, next) => {
   initEnv(c.env)
   await runWithDb(c.env.HYPERDRIVE.connectionString, () => next())
 })
 
-// Logger
 app.use('*', logger())
 
-// CORS dinámico leyendo desde los bindings del Worker
 app.use('*', async (c, next) => {
   const rawOrigin = c.env.CORS_ORIGIN ?? '*'
   const corsConfig =
@@ -59,7 +59,6 @@ app.use('*', secureHeaders({ crossOriginResourcePolicy: false, crossOriginOpener
 
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }))
 
-// Rate limiting condicional — el middleware lee RATE_LIMIT_ENABLED internamente
 app.use('/auth/*', async (c, next) => {
   if (c.env.RATE_LIMIT_ENABLED === 'true') {
     return authRateLimitMiddleware(c, next)
@@ -69,7 +68,7 @@ app.use('/auth/*', async (c, next) => {
 
 app.route('/auth', auth)
 
-const protectedPaths = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses', '/uploads', '/ai']
+const protectedPaths = ['/inventory', '/sales', '/collections', '/purchases', '/reports', '/exports', '/settings', '/expenses', '/uploads', '/notifications', '/ai']
 
 for (const path of protectedPaths) {
   app.use(`${path}/*`, authGuard)
@@ -90,28 +89,41 @@ app.route('/exports', exports)
 app.route('/settings', settings)
 app.route('/expenses', expenses)
 app.route('/uploads', uploads)
+app.route('/notifications', notifications)
 app.route('/ai', aiScan)
 app.route('/ai', ai)
 app.route('/ai', aiInsights)
 
 app.onError((err, c) => {
   if (err instanceof AppError) {
-    const status = err.statusCode
-    return c.json({ error: err.message }, status as Parameters<typeof c.json>[1])
+    return c.json({ error: err.message }, err.statusCode as Parameters<typeof c.json>[1])
   }
-  console.error('Unhandled error:', err)
-  // Log error completo con cause y stack para debug
-  const anyErr = err as any
-  console.error('Error name:', anyErr?.name)
-  console.error('Error code:', anyErr?.code)
-  console.error('Error cause:', anyErr?.cause)
-  console.error('Error stack:', anyErr?.stack)
-  if (anyErr?.cause) {
-    console.error('Cause name:', anyErr.cause.name)
-    console.error('Cause message:', anyErr.cause.message)
-    console.error('Cause code:', anyErr.cause.code)
+  if (err instanceof HTTPException) {
+    return c.json({ error: err.message }, err.status)
   }
+
+  // postgres.js sets `.code` on the error it throws; drizzle wraps it in DrizzleQueryError as `.cause`.
+  const pgCode = (err as { code?: string; cause?: { code?: string } }).code ?? (err as { cause?: { code?: string } }).cause?.code
+  if (pgCode?.startsWith('23')) {
+    return c.json({ error: pgIntegrityErrorMessage(pgCode) }, 409)
+  }
+
+  console.error('Unhandled error:', err, (err as Error).cause ?? '')
   return c.json({ error: 'Error interno del servidor' }, 500)
 })
+
+// SQLSTATE class 23 (integrity constraint violation): see https://www.postgresql.org/docs/current/errcodes-appendix.html
+function pgIntegrityErrorMessage(code: string): string {
+  switch (code) {
+    case '23505':
+      return 'Ya existe un registro con esos datos'
+    case '23503':
+      return 'La operación hace referencia a un registro que no existe'
+    case '23502':
+      return 'Falta un dato requerido'
+    default:
+      return 'Los datos no cumplen una condición requerida'
+  }
+}
 
 app.notFound((c) => c.json({ error: 'Ruta no encontrada' }, 404))

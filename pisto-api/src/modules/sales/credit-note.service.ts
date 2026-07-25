@@ -51,7 +51,7 @@ export async function createCreditNote(
         reason: data.reason,
         total: total.toFixed(2),
         createdBy: userId,
-      } as any)
+      })
       .returning()
 
     for (const line of lineData) {
@@ -61,7 +61,7 @@ export async function createCreditNote(
         quantity: line.quantity,
         unitPrice: line.unitPrice,
         lineTotal: line.lineTotal,
-      } as any)
+      })
 
       await updateStock(tx, line.productId, s.warehouseId, parseFloat(line.quantity), 'return_in', userId, line.unitPrice, 'credit_note', note!.id)
     }
@@ -72,7 +72,7 @@ export async function createCreditNote(
       if (ar) {
         const newBalance = new Decimal(ar.balance).minus(total)
         await tx.update(accountReceivable).set({
-          balance: newBalance.lte(0) ? 0 : parseFloat(newBalance.toFixed(2)),
+          balance: newBalance.lte(0) ? '0.00' : newBalance.toFixed(2),
           status: newBalance.lte(0) ? 'paid' : 'pending',
           updatedAt: new Date(),
         }).where(eq(accountReceivable.id, ar.id))
@@ -92,7 +92,7 @@ export async function listCreditNotes(businessId: string, page = 1, limit = 20) 
       .offset(offset).limit(limit),
     db.select({ count: count() }).from(creditNote).where(eq(creditNote.businessId, businessId)),
   ])
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function getCreditNote(businessId: string, id: string) {

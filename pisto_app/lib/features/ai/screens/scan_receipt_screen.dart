@@ -10,7 +10,8 @@ import '../../../config/api_client.dart';
 import '../../../config/app_theme.dart';
 import '../../../core/providers/service_providers.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../shared/widgets/page_header.dart';
+import '../../../shared/widgets/widgets.dart';
+import '../../expenses/providers/expenses_providers.dart';
 
 class ScanReceiptScreen extends ConsumerStatefulWidget {
   const ScanReceiptScreen({super.key});
@@ -22,12 +23,10 @@ class ScanReceiptScreen extends ConsumerStatefulWidget {
 class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
   final _picker = ImagePicker();
 
-  // Estado del flujo
   _ScanStep _step = _ScanStep.pick;
   Uint8List? _imageBytes;
   String? _error;
 
-  // Datos parseados
   final _proveedorCtrl = TextEditingController();
   final _nitCtrl = TextEditingController();
   DateTime _fecha = DateTime.now();
@@ -82,9 +81,8 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
       final aiService = ref.read(aiServiceProvider);
       final result = await aiService.scanReceipt(base64, mimeType);
 
-      // Mapear resultado tipado a campos editables
       _proveedorCtrl.text = result.vendor ?? '';
-      _nitCtrl.text = ''; // NIT no viene del modelo tipado
+      _nitCtrl.text = ''; // NIT isn't part of the typed scan result model
 
       final fechaRaw = result.date;
       if (fechaRaw != null) {
@@ -118,12 +116,11 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
   Future<void> _saveExpense() async {
     setState(() => _saving = true);
     try {
-      final expService = ref.read(expensesServiceProvider);
       final description = _proveedorCtrl.text.isNotEmpty
           ? 'Factura: ${_proveedorCtrl.text}'
           : 'Factura escaneada';
 
-      await expService.createExpense(
+      await ref.read(expenseMutationsProvider.notifier).create(
         description: description,
         amount: _total.toStringAsFixed(2),
         expenseDate: dateFmt.format(_fecha),
@@ -182,12 +179,13 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const PageHeader(
-                  eyebrow: 'ASISTENTE IA',
-                  title: 'Escanear Factura',
-                  meta: 'Toma una foto o selecciona desde galería',
+                const PageHeader(title: 'Escanear factura'),
+                const SizedBox(height: 4),
+                Text(
+                  'Tomá una foto o seleccioná una imagen desde la galería.',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                 ),
-                const SizedBox(height: 28),
+                const SizedBox(height: 24),
                 if (_error != null) ...[
                   _ErrorBanner(message: _error!, onRetry: _reset),
                   const SizedBox(height: 16),
@@ -228,29 +226,25 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
           ],
         ),
         const SizedBox(height: 32),
-        // Placeholder illustration
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 48),
-          decoration: BoxDecoration(
-            color: AppTheme.tintBg(context, cs.primary),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppTheme.borderSubtle(context)),
-          ),
-          child: Column(
-            children: [
-              Icon(LucideIcons.scanLine, size: 48, color: cs.onSurfaceVariant),
-              const SizedBox(height: 16),
-              Text(
-                'Escanea una factura para extraer\nlos datos automáticamente',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: cs.onSurfaceVariant,
-                  fontSize: 14,
-                  height: 1.5,
+        // Placeholder illustration: quiet card, icon is the only accent.
+        InfoCard(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Center(
+            child: Column(
+              children: [
+                const IconBadge(icon: LucideIcons.scanLine, color: AppTheme.info),
+                const SizedBox(height: 16),
+                Text(
+                  'Escaneá una factura para extraer\nlos datos automáticamente',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -270,44 +264,36 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
               fit: BoxFit.cover,
             ),
           ),
-        const SizedBox(height: 24),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.borderSubtle(context)),
-          ),
-          child: Column(
-            children: [
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  color: cs.primary,
-                ),
+        const SizedBox(height: 32),
+        // Transient state: flat, no card.
+        Column(
+          children: [
+            SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: cs.primary,
               ),
-              const SizedBox(height: 16),
-              Text(
-                'Procesando factura...',
-                style: TextStyle(
-                  color: cs.onSurfaceVariant,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Procesando factura...',
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Extrayendo datos con IA',
-                style: TextStyle(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                  fontSize: 12,
-                ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Extrayendo datos con IA',
+              style: TextStyle(
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: 12,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ],
     );
@@ -320,10 +306,9 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Image preview (small)
         if (_imageBytes != null)
           ClipRRect(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
             child: Image.memory(
               _imageBytes!,
               height: 120,
@@ -333,21 +318,18 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
           ),
         const SizedBox(height: 20),
 
-        // Proveedor
         TextField(
           controller: _proveedorCtrl,
           decoration: const InputDecoration(labelText: 'Proveedor'),
         ),
         const SizedBox(height: 12),
 
-        // NIT
         TextField(
           controller: _nitCtrl,
           decoration: const InputDecoration(labelText: 'NIT'),
         ),
         const SizedBox(height: 12),
 
-        // Fecha
         InkWell(
           borderRadius: BorderRadius.circular(14),
           onTap: () async {
@@ -374,42 +356,23 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 20),
-
-        // Items
-        Text(
-          'ITEMS',
-          style: AppTheme.eyebrow(context),
-        ),
-        const SizedBox(height: 8),
+        // Items: flat hairline sections, document-style, no boxed rows.
+        SectionHeading(title: 'Items'),
         if (_items.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainer,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.borderSubtle(context)),
-            ),
-            child: Center(
-              child: Text(
-                'Sin items detectados',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-              ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Sin items detectados',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
             ),
           )
         else
           ..._items.asMap().entries.map((entry) {
             final idx = entry.key;
             final item = entry.value;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainer,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.borderSubtle(context)),
-              ),
+            final isLast = idx == _items.length - 1;
+            return Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -438,7 +401,7 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(
@@ -468,42 +431,24 @@ class _ScanReceiptScreenState extends ConsumerState<ScanReceiptScreen> {
                       ),
                     ],
                   ),
+                  if (!isLast) ...[
+                    const SizedBox(height: 12),
+                    Divider(height: 1, color: cs.outlineVariant),
+                  ],
                 ],
               ),
             );
           }),
 
-        const SizedBox(height: 16),
+        // Totales: Subtotal/IVA quiet, Total as the hero mono figure.
+        SectionHeading(title: 'Total'),
+        _TotalRow(label: 'Subtotal', value: fmt.format(_subtotal)),
+        const SizedBox(height: 6),
+        _TotalRow(label: 'IVA', value: fmt.format(_iva)),
+        const SizedBox(height: 14),
+        BigFigure(label: 'Total', value: fmt.format(_total), size: BigFigureSize.m),
+        const SizedBox(height: 28),
 
-        // Totales
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cs.surfaceContainer,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTheme.borderSubtle(context)),
-          ),
-          child: Column(
-            children: [
-              _TotalRow(label: 'Subtotal', value: fmt.format(_subtotal)),
-              const SizedBox(height: 6),
-              _TotalRow(label: 'IVA', value: fmt.format(_iva)),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Divider(height: 1, color: AppTheme.borderSubtle(context)),
-              ),
-              _TotalRow(
-                label: 'Total',
-                value: fmt.format(_total),
-                bold: true,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Actions
         Row(
           children: [
             Expanded(
@@ -584,15 +529,7 @@ class _PickerButton extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: AppTheme.tintBg(context, cs.primary),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, size: 22, color: cs.primary),
-              ),
+              Icon(icon, size: 22, color: cs.primary),
               const SizedBox(height: 10),
               Text(
                 label,
@@ -620,14 +557,9 @@ class _ErrorBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Container(
-      width: double.infinity,
+    return InfoCard(
+      accentColor: AppTheme.danger,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.tintBg(context, AppTheme.danger),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
-      ),
       child: Row(
         children: [
           Icon(LucideIcons.circleAlert, size: 18, color: AppTheme.danger),
@@ -652,13 +584,8 @@ class _ErrorBanner extends StatelessWidget {
 class _TotalRow extends StatelessWidget {
   final String label;
   final String value;
-  final bool bold;
 
-  const _TotalRow({
-    required this.label,
-    required this.value,
-    this.bold = false,
-  });
+  const _TotalRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -672,14 +599,14 @@ class _TotalRow extends StatelessWidget {
           style: TextStyle(
             color: cs.onSurfaceVariant,
             fontSize: 13,
-            fontWeight: bold ? FontWeight.w600 : FontWeight.w500,
+            fontWeight: FontWeight.w500,
           ),
         ),
         Text(
           value,
           style: AppTheme.mono(
-            fontSize: bold ? 15 : 13,
-            fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
             color: cs.onSurface,
           ),
         ),

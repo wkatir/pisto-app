@@ -2,69 +2,57 @@ import { eq, and } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { supplier, supplierProduct } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
+import { crudService } from '../../shared/crud'
 
-export async function listSuppliers(businessId: string) {
-  return db.select().from(supplier)
-    .where(and(eq(supplier.businessId, businessId), eq(supplier.isActive, true)))
-}
+const suppliers = crudService(supplier, {
+  notFoundMessage: 'Proveedor no encontrado',
+})
 
-export async function getSupplier(businessId: string, id: string) {
-  const [s] = await db.select().from(supplier)
-    .where(and(eq(supplier.id, id), eq(supplier.businessId, businessId)))
-  if (!s) throw new AppError(404, 'Proveedor no encontrado')
-  return s
-}
+export const listSuppliers = suppliers.listAll
+export const getSupplier = suppliers.getById
+export const createSupplier = suppliers.create
+export const updateSupplier = suppliers.update
+export const deleteSupplier = suppliers.softDelete
 
-export async function createSupplier(businessId: string, data: Record<string, unknown>) {
-  const [s] = await db.insert(supplier).values({ businessId, ...data } as any).returning()
-  return s
-}
-
-export async function updateSupplier(businessId: string, id: string, data: Record<string, unknown>) {
-  const [updated] = await db.update(supplier)
-    .set({ ...data, updatedAt: new Date() } as any)
-    .where(and(eq(supplier.id, id), eq(supplier.businessId, businessId)))
-  if (!updated) throw new AppError(404, 'Proveedor no encontrado')
-  return updated
-}
-
-export async function deleteSupplier(businessId: string, id: string) {
-  const [deleted] = await db.update(supplier)
-    .set({ isActive: false, updatedAt: new Date() })
-    .where(and(eq(supplier.id, id), eq(supplier.businessId, businessId)))
-    .returning()
-  if (!deleted) throw new AppError(404, 'Proveedor no encontrado')
-  return deleted
-}
+type SupplierProductInsert = Omit<typeof supplierProduct.$inferInsert, 'id'>
 
 export async function listSupplierProducts(businessId: string, supplierId?: string) {
-  let query = db.select().from(supplierProduct)
-  if (supplierId) {
-    return db.select().from(supplierProduct)
-      .innerJoin(supplier, eq(supplierProduct.supplierId, supplier.id))
-      .where(eq(supplier.businessId, businessId))
-  }
-  return query
+  const conditions = [eq(supplier.businessId, businessId)]
+  if (supplierId) conditions.push(eq(supplierProduct.supplierId, supplierId))
+  const rows = await db.select({ supplierProduct })
+    .from(supplierProduct)
+    .innerJoin(supplier, eq(supplierProduct.supplierId, supplier.id))
+    .where(and(...conditions))
+  return rows.map((r) => r.supplierProduct)
 }
 
-export async function createSupplierProduct(_businessId: string, data: Record<string, unknown>) {
-  const [sp] = await db.insert(supplierProduct).values(data as any).returning()
+async function assertSupplierProductOwned(businessId: string, id: string) {
+  const [row] = await db.select({ id: supplierProduct.id })
+    .from(supplierProduct)
+    .innerJoin(supplier, eq(supplierProduct.supplierId, supplier.id))
+    .where(and(eq(supplierProduct.id, id), eq(supplier.businessId, businessId)))
+  if (!row) throw new AppError(404, 'Producto de proveedor no encontrado')
+}
+
+export async function createSupplierProduct(businessId: string, data: SupplierProductInsert) {
+  await getSupplier(businessId, data.supplierId)
+  const [sp] = await db.insert(supplierProduct).values(data).returning()
   return sp
 }
 
-export async function updateSupplierProduct(_businessId: string, id: string, data: Record<string, unknown>) {
+export async function updateSupplierProduct(businessId: string, id: string, data: Partial<SupplierProductInsert>) {
+  await assertSupplierProductOwned(businessId, id)
   const [updated] = await db.update(supplierProduct)
-    .set(data as any)
+    .set(data)
     .where(eq(supplierProduct.id, id))
     .returning()
-  if (!updated) throw new AppError(404, 'Producto de proveedor no encontrado')
   return updated
 }
 
-export async function deleteSupplierProduct(_businessId: string, id: string) {
+export async function deleteSupplierProduct(businessId: string, id: string) {
+  await assertSupplierProductOwned(businessId, id)
   const [deleted] = await db.delete(supplierProduct)
     .where(eq(supplierProduct.id, id))
     .returning()
-  if (!deleted) throw new AppError(404, 'Producto de proveedor no encontrado')
   return deleted
 }

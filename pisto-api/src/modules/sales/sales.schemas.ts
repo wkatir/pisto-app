@@ -1,5 +1,6 @@
 import * as v from 'valibot'
-import { intParam } from '../../shared/schemas/pagination'
+import { decimalString } from '../../shared/schemas/common'
+import { paginationQuerySchema } from '../../shared/utils/pagination'
 
 export const createCustomerSchema = v.object({
   customerType: v.optional(v.picklist(['person', 'company']), 'person'),
@@ -11,17 +12,11 @@ export const createCustomerSchema = v.object({
   email: v.optional(v.pipe(v.string(), v.email())),
   phone: v.optional(v.string()),
   address: v.optional(v.string()),
-  creditLimit: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)), '0'),
+  creditLimit: v.optional(decimalString, '0'),
   creditDays: v.optional(v.pipe(v.number(), v.integer()), 0),
 })
 
 export const updateCustomerSchema = v.partial(createCustomerSchema)
-
-export const customerQuerySchema = v.object({
-  page: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1)), '1'),
-  limit: v.optional(v.pipe(v.string(), v.transform(Number), v.integer(), v.minValue(1), v.maxValue(100)), '20'),
-  search: v.optional(v.string()),
-})
 
 export const createSaleSchema = v.object({
   customerId: v.optional(v.pipe(v.string(), v.uuid())),
@@ -33,23 +28,22 @@ export const createSaleSchema = v.object({
   lines: v.pipe(
     v.array(v.object({
       productId: v.pipe(v.string(), v.uuid()),
-      quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-      unitPrice: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-      discountPct: v.optional(v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)), '0'),
+      quantity: decimalString,
+      unitPrice: decimalString,
+      discountPct: v.optional(decimalString, '0'),
       taxId: v.optional(v.pipe(v.string(), v.uuid())),
     })),
     v.minLength(1, 'Al menos un producto'),
   ),
   payments: v.optional(v.array(v.object({
     paymentMethodId: v.pipe(v.string(), v.uuid()),
-    amount: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+    amount: decimalString,
     reference: v.optional(v.string()),
   }))),
 })
 
 export const invoiceQuerySchema = v.object({
-  page: intParam(1, 10000),
-  limit: intParam(1, 200),
+  ...paginationQuerySchema.entries,
   customerId: v.optional(v.pipe(v.string(), v.uuid())),
 })
 
@@ -58,8 +52,8 @@ export const creditNoteSchema = v.object({
   lines: v.pipe(
     v.array(v.object({
       productId: v.pipe(v.string(), v.uuid()),
-      quantity: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
-      unitPrice: v.pipe(v.string(), v.regex(/^\d+(\.\d{1,2})?$/)),
+      quantity: decimalString,
+      unitPrice: decimalString,
     })),
     v.minLength(1),
   ),

@@ -1,90 +1,140 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../../config/app_theme.dart';
+import '../../../core/providers/theme_provider.dart';
 
-class AuthSplitLayout extends StatelessWidget {
+/// Shared layout for the auth screens.
+///
+/// Wide (>= [Breakpoints.medium]): brand panel on the left (pastel,
+/// theme tokens) and form over surface on the right.
+/// Narrow: centered column with the wordmark above the card.
+class AuthSplitLayout extends ConsumerWidget {
   final Widget form;
 
   const AuthSplitLayout({super.key, required this.form});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final width = MediaQuery.sizeOf(context).width;
-    final isWide = width >= 720;
+    final isWide = width >= Breakpoints.medium;
     final cs = Theme.of(context).colorScheme;
 
-    return !isWide
-        ? Scaffold(
-            backgroundColor: cs.surface,
-            body: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 400),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _MobileLogo(),
-                        const SizedBox(height: 32),
-                        form,
-                      ],
+    final body = isWide
+        ? Row(
+            children: [
+              const Expanded(flex: 5, child: _BrandPanel()),
+              Expanded(
+                flex: 6,
+                child: Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: form,
                     ),
                   ),
                 ),
               ),
-            ),
+            ],
           )
-        : Scaffold(
-            backgroundColor: cs.surface,
-            body: Row(
-              children: [
-                Expanded(
-                  flex: 5,
-                  child: _BrandPanel(),
-                ),
-                Expanded(
-                  flex: 6,
-                  child: Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
+        : SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _MobileWordmark(),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: cs.surface,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: AppTheme.borderSubtle(context)),
+                        ),
                         child: form,
                       ),
-                    ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           );
+
+    return Scaffold(
+      backgroundColor: isWide ? cs.surface : null,
+      body: Stack(
+        children: [
+          body,
+          Positioned(
+            top: 12,
+            right: 12,
+            child: SafeArea(child: _ThemeToggle()),
+          ),
+        ],
+      ),
+    );
   }
 }
 
-class _MobileLogo extends StatelessWidget {
+class _ThemeToggle extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
+    final cs = Theme.of(context).colorScheme;
+
+    final (icon, label) = switch (mode) {
+      ThemeMode.system => (LucideIcons.monitor, 'Tema: sistema'),
+      ThemeMode.light => (LucideIcons.sun, 'Tema: claro'),
+      ThemeMode.dark => (LucideIcons.moon, 'Tema: oscuro'),
+    };
+
+    return IconButton(
+      tooltip: label,
+      onPressed: () => ref.read(themeModeProvider.notifier).cycle(),
+      icon: Icon(icon, size: 18, color: cs.onSurfaceVariant),
+    );
+  }
+}
+
+class _Wordmark extends StatelessWidget {
+  final Color chipColor;
+  final Color chipIconColor;
+  final Color textColor;
+
+  const _Wordmark({
+    required this.chipColor,
+    required this.chipIconColor,
+    required this.textColor,
+  });
+
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
-    return Column(
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 48,
-          height: 48,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
-            color: cs.primary,
-            borderRadius: BorderRadius.circular(12),
+            color: chipColor,
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(LucideIcons.landmark, size: 24, color: cs.onPrimary),
+          child: Icon(LucideIcons.landmark, size: 18, color: chipIconColor),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(width: 10),
         Text(
           'Pisto',
           style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: cs.onSurface,
-            letterSpacing: -0.3,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+            letterSpacing: -0.4,
           ),
         ),
       ],
@@ -92,149 +142,123 @@ class _MobileLogo extends StatelessWidget {
   }
 }
 
-class _BrandPanel extends StatelessWidget {
+class _MobileWordmark extends StatelessWidget {
+  const _MobileWordmark();
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final theme = Theme.of(context);
+    return Center(
+      child: _Wordmark(
+        chipColor: cs.primary,
+        chipIconColor: cs.onPrimary,
+        textColor: cs.onSurface,
+      ),
+    );
+  }
+}
 
-    final features = [
-      (LucideIcons.package, 'Inventario en tiempo real', 'Control de stock, alertas y movimientos'),
-      (LucideIcons.receipt, 'Facturacion rapida', 'Emite facturas y cobra en segundos'),
-      (LucideIcons.chartColumn, 'Reportes financieros', 'KPIs, tendencias y margenes de utilidad'),
-      (LucideIcons.wallet, 'Cobranza inteligente', 'Antiguedad de cartera y seguimiento de pagos'),
+class _BrandPanel extends StatelessWidget {
+  const _BrandPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final fg = cs.onPrimaryContainer;
+
+    const features = [
+      (LucideIcons.receipt, 'Facturá y cobrá sin enredos'),
+      (LucideIcons.package, 'Tu inventario siempre al día'),
+      (LucideIcons.chartColumn, 'Mirá cómo va tu negocio, en un vistazo'),
     ];
 
     return Container(
-      decoration: BoxDecoration(
-        color: cs.primary,
-      ),
+      color: cs.primaryContainer,
       child: LayoutBuilder(
-        builder: (context, viewport) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 56),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: viewport.maxHeight - 112),
-              child: IntrinsicHeight(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: cs.onPrimary.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Icon(LucideIcons.landmark, size: 18, color: cs.onPrimary),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Pisto',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: cs.onPrimary,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                      ],
+        builder: (context, viewport) => SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 44),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: viewport.maxHeight - 88),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Wordmark(
+                    chipColor: cs.primary,
+                    chipIconColor: cs.onPrimary,
+                    textColor: fg,
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Las cuentas claras\nde tu negocio.',
+                    style: AppTheme.serif(
+                      fontSize: 40,
+                      fontWeight: FontWeight.w800,
+                      color: fg,
+                      letterSpacing: -1.0,
+                      height: 1.1,
                     ),
-                    const Spacer(),
-                    Text(
-                      'Tu negocio,\nbajo control.',
-                      style: AppTheme.serif(
-                        fontSize: 44,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onPrimary,
-                        letterSpacing: -1.0,
-                        height: 1.05,
-                      ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    'Ventas, inventario y cobros en un solo lugar,\nsin Excel ni cuadernos.',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: fg.withValues(alpha: 0.8),
+                      height: 1.55,
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'Factura, cobra y controla tu inventario\ndesde un solo lugar — sin Excel ni desorden.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: cs.onPrimary.withValues(alpha: 0.92),
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    ...features.map((f) => Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: cs.onPrimary.withValues(alpha: 0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(f.$1, size: 17, color: cs.onPrimary),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      f.$2,
-                                      style: theme.textTheme.labelLarge?.copyWith(
-                                        color: cs.onPrimary.withValues(alpha: 0.92),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      f.$3,
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: cs.onPrimary.withValues(alpha: 0.82),
-                                        height: 1.4,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.all(16),
+                  ),
+                  const SizedBox(height: 28),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 340),
                       decoration: BoxDecoration(
-                        color: cs.onPrimary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: AppTheme.borderSubtle(context)),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      clipBehavior: Clip.antiAlias,
+                      child: Image.asset(
+                        'assets/illustrations/login_hero.png',
+                        height: 240,
+                        width: 340,
+                        fit: BoxFit.cover,
+                        alignment: Alignment.topCenter,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                  for (final f in features)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Row(
                         children: [
-                          Text(
-                            '"Reducimos la cartera vencida en 40% el primer mes."',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: cs.onPrimary,
-                              fontStyle: FontStyle.italic,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            'Maria Alvarado - Directora Financiera, AgroMax',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: cs.onPrimary.withValues(alpha: 0.82),
+                          Icon(f.$1, size: 17, color: cs.primary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              f.$2,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: fg.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  const Spacer(),
+                  Text(
+                    'Hecho para las PYMES de El Salvador',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: fg.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

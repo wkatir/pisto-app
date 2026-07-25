@@ -37,10 +37,10 @@ export function initEnv(bindings: Bindings): void {
   }
 }
 
-// Proxy que delega al singleton — los módulos siguen importando `env` sin cambios
+// Proxy delegating to the singleton: modules keep importing `env` unchanged.
 export const env = new Proxy({} as EnvConfig, {
   get(_, prop: string | symbol) {
-    if (!_env) throw new Error('Env no inicializado. initEnv() debe llamarse antes.')
+    if (!_env) throw new Error('Env not initialized. initEnv() must be called first.')
     return (_env as any)[prop]
   },
 })

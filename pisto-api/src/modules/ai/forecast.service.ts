@@ -1,6 +1,64 @@
-import { client, getAiModel } from './ai-client'
+import { structuredCompletion } from './ai-client'
 import { sql } from 'drizzle-orm'
 import { db } from '../../config/database'
+
+const forecastJsonSchema = {
+  type: 'object',
+  properties: {
+    forecast: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string' },
+          projectedIncome: { type: 'number' },
+          projectedExpenses: { type: 'number' },
+          netCashFlow: { type: 'number' },
+        },
+        required: ['date', 'projectedIncome', 'projectedExpenses', 'netCashFlow'],
+        additionalProperties: false,
+      },
+    },
+    summary: {
+      type: 'object',
+      properties: {
+        totalProjectedIncome: { type: 'number' },
+        totalProjectedExpenses: { type: 'number' },
+        netProjection: { type: 'number' },
+      },
+      required: ['totalProjectedIncome', 'totalProjectedExpenses', 'netProjection'],
+      additionalProperties: false,
+    },
+    insights: { type: 'array', items: { type: 'string' } },
+    risk: { type: 'string', enum: ['bajo', 'medio', 'alto'] },
+  },
+  required: ['forecast', 'summary', 'insights', 'risk'],
+  additionalProperties: false,
+} as const
+
+const anomaliesJsonSchema = {
+  type: 'object',
+  properties: {
+    anomalies: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['gasto_inusual', 'venta_atipica', 'factura_duplicada', 'patron_sospechoso'] },
+          description: { type: 'string' },
+          severity: { type: 'string', enum: ['info', 'warning', 'critical'] },
+          amount: { type: ['number', 'null'] },
+          date: { type: ['string', 'null'] },
+        },
+        required: ['type', 'description', 'severity', 'amount', 'date'],
+        additionalProperties: false,
+      },
+    },
+    summary: { type: 'string' },
+  },
+  required: ['anomalies', 'summary'],
+  additionalProperties: false,
+} as const
 
 async function execRows<T = Record<string, unknown>>(query: Parameters<typeof db.execute>[0]): Promise<T[]> {
   const result = await db.execute(query)
@@ -95,9 +153,10 @@ export async function forecastCashFlow(businessId: string, days: number = 30) {
     pendingPayables: payables,
   }
 
-  const response = await client.chat.completions.create({
-    model: getAiModel(),
-    max_tokens: 4096,
+  return structuredCompletion<Record<string, unknown>>({
+    name: 'cash_flow_forecast',
+    schema: forecastJsonSchema,
+    maxTokens: 4096,
     messages: [
       {
         role: 'user',
@@ -105,26 +164,12 @@ export async function forecastCashFlow(businessId: string, days: number = 30) {
 
 Datos: ${JSON.stringify(historicalData)}
 
-Responde ÚNICAMENTE con JSON válido (sin markdown, sin backticks) con esta estructura:
-- forecast: array de { date: 'YYYY-MM-DD', projectedIncome: number, projectedExpenses: number, netCashFlow: number }
-- summary: { totalProjectedIncome: number, totalProjectedExpenses: number, netProjection: number }
-- insights: array de strings con 2-3 observaciones clave en español
-- risk: 'bajo' | 'medio' | 'alto' basado en si los gastos proyectados superan los ingresos
+Las fechas van en formato YYYY-MM-DD. insights son 2-3 observaciones clave en español. risk se basa en si los gastos proyectados superan los ingresos.
 
 Basa tus proyecciones en tendencias reales. No inventes datos.`,
       },
     ],
   })
-
-  const text = response.choices[0]?.message?.content
-  if (!text) throw new Error('AI returned empty response for forecast')
-
-  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
-  try {
-    return JSON.parse(cleaned)
-  } catch (e) {
-    throw new Error(`Failed to parse forecast JSON: ${(e as Error).message}\nRaw: ${cleaned.slice(0, 500)}`)
-  }
 }
 
 // ── Anomaly Detection ───────────────────────────────────────────────
@@ -178,9 +223,10 @@ export async function detectAnomalies(businessId: string) {
     }
   }
 
-  const response = await client.chat.completions.create({
-    model: getAiModel(),
-    max_tokens: 4096,
+  return structuredCompletion<Record<string, unknown>>({
+    name: 'anomaly_report',
+    schema: anomaliesJsonSchema,
+    maxTokens: 4096,
     messages: [
       {
         role: 'user',
@@ -189,23 +235,10 @@ export async function detectAnomalies(businessId: string) {
 Últimos 30 días: ${JSON.stringify(recentTransactions)}
 Período anterior: ${JSON.stringify(baselineTransactions)}
 
-Responde ÚNICAMENTE con JSON válido (sin markdown, sin backticks) con esta estructura:
-- anomalies: array de { type: 'gasto_inusual' | 'venta_atipica' | 'factura_duplicada' | 'patron_sospechoso', description: string, severity: 'info' | 'warning' | 'critical', amount?: number, date?: string }
-- summary: string con resumen de 1-2 oraciones
-
+summary es un resumen de 1-2 oraciones en español.
 Si no hay anomalías, devuelve un array vacío con summary: 'Todo se ve normal.'
 Solo reporta anomalías reales, no inventes.`,
       },
     ],
   })
-
-  const text = response.choices[0]?.message?.content
-  if (!text) throw new Error('AI returned empty response for anomalies')
-
-  const cleaned = text.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim()
-  try {
-    return JSON.parse(cleaned)
-  } catch (e) {
-    throw new Error(`Failed to parse anomalies JSON: ${(e as Error).message}\nRaw: ${cleaned.slice(0, 500)}`)
-  }
 }

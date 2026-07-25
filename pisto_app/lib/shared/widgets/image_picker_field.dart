@@ -5,43 +5,44 @@ import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../config/api_client.dart';
 import '../../config/app_theme.dart';
+import '../../core/providers/core_providers.dart';
 import '../../core/providers/service_providers.dart';
 import '../../core/services/uploads_service.dart';
 
-/// Campo reutilizable para subir y previsualizar una imagen.
+/// Reusable field for uploading and previewing an image.
 ///
-/// Soporta tres formas: cuadrada (productos/recibos), círculo (avatares de
-/// usuario) y redondeada (logos). Maneja todo el flujo internamente: tap →
-/// picker → upload → callback con URL.
+/// Supports three shapes: square (products/receipts), circle (user
+/// avatars), and rounded (logos). Handles the whole flow internally: tap →
+/// picker → upload → callback with the URL.
 ///
-/// El padre solo necesita guardar la URL ([currentUrl]) y reaccionar al
-/// callback [onChanged] con la nueva URL (o null si se borró).
+/// The parent only needs to store the URL ([currentUrl]) and react to the
+/// [onChanged] callback with the new URL (or null if it was removed).
 enum ImagePickerShape { square, circle, rounded }
 
 class ImagePickerField extends ConsumerStatefulWidget {
-  /// URL actual (relativa `/uploads/...` o absoluta). Si es null/empty se
-  /// muestra el placeholder con ícono.
+  /// Current URL (relative `/uploads/...` or absolute). If null/empty, shows
+  /// the icon placeholder.
   final String? currentUrl;
 
-  /// Carpeta destino en el backend.
+  /// Destination folder on the backend.
   final UploadFolder folder;
 
-  /// Forma del contenedor.
+  /// Container shape.
   final ImagePickerShape shape;
 
-  /// Tamaño en px (para circle/rounded). Square es responsive.
+  /// Size in px (for circle/rounded). Square is responsive.
   final double size;
 
-  /// Texto del placeholder cuando no hay imagen.
+  /// Placeholder text when there's no image.
   final String placeholderLabel;
 
-  /// Ícono del placeholder.
+  /// Placeholder icon.
   final IconData placeholderIcon;
 
-  /// Callback cuando se sube o borra. Devuelve la URL relativa o null.
+  /// Callback on upload or delete. Returns the relative URL or null.
   final ValueChanged<String?> onChanged;
 
-  /// Si true, permite borrar la imagen tocando un botón "X".
+  /// If true, allows removing the image by tapping an "X" button.
   final bool allowRemove;
 
   const ImagePickerField({
@@ -134,7 +135,8 @@ class _ImagePickerFieldState extends ConsumerState<ImagePickerField> {
               if (widget.allowRemove && (widget.currentUrl?.isNotEmpty ?? false))
                 ListTile(
                   leading: Icon(LucideIcons.trash2, color: AppTheme.danger),
-                  title: Text('Quitar foto', style: TextStyle(color: AppTheme.danger)),
+                  title: Text('Quitar foto',
+                      style: TextStyle(color: context.tokens.dangerText)),
                   onTap: () {
                     Navigator.pop(ctx);
                     widget.onChanged(null);
@@ -173,6 +175,7 @@ class _ImagePickerFieldState extends ConsumerState<ImagePickerField> {
           : hasImage
               ? CachedNetworkImage(
                   imageUrl: resolveUrl(widget.currentUrl),
+                  httpHeaders: ref.watch(apiClientProvider).authHeaders,
                   fit: BoxFit.cover,
                   placeholder: (_, _) => Container(
                     color: cs.surfaceContainerHigh,
@@ -213,7 +216,7 @@ class _ImagePickerFieldState extends ConsumerState<ImagePickerField> {
             child: box,
           ),
         ),
-        // Botón flotante "editar" cuando hay imagen, para indicar que es tap-able.
+        // Floating "edit" button when there's an image, to signal it's tappable.
         if (hasImage && !_uploading)
           Positioned(
             right: 4,
@@ -235,10 +238,10 @@ class _ImagePickerFieldState extends ConsumerState<ImagePickerField> {
   }
 }
 
-/// Imagen de solo lectura para mostrar en listas/chips/avatares.
-/// Si la URL es null/empty, muestra [fallback] (típicamente un avatar de
-/// iniciales o un ícono).
-class NetworkImageThumb extends StatelessWidget {
+/// Read-only image for displaying in lists/chips/avatars.
+/// If the URL is null/empty, shows [fallback] (typically an initials
+/// avatar or an icon).
+class NetworkImageThumb extends ConsumerWidget {
   final String? url;
   final double size;
   final BorderRadius? borderRadius;
@@ -253,12 +256,13 @@ class NetworkImageThumb extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (url == null || url!.isEmpty) return fallback;
     return ClipRRect(
       borderRadius: borderRadius ?? BorderRadius.circular(size / 2),
       child: CachedNetworkImage(
         imageUrl: resolveUrl(url),
+        httpHeaders: ref.watch(apiClientProvider).authHeaders,
         width: size,
         height: size,
         fit: BoxFit.cover,

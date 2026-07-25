@@ -1,4 +1,4 @@
-import { eq, and, like, sql, count } from 'drizzle-orm'
+import { eq, and, gt, like, sql, count } from 'drizzle-orm'
 import { db } from '../../config/database'
 import { product, productStock, productCategory, unitOfMeasure } from '../../db/schema'
 import { AppError } from '../../shared/errors/app-error'
@@ -62,7 +62,7 @@ export async function listProducts(businessId: string, query: ProductQuery) {
     db.select({ count: count() }).from(product).where(where),
   ])
 
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function getProduct(businessId: string, id: string) {
@@ -83,7 +83,7 @@ export async function createProduct(businessId: string, data: {
   minStock?: string; maxStock?: string; isService?: boolean; isTaxable?: boolean
   imageUrl?: string
 }) {
-  const [p] = await db.insert(product).values({ businessId, ...data } as any).returning()
+  const [p] = await db.insert(product).values({ businessId, ...data }).returning()
   return p
 }
 
@@ -91,6 +91,7 @@ export async function updateProduct(businessId: string, id: string, data: Record
   const [updated] = await db.update(product)
     .set({ ...data, updatedAt: new Date() })
     .where(and(eq(product.id, id), eq(product.businessId, businessId)))
+    .returning()
   if (!updated) throw new AppError(404, 'Producto no encontrado')
   return updated
 }
@@ -118,6 +119,8 @@ export async function getLowStockAlerts(businessId: string) {
       eq(product.businessId, businessId),
       eq(product.isActive, true),
       eq(product.isService, false),
+      // min_stock = 0 means "no minimum configured": not an alert.
+      gt(product.minStock, '0'),
     ))
     .groupBy(product.id, product.name, product.sku, product.minStock)
     .having(sql`COALESCE(SUM(${productStock.quantity}), 0) <= ${product.minStock}`)

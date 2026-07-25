@@ -1,6 +1,6 @@
-import { eq, and, desc, count, inArray } from 'drizzle-orm'
+import { eq, and, desc, count, inArray, getTableColumns, sql } from 'drizzle-orm'
 import { db } from '../../config/database'
-import { sale, saleLine, saleLineTax, salePayment, accountReceivable, tax } from '../../db/schema'
+import { sale, saleLine, saleLineTax, salePayment, accountReceivable, customer, tax } from '../../db/schema'
 import { updateStock } from '../inventory/movement.service'
 import { generateCorrelative } from '../../shared/utils/correlative'
 import { AppError } from '../../shared/errors/app-error'
@@ -103,7 +103,7 @@ export async function createSale(
         total: total.toFixed(2),
         notes: data.notes,
         createdBy: userId,
-      } as any)
+      })
       .returning()
 
     for (const line of lineData) {
@@ -118,7 +118,7 @@ export async function createSale(
           taxId: line.taxId,
           taxAmount: line.taxAmount,
           lineTotal: line.lineTotal,
-        } as any)
+        })
         .returning()
 
       if (line.taxId) {
@@ -127,7 +127,7 @@ export async function createSale(
           taxId: line.taxId,
           taxBase: line.afterDiscount.toFixed(2),
           taxAmount: line.taxAmount,
-        } as any)
+        })
       }
 
       await updateStock(tx, line.productId, data.warehouseId, -parseFloat(line.quantity), 'sale_out', userId, line.unitPrice, 'sale', newSale!.id)
@@ -140,7 +140,7 @@ export async function createSale(
           paymentMethodId: pay.paymentMethodId,
           amount: pay.amount,
           reference: pay.reference,
-        } as any)
+        })
       }
     }
 
@@ -151,8 +151,8 @@ export async function createSale(
         saleId: newSale!.id,
         originalAmount: total.toFixed(2),
         balance: total.toFixed(2),
-        dueDate: data.dueDate || new Date().toISOString().split('T')[0],
-      } as any)
+        dueDate: data.dueDate || new Date().toISOString().slice(0, 10),
+      })
     }
 
     return newSale!
@@ -165,13 +165,18 @@ export async function listSales(businessId: string, page = 1, limit = 20, custom
     ? and(eq(sale.businessId, businessId), eq(sale.customerId, customerId))
     : eq(sale.businessId, businessId)
   const [items, [total]] = await Promise.all([
-    db.select().from(sale)
+    db.select({
+      ...getTableColumns(sale),
+      customerName: sql<string | null>`COALESCE(${customer.companyName}, ${customer.firstName} || ' ' || ${customer.lastName})`,
+    })
+      .from(sale)
+      .leftJoin(customer, eq(sale.customerId, customer.id))
       .where(whereClause)
       .orderBy(desc(sale.createdAt))
       .offset(offset).limit(limit),
     db.select({ count: count() }).from(sale).where(whereClause),
   ])
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function getSale(businessId: string, id: string) {

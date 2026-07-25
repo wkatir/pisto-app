@@ -7,7 +7,7 @@ type Db = ReturnType<typeof drizzle<typeof schema>>
 
 const dbStorage = new AsyncLocalStorage<Db>()
 
-// Crea una conexión nueva por request (Workers no permite compartir I/O entre requests)
+// New connection per request: Workers can't share I/O across requests.
 export async function runWithDb<T>(databaseUrl: string, fn: () => Promise<T>): Promise<T> {
   const client = postgres(databaseUrl, {
     max: 5,
@@ -18,16 +18,17 @@ export async function runWithDb<T>(databaseUrl: string, fn: () => Promise<T>): P
   try {
     return await dbStorage.run(dbInstance, fn)
   } finally {
-    // Cerrar la conexión al final del request
+    // Best-effort close: the response is already resolved, so a close failure here must not
+    // override it or crash an otherwise-successful request.
     await client.end({ timeout: 5 }).catch(() => {})
   }
 }
 
-// Proxy que delega al storage del request actual — servicios siguen usando `import { db }`
+// Proxy delegating to the current request's store: services keep importing `db` unchanged.
 export const db = new Proxy({} as Db, {
   get(_, prop: string | symbol) {
     const current = dbStorage.getStore()
-    if (!current) throw new Error('DB no inicializada para este request. runWithDb() debe envolver el handler.')
+    if (!current) throw new Error('DB not initialized for this request. runWithDb() must wrap the handler.')
     return (current as any)[prop]
   },
 })

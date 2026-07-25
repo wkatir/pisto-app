@@ -22,7 +22,7 @@ export async function listPayables(businessId: string, page = 1, limit = 20) {
     db.select({ count: count() }).from(accountPayable).where(where),
   ])
 
-  return paginatedResponse(items, total!.count, { page, limit, sortOrder: 'desc' as const })
+  return paginatedResponse(items, total!.count, page, limit)
 }
 
 export async function createSupplierPayment(
@@ -52,14 +52,14 @@ export async function createSupplierPayment(
       reference: data.reference,
       notes: data.notes,
       paidBy: userId,
-    } as any).returning()
+    }).returning()
 
     const newBalance = currentBalance.minus(payAmount)
     await tx.update(accountPayable).set({
-      balance: parseFloat(newBalance.toFixed(2)),
+      balance: newBalance.toFixed(2),
       status: newBalance.lte(0) ? 'paid' : 'pending',
       updatedAt: new Date(),
-    } as any).where(eq(accountPayable.id, payableId))
+    }).where(eq(accountPayable.id, payableId))
 
     return payment
   })

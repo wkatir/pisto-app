@@ -1,4 +1,5 @@
-import 'dotenv/config'
+import { config } from 'dotenv'
+config({ path: '.dev.vars' })
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { eq, and } from 'drizzle-orm'
@@ -47,7 +48,7 @@ async function tryInsertOne<T>(fn: () => Promise<T[]>): Promise<T | null> {
     const rows = await fn()
     return rows[0] ?? null
   } catch (e: any) {
-    // Unique constraint violation en Postgres
+    // Unique constraint violation in Postgres
     if (e?.code === '23505') return null
     throw e
   }
@@ -402,7 +403,8 @@ async function main() {
 
       const lines = selectedProducts.map(prod => {
         const qty = randomBetween(1, 8)
-        const unitPrice = prod.salePrice as number
+        // numeric columns come back from .returning() as strings
+        const unitPrice = Number(prod.salePrice)
         const discountPct = Math.random() < 0.2 ? randomBetween(5, 15) : 0
         const lineSubtotal = qty * unitPrice
         const discountAmt = lineSubtotal * (discountPct / 100)
@@ -538,7 +540,7 @@ async function main() {
 
     const poLines = prods.slice(0, Math.min(prods.length, 4)).map((p: any) => {
       const qty = randomBetween(20, 100)
-      const unitCost = p.costPrice as number
+      const unitCost = Number(p.costPrice)
       const lineBase = qty * unitCost
       const lineTax = lineBase * taxRate
       poSubtotal += lineBase

@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { vValidator } from '@hono/valibot-validator'
 import * as v from 'valibot'
 import * as reportService from './report.service'
-import { dateRangeQuerySchema, intParam } from '../../shared/schemas/pagination'
+import { dateRangeQuerySchema, intParam } from '../../shared/utils/pagination'
 import type { AppEnv } from '../../types/app-env'
 
 const dashboardQuerySchema = v.object({
@@ -11,13 +11,13 @@ const dashboardQuerySchema = v.object({
 })
 
 const topProductsQuerySchema = v.object({
-  limit: intParam(1, 500),
+  limit: v.optional(intParam(1, 500), '10'),
   from: v.optional(v.pipe(v.string(), v.isoDate())),
   to: v.optional(v.pipe(v.string(), v.isoDate())),
 })
 
 const salesTrendQuerySchema = v.object({
-  days: intParam(1, 365),
+  days: v.optional(intParam(1, 365), '30'),
   startDate: v.optional(v.pipe(v.string(), v.isoDate())),
   endDate: v.optional(v.pipe(v.string(), v.isoDate())),
 })
@@ -40,7 +40,7 @@ reports.get('/sales-summary', vValidator('query', dateRangeQuerySchema), async (
 
 reports.get('/top-products', vValidator('query', topProductsQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const { limit = 10, from, to } = c.req.valid('query')
+  const { limit, from, to } = c.req.valid('query')
   const products = await reportService.getTopProducts(businessId, limit, from, to)
   return c.json(products)
 })
@@ -66,7 +66,7 @@ reports.get('/purchases-by-supplier', vValidator('query', dateRangeQuerySchema),
 
 reports.get('/sales-trend', vValidator('query', salesTrendQuerySchema), async (c) => {
   const businessId = c.get('businessId')
-  const { days = 30, startDate, endDate } = c.req.valid('query')
+  const { days, startDate, endDate } = c.req.valid('query')
   const trend = await reportService.getSalesTrend(businessId, days, startDate, endDate)
   return c.json(trend)
 })

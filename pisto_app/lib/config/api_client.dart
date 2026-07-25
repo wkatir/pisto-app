@@ -68,6 +68,11 @@ class ApiClient {
 
   bool get hasTokens => _accessToken != null;
 
+  /// Authorization headers for requests outside [dio] (e.g. `Image.network`
+  /// / `CachedNetworkImage` loading `/uploads/*`, which requires a Bearer token).
+  Map<String, String> get authHeaders =>
+      _accessToken != null ? {'Authorization': 'Bearer $_accessToken'} : {};
+
   Future<bool> restoreTokens() async {
     _accessToken = await _storage.read(key: AppConstants.accessTokenKey);
     _refreshTokenValue =
@@ -91,8 +96,7 @@ class ApiClient {
       final newRefresh = res.data['refreshToken'] as String;
       await setTokens(newAccess, newRefresh);
       return true;
-    } catch (e, st) {
-      debugPrint('Token refresh failed: $e\n$st');
+    } catch (_) {
       await clearTokens();
       return false;
     } finally {
